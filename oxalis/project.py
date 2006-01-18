@@ -20,6 +20,7 @@ import os
 import subprocess
 import string
 import re
+from ConfigParser import RawConfigParser
 
 import markdown
 import smartypants
@@ -46,7 +47,7 @@ sitecopy_rc = '''site $name
   exclude _oxalis
 '''
 
-def create_project(path, settings):
+def create_project(path, upload_settings):
 	global default_template
 	
 	name = os.path.basename(path)
@@ -54,18 +55,17 @@ def create_project(path, settings):
 	oxalis_dir = os.path.join(path, '_oxalis')
 	os.mkdir(oxalis_dir)
 	
+	# Write project configuration
 	config_file = os.path.join(oxalis_dir, 'config')
-	
-	# Project configuration file has similar structure as page, so I will use
-	# Page class to work with it
+	config = RawConfigParser()
+	config.add_section('project')
+	config.set('project', 'format', '0.1')
+	config.add_section('upload')
+	for key, value in upload_settings.items():
+		config.set('upload', key, value)
 	f = file(config_file, 'w')
-	f.write('\n')
+	config.write(f)
 	f.close()
-	
-	project = Page(None, config_file)
-	for key, value in settings.items():
-		project.header[key] = value
-	project.write_page()
 	
 	f = file(os.path.join(path, 'index.text'), 'w')
 	f.write('Title: ' + name)
@@ -84,7 +84,7 @@ def create_project(path, settings):
 	# Sitecopy configuration
 	f = file(os.path.join(oxalis_dir, 'sitecopyrc'), 'w')
 	tpl = string.Template(sitecopy_rc)
-	f.write(tpl.substitute(settings, name=name, local=path))
+	f.write(tpl.substitute(upload_settings, name=name, local=path))
 	f.close()
 	os.chmod(os.path.join(oxalis_dir, 'sitecopyrc'), 0600)
 		
