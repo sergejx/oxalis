@@ -84,7 +84,7 @@ def create_project(path, upload_settings):
 	# Sitecopy configuration
 	f = file(os.path.join(oxalis_dir, 'sitecopyrc'), 'w')
 	tpl = string.Template(sitecopy_rc)
-	f.write(tpl.substitute(upload_settings, name=name, local=path))
+	f.write(tpl.substitute(upload_settings, name='project', local=path))
 	f.close()
 	os.chmod(os.path.join(oxalis_dir, 'sitecopyrc'), 0600)
 		
@@ -111,15 +111,14 @@ class Project(object):
 					page.write_html()
 	
 	def upload(self):
-		name = os.path.basename(self.file)[0:-4]
 		rcfile = os.path.join(self.dir, '_oxalis', 'sitecopyrc')
 		storepath = os.path.join(self.dir, '_oxalis', 'sitecopy')
-		if not os.path.exists(os.path.join(storepath, name)):
+		if not os.path.exists(os.path.join(storepath, 'project')):
 			sitecopy = subprocess.Popen(('sitecopy',
-				'--rcfile='+rcfile, '--storepath='+storepath, '--init', name))
+				'--rcfile='+rcfile, '--storepath='+storepath, '--init', 'project'))
 			code = sitecopy.wait()
 		sitecopy = subprocess.Popen(('sitecopy',
-			'--rcfile='+rcfile, '--storepath='+storepath, '--update', name))
+			'--rcfile='+rcfile, '--storepath='+storepath, '--update', 'project'))
 		
 		code = sitecopy.wait()
 		print '>', code
