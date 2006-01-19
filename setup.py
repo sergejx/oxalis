@@ -8,5 +8,8 @@ setup(name = 'oxalis',
 	author = 'Sergej Chodarev',
 	author_email = 'sergejx@centrum.sk',
 	packages = ['oxalis'],
-	scripts = ['scripts/oxalis']
+	scripts = ['scripts/oxalis'],
+	data_files=[
+		('share/applications', ['data/oxalis.desktop']),
+		('share/pixmaps', ['data/oxalis.png'])]
 )
