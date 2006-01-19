@@ -66,6 +66,8 @@ def create_project(path, upload_settings):
 	f = file(config_file, 'w')
 	config.write(f)
 	f.close()
+	# Make configuration file readable only by owner (it contains FTP password)
+	os.chmod(config_file, 0600)
 	
 	f = file(os.path.join(path, 'index.text'), 'w')
 	f.write('Title: ' + name)
