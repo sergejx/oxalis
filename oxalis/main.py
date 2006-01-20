@@ -31,9 +31,9 @@ import editor
 
 
 name = 'Oxalis'
-version = '0.0.0'
-comments = 'Web Editor'
-copyright = 'Copyright \302\251 2005 Sergej Chodarev'
+version = '0.1-alpha1'
+comments = 'Web Site Editor'
+copyright = 'Copyright \302\251 2005-2006 Sergej Chodarev'
 
 ui = '''
 <ui>
