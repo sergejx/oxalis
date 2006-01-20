@@ -11,5 +11,7 @@ setup(name = 'oxalis',
 	scripts = ['scripts/oxalis'],
 	data_files=[
 		('share/applications', ['data/oxalis.desktop']),
-		('share/pixmaps', ['data/oxalis.png'])]
+		('share/pixmaps', ['data/oxalis.png']),
+		('share/doc/oxalis', ['COPYING'])
+	]
 )
