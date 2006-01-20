@@ -50,6 +50,8 @@ ui = '''
       <menuitem action="Generate" />
       <menuitem action="Upload" />
       <separator />
+      <menuitem action="Properties" />
+      <separator />
       <menuitem action="Quit" />
     </menu>
     <menu action="EditMenu">
@@ -91,6 +93,7 @@ class Oxalis(object):
 			('AddFile', gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
 			('Generate', None, 'Generate', None, None, self.generate_cb),
 			('Upload', None, 'Upload', None, None, self.upload_cb),
+			('Properties', gtk.STOCK_PROPERTIES, None, None, None, self.properties_cb),
 			('Quit', gtk.STOCK_QUIT, None, None, None, self.quit_cb),
 			('EditMenu', None, 'Edit'),
 			('Preferences', gtk.STOCK_PREFERENCES, None, None, None, self.preferences_cb),
@@ -143,13 +146,8 @@ class Oxalis(object):
 		chooser.destroy()
 		
 		if response == gtk.RESPONSE_OK:
-			settings_dlg = ProjectSettingsDialog()
-			response = settings_dlg.run()
-			settings = settings_dlg.get_settings()
-			settings_dlg.destroy()
-			if response == gtk.RESPONSE_OK:
-				project.create_project(dirname, settings)
-				self.load_project(dirname)
+			project.create_project(dirname)
+			self.load_project(dirname)
 	
 	def open_project_cb(self, *args):
 		chooser = gtk.FileChooserDialog(
@@ -335,6 +333,9 @@ class Oxalis(object):
 	def upload_cb(self, action):
 		self.project.upload()
 	
+	def properties_cb(self, action):
+		self.project.properties_dialog(self.window)
+	
 	def nav_button_clicked(self, button, param):
 		if self.active_component == param:
 			button.set_active(True)
@@ -465,40 +466,6 @@ class Oxalis(object):
 		if 'paned' in self.__dict__:
 			config.set('window', 'sidepanel-width', self.paned.get_position())
 		gtk.main_quit()
-
-
-class ProjectSettingsDialog(gtk.Dialog):
-	keys = ('host', 'user', 'passwd', 'remotedir')
-	texts = {'host':'Host:',
-		'user':'User:',
-		'passwd':'Password:',
-		'remotedir':'Remote Directory:'}
-	
-	def __init__(self, window = None, settings = {}):
-		gtk.Dialog.__init__(self, 'FTP Server Settings', window,
-			buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-				gtk.STOCK_OK, gtk.RESPONSE_OK))
-		self.set_default_response(gtk.RESPONSE_OK)
-		
-		self.entries = {}
-		for key in self.keys:
-			self.entries[key] = gtk.Entry()
-			if key in settings:
-				self.entries[key].set_text(settings[key])
-			label = gtk.Label(self.texts[key])
-			hbox = gtk.HBox()
-			hbox.pack_start(label)
-			hbox.pack_start(self.entries[key])
-			self.vbox.pack_start(hbox)
-		self.entries['passwd'].set_visibility(False)
-		
-		self.vbox.show_all()
-		
-	def get_settings(self):
-		settings = {}
-		for key in self.keys:
-			settings[key] = self.entries[key].get_text()
-		return settings
 
 
 class PreferencesDialog(gtk.Dialog):

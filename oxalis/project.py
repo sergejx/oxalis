@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005 Sergej Chodarev
+# Copyright (C) 2005-2006 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,6 +21,8 @@ import subprocess
 import string
 import re
 from ConfigParser import RawConfigParser
+
+import gtk
 
 import markdown
 import smartypants
@@ -47,7 +49,7 @@ sitecopy_rc = '''site $name
   exclude _oxalis
 '''
 
-def create_project(path, upload_settings):
+def create_project(path):
 	global default_template
 	
 	name = os.path.basename(path)
@@ -83,10 +85,8 @@ def create_project(path, upload_settings):
 	f.write(default_template)
 	f.close()
 	
-	# Sitecopy configuration
+	# Create sitecopy configuration file
 	f = file(os.path.join(oxalis_dir, 'sitecopyrc'), 'w')
-	tpl = string.Template(sitecopy_rc)
-	f.write(tpl.substitute(upload_settings, name='project', local=path))
 	f.close()
 	os.chmod(os.path.join(oxalis_dir, 'sitecopyrc'), 0600)
 		
@@ -100,6 +100,8 @@ def create_project(path, upload_settings):
 class Project(object):
 	def __init__(self, dir):
 		self.dir = dir
+		self.config = RawConfigParser()
+		self.config.read(os.path.join(self.dir, '_oxalis', 'config'))
 	
 	def generate(self):
 		for dirpath, dirnames, filenames in os.walk(self.dir):
@@ -115,6 +117,14 @@ class Project(object):
 	def upload(self):
 		rcfile = os.path.join(self.dir, '_oxalis', 'sitecopyrc')
 		storepath = os.path.join(self.dir, '_oxalis', 'sitecopy')
+		
+		# Update sitecopyrc file
+		f = file(rcfile, 'w')
+		tpl = string.Template(sitecopy_rc)
+		f.write(tpl.substitute(dict(self.config.items('upload')),
+			name='project', local=self.dir))
+		f.close()
+		
 		if not os.path.exists(os.path.join(storepath, 'project')):
 			sitecopy = subprocess.Popen(('sitecopy',
 				'--rcfile='+rcfile, '--storepath='+storepath, '--init', 'project'))
@@ -124,6 +134,23 @@ class Project(object):
 		
 		code = sitecopy.wait()
 		print '>', code
+	
+	def properties_dialog(self, parent_window):
+		'''Display project properties dialog.'''
+		settings = dict(self.config.items('upload'))
+		dialog = ProjectPropertiesDialog(parent_window, settings)
+		response = dialog.run()
+		settings = dialog.get_settings()
+		dialog.destroy()
+		
+		if response == gtk.RESPONSE_OK:
+			for key, value in settings.items():
+				self.config.set('upload', key, value)
+			
+			# Save properties
+			f = file(os.path.join(self.dir, '_oxalis', 'config'), 'w')
+			self.config.write(f)
+			f.close
 
 
 class Page(object):
@@ -211,3 +238,37 @@ class Template(object):
 		f = file(self.path, 'w')
 		f.write(self.text)
 		f.close()
+
+
+class ProjectPropertiesDialog(gtk.Dialog):
+	keys = ('host', 'user', 'passwd', 'remotedir')
+	texts = {'host':'Host:',
+		'user':'User:',
+		'passwd':'Password:',
+		'remotedir':'Remote Directory:'}
+	
+	def __init__(self, window = None, settings = {}):
+		gtk.Dialog.__init__(self, 'Project Properties', window,
+			buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+				gtk.STOCK_OK, gtk.RESPONSE_OK))
+		self.set_default_response(gtk.RESPONSE_OK)
+		
+		self.entries = {}
+		for key in self.keys:
+			self.entries[key] = gtk.Entry()
+			if key in settings:
+				self.entries[key].set_text(settings[key])
+			label = gtk.Label(self.texts[key])
+			hbox = gtk.HBox()
+			hbox.pack_start(label)
+			hbox.pack_start(self.entries[key])
+			self.vbox.pack_start(hbox)
+		self.entries['passwd'].set_visibility(False)
+		
+		self.vbox.show_all()
+		
+	def get_settings(self):
+		settings = {}
+		for key in self.keys:
+			settings[key] = self.entries[key].get_text()
+		return settings
