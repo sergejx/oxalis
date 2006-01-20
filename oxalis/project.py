@@ -63,8 +63,6 @@ def create_project(path):
 	config.add_section('project')
 	config.set('project', 'format', '0.1')
 	config.add_section('upload')
-	for key, value in upload_settings.items():
-		config.set('upload', key, value)
 	f = file(config_file, 'w')
 	config.write(f)
 	f.close()
