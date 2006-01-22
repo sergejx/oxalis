@@ -92,8 +92,6 @@ def create_project(path):
 	# Sitecopy storepath
 	os.mkdir(os.path.join(oxalis_dir, 'sitecopy'))
 	os.chmod(os.path.join(oxalis_dir, 'sitecopy'), 0700)
-	
-	return path
 
 
 class Project(object):
