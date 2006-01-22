@@ -19,7 +19,6 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 import os
-import shutil
 
 import pygtk
 pygtk.require('2.0')
@@ -201,6 +200,12 @@ class Oxalis(object):
 	
 	def font_changed(self):
 		self.editor.set_font()
+	
+	def get_selected(self):
+		'''Returns iter of selected item in tree_view'''
+		selection = self.tree_view.get_selection()
+		selected = selection.get_selected()
+		return selected[1]  # selected is tuple (model, iter)
 
 	def new_page_cb(self, action):
 		self.files_button.clicked()
@@ -208,21 +213,9 @@ class Oxalis(object):
 		
 		if response == gtk.RESPONSE_OK:
 			if name != '':
-				if name.endswith('.html'):
-					basename = name[0:-5]
-				else:
-					basename = name
+				if not name.endswith('.html'):
 					name += '.html'
-					
-				parent, dir = self.get_selected_dir()
-				path = os.path.join(dir, basename+'.text')
-				
-				# Create page
-				f = file(path, 'w')
-				f.write('\n')
-				f.close()
-				
-				iter = self.files_store.append(parent, (name, path, 'page'))
+				self.project.new_page(name, self.get_selected())
 	
 	def new_style_cb(self, action):
 		self.files_button.clicked()
@@ -232,15 +225,7 @@ class Oxalis(object):
 			if name != '':
 				if not name.endswith('.css'):
 					name += '.css'
-					
-				parent, dir = self.get_selected_dir()
-				path = os.path.join(dir, name)
-				
-				# Create page
-				f = file(path, 'w')
-				f.close()
-				
-				iter = self.files_store.append(parent, (name, path, 'style'))
+				self.project.new_style(name, self.get_selected())
 	
 	def new_dir_cb(self, action):
 		self.files_button.clicked()
@@ -248,13 +233,7 @@ class Oxalis(object):
 		
 		if response == gtk.RESPONSE_OK:
 			if name != '':
-				parent, dir = self.get_selected_dir()
-				path = os.path.join(dir, name)
-				
-				# Create directory
-				os.mkdir(path)
-				
-				iter = self.files_store.append(parent, (name, path, 'dir'))
+				self.project.new_dir(name, self.get_selected())
 	
 	def new_template_cb(self, action):
 		self.templates_button.clicked()
@@ -262,13 +241,7 @@ class Oxalis(object):
 		
 		if response == gtk.RESPONSE_OK:
 			if name != '':
-				path = os.path.join(self.project.dir, '_oxalis', 'templates', name)
-				
-				# Create template
-				f = file(path, 'w')
-				f.close()
-				
-				iter = self.templates_store.append((name, path, 'tpl'))
+				self.project.new_template(name)
 	
 	def add_file_cb(self, action):
 		chooser = gtk.FileChooserDialog('Add File', parent=self.window,
@@ -280,13 +253,7 @@ class Oxalis(object):
 		chooser.destroy()
 		
 		if response == gtk.RESPONSE_OK:
-			parent, dir = self.get_selected_dir()
-			name = os.path.basename(filename)
-			path = os.path.join(dir, name)
-			
-			shutil.copyfile(filename, path)
-			
-			iter = self.files_store.append(parent, (name, path, 'file'))
+			self.project.add_file(filename, self.get_selected())
 	
 	def ask_name(self, title):
 		dialog = gtk.Dialog('New '+title, self.window, 
@@ -306,25 +273,6 @@ class Oxalis(object):
 		name = entry.get_text()
 		dialog.destroy()
 		return response, name
-	
-	def get_selected_dir(self):
-		'''Find selectected directory or parent directory of selected file
-		If nothing is selected, returns None and base dir of project
-		Returns tuple (iter, dir)'''
-		model, selected = self.tree_view.get_selection().get_selected()
-		if selected == None:
-			parent = None
-			dir = self.project.dir
-		elif model.get_value(selected, 2) == 'dir':
-			parent = selected
-			dir = model.get_value(selected, 1)
-		else:
-			parent = model.iter_parent(selected)
-			if parent != None:
-				dir = model.get_value(parent, 1)
-			else:
-				dir = self.project.dir
-		return parent, dir
 	
 	def generate_cb(self, action):
 		self.editor.save()
@@ -348,10 +296,10 @@ class Oxalis(object):
 		self.active_component = component
 		if component == 'files':
 			self.templates_button.set_active(False)
-			self.tree_view.set_model(self.files_store)
+			self.tree_view.set_model(self.project.files)
 		else:
 			self.files_button.set_active(False)
-			self.tree_view.set_model(self.templates_store)
+			self.tree_view.set_model(self.project.templates)
 
 	def file_activated(self, tree_view, path, column):
 		store = tree_view.get_model()
@@ -376,43 +324,8 @@ class Oxalis(object):
 		self.create_paned()
 		
 		self.project = project.Project(filename)
-
-		# Create files tree store
-		# diaplay_name, path, type
-		# type can be: dir, page, style, file, tpl
-		self.files_store = gtk.TreeStore(str, str, str)
-		self.files_store.set_sort_column_id(0, gtk.SORT_ASCENDING)
 		
-		parent = None
-		for dirpath, dirnames, filenames in os.walk(self.project.dir):
-			if dirpath == self.project.dir:
-				dirnames.remove('_oxalis')
-			else:
-				name = os.path.basename(dirpath)
-				parent = self.files_store.append(parent, (name, dirpath, 'dir'))
-			for filename in filenames:
-				name, ext = os.path.splitext(filename)
-				path = os.path.join(dirpath, filename)
-				if ext == '.text':
-					name += '.html'
-					self.files_store.append(parent, (name, path, 'page'))
-				elif ext == '.css':
-					name = filename
-					self.files_store.append(parent, (name, path, 'style'))
-				elif ext not in ('.web','.html') and filename[0] not in ('.','_'):
-					name = filename
-					self.files_store.append(parent, (name, path, 'file'))
-		
-		self.tree_view.set_model(self.files_store)
-		
-		# Create templates tree store
-		self.templates_store = gtk.ListStore(str, str, str)
-		
-		for filename in os.listdir(os.path.join(self.project.dir, '_oxalis', 'templates')):
-			name = os.path.basename(filename)
-			path = os.path.join(self.project.dir, '_oxalis', 'templates', filename)
-			self.templates_store.append((name, path, 'tpl'))
-		
+		self.tree_view.set_model(self.project.files)
 		
 		self.vbox.remove(self.start_panel)
 		self.vbox.pack_start(self.paned)
@@ -426,7 +339,7 @@ class Oxalis(object):
 		
 		if type == 'page':
 			page = project.Page(self.project, filename)
-			self.editor = editor.PageEditor(page, self.templates_store)
+			self.editor = editor.PageEditor(page, self.project.templates)
 		elif type == 'style':
 			self.editor = editor.StyleEditor(filename)
 		elif type == 'tpl':

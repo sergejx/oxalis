@@ -17,6 +17,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 import os
+import shutil
 import subprocess
 import string
 import re
@@ -100,6 +101,126 @@ class Project(object):
 		self.dir = dir
 		self.config = RawConfigParser()
 		self.config.read(os.path.join(self.dir, '_oxalis', 'config'))
+		self.load_files_tree()
+		self.load_templates_list()
+	
+	def load_files_tree(self):
+		'''Loads tree of project files
+		
+		Tree is gtk.TreeStore with columns:
+		 - display name
+		 - full path
+		 - type
+		Type can be: dir, page, style, file, tpl
+		Tree is stored in self.files
+		'''
+		self.files = gtk.TreeStore(str, str, str)
+		self.files.set_sort_column_id(0, gtk.SORT_ASCENDING)
+		
+		parent = None
+		for dirpath, dirnames, filenames in os.walk(self.dir):
+			if dirpath == self.dir:
+				dirnames.remove('_oxalis')
+			else:
+				name = os.path.basename(dirpath)
+				parent = self.files.append(parent, (name, dirpath, 'dir'))
+			for filename in filenames:
+				name, ext = os.path.splitext(filename)
+				path = os.path.join(dirpath, filename)
+				if ext == '.text':
+					name += '.html'
+					self.files.append(parent, (name, path, 'page'))
+				elif ext == '.css':
+					name = filename
+					self.files.append(parent, (name, path, 'style'))
+				elif ext != '.html' and filename[0] not in ('.','_'):
+					name = filename
+					self.files.append(parent, (name, path, 'file'))
+	
+	def load_templates_list(self):
+		'''Loads list of project templates
+		
+		List is stored in self.templates and has same columns as self.files
+		'''
+		self.templates = gtk.ListStore(str, str, str)
+		
+		tpl_dir = os.path.join(self.dir, '_oxalis', 'templates')
+		for filename in os.listdir(tpl_dir):
+			name = os.path.basename(filename)
+			path = os.path.join(tpl_dir, filename)
+			self.templates.append((name, path, 'tpl'))
+	
+	def find_parent_dir(self, selected):
+		'''Find parent directory for adding new file to project
+		
+		If directory is selected, returns it, else return parent directory of
+		selected file.
+		Returns tuple of 2 items: tree iter and path to directory
+		'''
+		if selected == None:
+			parent = None
+			dir = self.dir
+		elif self.files.get_value(selected, 2) == 'dir':
+			parent = selected
+			dir = self.files.get_value(selected, 1)
+		else:
+			parent = self.files.iter_parent(selected)
+			if parent != None:
+				dir = self.files.get_value(parent, 1)
+			else:
+				dir = self.dir
+		return parent, dir
+	
+	def new_page(self, name, selected):
+		'''Create new page
+		
+		name - name of page, must ends with .html
+		'''
+		parent, dir = self.find_parent_dir(selected)
+		path = os.path.join(dir, name)
+		path = path[:-4] + 'text'  # Change extension from .html to .text
+		# Create empty page
+		f = file(path, 'w')
+		f.write('\n')
+		f.close()
+		
+		self.files.append(parent, (name, path, 'page'))
+	
+	def new_style(self, name, selected):
+		'''Create new CSS style'''
+		parent, dir = self.find_parent_dir(selected)
+		path = os.path.join(dir, name)
+		# Create empty file
+		f = file(path, 'w')
+		f.close()
+		
+		self.files.append(parent, (name, path, 'style'))
+	
+	def new_dir(self, name, selected):
+		'''Create new directory'''
+		parent, dir = self.find_parent_dir(selected)
+		path = os.path.join(dir, name)
+		os.mkdir(path)
+		
+		self.files.append(parent, (name, path, 'dir'))
+	
+	def new_template(self, name):
+		'''Create new template'''
+		path = os.path.join(self.dir, '_oxalis', 'templates', name)
+		# Create empty file
+		f = file(path, 'w')
+		f.close()
+		
+		self.templates.append((name, path, 'tpl'))
+	
+	def add_file(self, filename, selected):
+		'''Add existing file to project'''
+		parent, dir = self.find_parent_dir(selected)
+		name = os.path.basename(filename)
+		path = os.path.join(dir, name)
+		shutil.copyfile(filename, path)
+		
+		self.files.append(parent, (name, path, 'file'))
 	
 	def generate(self):
 		for dirpath, dirnames, filenames in os.walk(self.dir):
