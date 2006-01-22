@@ -81,9 +81,18 @@ class Oxalis(object):
 		self.window.add_accel_group(accelgroup)
 		ui_manager.add_ui_from_string(ui)
 		
-		actions = gtk.ActionGroup('actions')
-		actions.add_actions((
+		app_actions = gtk.ActionGroup('app_actions')
+		app_actions.add_actions((
 			('ProjectMenu', None, 'Project'),
+			('Quit', gtk.STOCK_QUIT, None, None, None, self.quit_cb),
+			('EditMenu', None, 'Edit'),
+			('Preferences', gtk.STOCK_PREFERENCES, None, None, None,
+				self.preferences_cb),
+			('HelpMenu', None, 'Help'),
+			('About', gtk.STOCK_ABOUT, None, None, None, self.about_cb)
+		))
+		self.project_actions = gtk.ActionGroup('project_actions')
+		self.project_actions.add_actions((
 			('NewFile', gtk.STOCK_NEW, 'New File', ''),
 			('NewPage', None, 'Page', None, None, self.new_page_cb),
 			('NewStyle', None, 'Style (CSS)', None, None, self.new_style_cb),
@@ -92,15 +101,13 @@ class Oxalis(object):
 			('AddFile', gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
 			('Generate', None, 'Generate', None, None, self.generate_cb),
 			('Upload', None, 'Upload', None, None, self.upload_cb),
-			('Properties', gtk.STOCK_PROPERTIES, None, None, None, self.properties_cb),
-			('Quit', gtk.STOCK_QUIT, None, None, None, self.quit_cb),
-			('EditMenu', None, 'Edit'),
-			('Preferences', gtk.STOCK_PREFERENCES, None, None, None, self.preferences_cb),
-			('HelpMenu', None, 'Help'),
-			('About', gtk.STOCK_ABOUT, None, None, None, self.about_cb)
+			('Properties', gtk.STOCK_PROPERTIES, None, None, None,
+				self.properties_cb)
 		))
+		self.project_actions.set_sensitive(False)
 		
-		ui_manager.insert_action_group(actions, 0)
+		ui_manager.insert_action_group(app_actions, 0)
+		ui_manager.insert_action_group(self.project_actions, 0)
 		menubar = ui_manager.get_widget('/MenuBar')
 		
 		self.vbox = gtk.VBox()
@@ -321,15 +328,16 @@ class Oxalis(object):
 			cell.set_property('pixbuf', None)
 		
 	def load_project(self, filename):
-		self.create_paned()
-		
 		self.project = project.Project(filename)
 		
+		self.create_paned()
 		self.tree_view.set_model(self.project.files)
 		
 		self.vbox.remove(self.start_panel)
 		self.vbox.pack_start(self.paned)
 		self.paned.show_all()
+		
+		self.project_actions.set_sensitive(True)
 		self.load_file(os.path.join(self.project.dir, 'index.text'), 'page')
 		
 	def load_file(self, filename, type):
