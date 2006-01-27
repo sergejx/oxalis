@@ -2,7 +2,7 @@
 
 # Oxalis Web Editor
 #
-# Copyright (C) 2005 Sergej Chodarev
+# Copyright (C) 2005-2006 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,6 +45,7 @@ ui = '''
         <menuitem action="NewTemplate" />
       </menu>
       <menuitem action="AddFile" />
+      <menuitem action="DeleteSelected" />
       <separator />
       <menuitem action="Generate" />
       <menuitem action="Upload" />
@@ -99,6 +100,8 @@ class Oxalis(object):
 			('NewDirectory', None, 'Directory', None, None, self.new_dir_cb),
 			('NewTemplate', None, 'Template', None, None, self.new_template_cb),
 			('AddFile', gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
+			('DeleteSelected', gtk.STOCK_DELETE, 'Delete selected', None, None,
+				self.delete_selected_cb),
 			('Generate', None, 'Generate', None, None, self.generate_cb),
 			('Upload', None, 'Upload', None, None, self.upload_cb),
 			('Properties', gtk.STOCK_PROPERTIES, None, None, None,
@@ -261,6 +264,38 @@ class Oxalis(object):
 		
 		if response == gtk.RESPONSE_OK:
 			self.project.add_file(filename, self.get_selected())
+	
+	def delete_selected_cb(self, action):
+		'''Delete selected file, directory or template'''
+		selected = self.get_selected()
+		if self.active_component == 'files':
+			name, type = self.project.files.get(selected, 0, 2)
+		else:
+			name, type = self.project.templates.get(selected, 0, 2)
+
+		if type == 'dir':
+			message = 'Delete directory "%(name)s" and its contents?' % {'name': name}
+			message2 = 'If you delete the directory, all of its files and its subdirectories will be permanently lost.'
+		else:
+			message = 'Delete "%(name)s"?' % {'name': name}
+			message2 = 'If you delete the item, it will be permanently lost.'
+		
+		# Create message dialog
+		msg_dlg = gtk.MessageDialog(parent=self.window,
+			type=gtk.MESSAGE_WARNING, message_format = message)
+		msg_dlg.format_secondary_text(message2)
+		msg_dlg.add_buttons(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+			gtk.STOCK_DELETE, gtk.RESPONSE_OK)
+		
+		msg_dlg.show_all()
+		response = msg_dlg.run()
+		msg_dlg.destroy()
+
+		if response == gtk.RESPONSE_OK:
+			if self.active_component == 'files':
+				self.project.remove_file(selected)
+			else:
+				self.project.remove_template(selected)
 	
 	def ask_name(self, title):
 		dialog = gtk.Dialog('New '+title, self.window, 

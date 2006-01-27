@@ -220,6 +220,27 @@ class Project(object):
 		
 		self.files.append(parent, (name, path, 'file'))
 	
+	def remove_file(self, selected):
+		'''Remove selected file or directory
+		
+		selected - tree iter
+		'''
+		path, type = self.files.get(selected, 1, 2)
+		if type == 'dir':
+			shutil.rmtree(path)
+		else:
+			os.remove(path)
+		self.files.remove(selected)
+	
+	def remove_template(self, selected):
+		'''Remove selected template
+		
+		selected - tree iter
+		'''
+		path = self.templates.get_value(selected, 1)
+		os.remove(path)
+		self.templates.remove(selected)
+	
 	def generate(self):
 		for dirpath, dirnames, filenames in os.walk(self.dir):
 			if dirpath == self.dir:
