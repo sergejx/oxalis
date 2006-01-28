@@ -186,6 +186,8 @@ class Oxalis(object):
 		self.column.add_attribute(self.cell, 'text', 0)
 		self.tree_view.set_search_column(0)
 		self.tree_view.connect('row-activated', self.file_activated)
+		selection = self.tree_view.get_selection()
+		selection.connect('changed', self.selection_changed_cb)
 		# Create scrolled window
 		tree_scrolled = gtk.ScrolledWindow()
 		tree_scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -328,6 +330,15 @@ class Oxalis(object):
 	def properties_cb(self, action):
 		self.project.properties_dialog(self.window)
 	
+	def selection_changed_cb(self, selection):
+		count = selection.count_selected_rows()
+		delete_action = self.project_actions.get_action('DeleteSelected')
+		# If nothing is selected, DeleteSelected action should be insensitive
+		if count == 0:
+			delete_action.set_sensitive(False)
+		else:
+			delete_action.set_sensitive(True)
+	
 	def nav_button_clicked(self, button, param):
 		if self.active_component == param:
 			button.set_active(True)
@@ -344,6 +355,8 @@ class Oxalis(object):
 		else:
 			self.files_button.set_active(False)
 			self.tree_view.set_model(self.project.templates)
+		# Make DeleteSelected action insensitive while nothing is selected
+		self.project_actions.get_action('DeleteSelected').set_sensitive(False)
 
 	def file_activated(self, tree_view, path, column):
 		store = tree_view.get_model()
@@ -375,6 +388,8 @@ class Oxalis(object):
 		self.paned.show_all()
 		
 		self.project_actions.set_sensitive(True)
+		# Make DeleteSelected action insensitive while nothing is selected
+		self.project_actions.get_action('DeleteSelected').set_sensitive(False)
 		self.load_file(os.path.join(self.project.dir, 'index.text'), 'page')
 		
 	def load_file(self, filename, type):
