@@ -55,6 +55,8 @@ ui = '''
       <menuitem action="Quit" />
     </menu>
     <menu action="EditMenu">
+      <placeholder name="EditActions" />
+      <separator />
       <menuitem action="Preferences" />
     </menu>
     <menu action="HelpMenu">
@@ -77,10 +79,10 @@ class Oxalis(object):
 		self.window.connect_after('delete-event', self.quit_cb)
 		
 		# Create menu bar
-		ui_manager = gtk.UIManager()
-		accelgroup = ui_manager.get_accel_group()
+		self.ui_manager = gtk.UIManager()
+		accelgroup = self.ui_manager.get_accel_group()
 		self.window.add_accel_group(accelgroup)
-		ui_manager.add_ui_from_string(ui)
+		self.ui_manager.add_ui_from_string(ui)
 		
 		app_actions = gtk.ActionGroup('app_actions')
 		app_actions.add_actions((
@@ -109,9 +111,9 @@ class Oxalis(object):
 		))
 		self.project_actions.set_sensitive(False)
 		
-		ui_manager.insert_action_group(app_actions, 0)
-		ui_manager.insert_action_group(self.project_actions, 0)
-		menubar = ui_manager.get_widget('/MenuBar')
+		self.ui_manager.insert_action_group(app_actions, 0)
+		self.ui_manager.insert_action_group(self.project_actions, 0)
+		menubar = self.ui_manager.get_widget('/MenuBar')
 		
 		self.vbox = gtk.VBox()
 		self.vbox.pack_start(menubar, False)
@@ -379,6 +381,9 @@ class Oxalis(object):
 		if type != 'dir':
 			if 'editor' in self.__dict__: # this should be done more elegantly
 				self.paned.remove(self.editor)
+				# Remove editor UI and actions
+				self.ui_manager.remove_ui(self.editor_merge_id)
+				self.ui_manager.remove_action_group(self.editor.edit_actions)
 		
 		if type == 'page':
 			page = project.Page(self.project, filename)
@@ -391,7 +396,12 @@ class Oxalis(object):
 		
 		self.paned.add2(self.editor)
 		self.editor.show_all()
-		print filename
+		
+		# Add editor UI and actions
+		ui = self.editor.ui
+		actions = self.editor.edit_actions
+		self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
+		self.ui_manager.insert_action_group(actions, 1)
 		
 	def run(self):
 		self.make_window()

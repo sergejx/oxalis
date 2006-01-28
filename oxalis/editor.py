@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005 Sergej Chodarev
+# Copyright (C) 2005-2006 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,6 +27,23 @@ import config
 
 
 class Editor(object):
+	ui = '''
+<ui>
+  <menubar name="MenuBar">
+    <menu action="EditMenu">
+      <placeholder name="EditActions">
+        <menuitem action="Undo" />
+        <menuitem action="Redo" />
+        <separator />
+        <menuitem action="Cut" />
+        <menuitem action="Copy" />
+        <menuitem action="Paste" />
+      </placeholder>
+    </menu>
+  </menubar>
+</ui>
+'''
+
 	def create_text_view(self, mime='text/html'):
 		# Create text view
 		self.buffer = gtksourceview.SourceBuffer()
@@ -43,7 +60,51 @@ class Editor(object):
 		text_scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 		text_scrolled.add(self.text_view)
 		
+		self.create_actions()
+		
 		return text_scrolled
+	
+	def create_actions(self):
+		'''Create editor ActionGroup and store it in self.edit_actions'''
+		self.edit_actions = gtk.ActionGroup('edit_actions')
+		self.edit_actions.add_actions((
+			('Cut', gtk.STOCK_CUT, None, None, None, self.cut_cb),
+			('Copy', gtk.STOCK_COPY, None, None, None, self.copy_cb),
+			('Paste', gtk.STOCK_PASTE, None, None, None, self.paste_cb)
+		))
+		
+		undo_action = gtk.Action('Undo', None, None, gtk.STOCK_UNDO)
+		undo_action.connect('activate', self.undo_cb)
+		undo_action.set_sensitive(False)
+		self.edit_actions.add_action_with_accel(undo_action, '<Ctrl>Z')
+		
+		redo_action = gtk.Action('Redo', None, None, gtk.STOCK_REDO)
+		redo_action.connect('activate', self.redo_cb)
+		redo_action.set_sensitive(False)
+		self.edit_actions.add_action_with_accel(redo_action, '<Ctrl><Shift>Z')
+		
+		self.buffer.connect('can-undo', self.change_undo_cb, undo_action)
+		self.buffer.connect('can-redo', self.change_undo_cb, redo_action)
+	
+	def undo_cb(self, action):
+		self.buffer.undo()
+	def redo_cb(self, action):
+		self.buffer.redo()
+	def cut_cb(self, action):
+		self.buffer.cut_clipboard(gtk.clipboard_get(), True)
+	def copy_cb(self, action):
+		self.buffer.copy_clipboard(gtk.clipboard_get())
+	def paste_cb(self, action):
+		self.buffer.paste_clipboard(gtk.clipboard_get(), None, True)
+	def change_undo_cb(self, buffer, value, action):
+		'''Change sensitivity of undo/redo action'''
+		action.set_sensitive(value)
+		
+	def set_text(self, text):
+		'''Set initial text of text buffer'''
+		self.buffer.begin_not_undoable_action()
+		self.buffer.set_text(text)
+		self.buffer.end_not_undoable_action()
 	
 	def set_font(self):
 		font = config.get('editor', 'font')
@@ -83,7 +144,7 @@ class PageEditor(TabbedEditor):
 			template = 'default'
 		
 		self.templates_store.foreach(self.search_template, template)
-		self.buffer.set_text(self.page.text)
+		self.set_text(self.page.text)
 	
 	def search_template(self, model, path, iter, template):
 		if model.get_value(iter, 0) == template:
@@ -136,7 +197,7 @@ class TemplateEditor(TabbedEditor):
 	def __init__(self, template):
 		self.template = template
 		TabbedEditor.__init__(self)
-		self.buffer.set_text(self.template.text)
+		self.set_text(self.template.text)
 		
 	def make_preview(self):
 		text = self.buffer.get_text(
@@ -173,7 +234,7 @@ class StyleEditor(Editor, gtk.VBox):
 		text = f.read()
 		f.close()
 		
-		self.buffer.set_text(text)
+		self.set_text(text)
 	
 	def save(self):
 		text = self.buffer.get_text(
