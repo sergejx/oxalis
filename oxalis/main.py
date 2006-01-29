@@ -361,12 +361,19 @@ class Oxalis(object):
 	def file_activated(self, tree_view, path, column):
 		store = tree_view.get_model()
 		
-		i = store.get_iter(path)
-		filename = store.get_value(i, 1)
-		type = store.get_value(i, 2)
+		iter = store.get_iter(path)
+		filename = store.get_value(iter, 1)
+		type = store.get_value(iter, 2)
 		
-		self.editor.save()
-		self.load_file(filename, type)
+		if type != 'dir':
+			# Unload old editor
+			self.editor.save()
+			self.paned.remove(self.editor)
+			# Remove editor UI and actions
+			self.ui_manager.remove_ui(self.editor_merge_id)
+			self.ui_manager.remove_action_group(self.editor.edit_actions)
+			# Load new editor
+			self.load_file(filename, type)
 	
 	def set_file_icon(self, column, cell, model, iter):
 		type = model.get_value(iter, 2)
@@ -393,13 +400,6 @@ class Oxalis(object):
 		self.load_file(os.path.join(self.project.dir, 'index.text'), 'page')
 		
 	def load_file(self, filename, type):
-		if type != 'dir':
-			if 'editor' in self.__dict__: # this should be done more elegantly
-				self.paned.remove(self.editor)
-				# Remove editor UI and actions
-				self.ui_manager.remove_ui(self.editor_merge_id)
-				self.ui_manager.remove_action_group(self.editor.edit_actions)
-		
 		if type == 'page':
 			page = project.Page(self.project, filename)
 			self.editor = editor.PageEditor(page, self.project.templates)
