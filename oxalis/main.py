@@ -170,7 +170,16 @@ class Oxalis(object):
 		chooser.destroy()
 		
 		if response == gtk.RESPONSE_OK:
-			self.load_project(dirname)
+			if project.dir_is_project(dirname):
+				self.load_project(dirname)
+			else:
+				# Display error message
+				message = 'Selected directory is not valid Oxalis project'
+				dlg = gtk.MessageDialog(parent=self.window,
+					type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK,
+					message_format=message)
+				dlg.run()
+				dlg.destroy()
 	
 	def create_paned(self):
 		# Create tree view

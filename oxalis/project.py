@@ -93,6 +93,15 @@ def create_project(path):
 	os.mkdir(os.path.join(oxalis_dir, 'sitecopy'))
 	os.chmod(os.path.join(oxalis_dir, 'sitecopy'), 0700)
 
+def dir_is_project(directory):
+	'''Checks if directory contains Oxalis project
+	
+	directory - full path to directory
+	Returns True if directory contains Oxalis project or False if not
+	'''
+	# Simply check if directory contains subdirectory _oxalis
+	return os.path.isdir(os.path.join(directory, '_oxalis'))
+
 
 class Project(object):
 	def __init__(self, dir):
