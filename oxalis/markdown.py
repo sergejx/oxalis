@@ -94,7 +94,7 @@ HTML_PLACEHOLDER = HTML_PLACEHOLDER_PREFIX + "%dajkqlsmdqpakldnzsdfls"
 BLOCK_LEVEL_ELEMENTS = ['p', 'div', 'blockquote', 'pre', 'table',
                         'dl', 'ol', 'ul', 'script', 'noscript',
                         'form', 'fieldset', 'iframe', 'math', 'ins',
-                        'del']
+                        'del', 'hr', 'hr/']
 
 def is_block_level (tag) :
 
