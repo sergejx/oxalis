@@ -49,6 +49,8 @@ class Editor(object):
 		self.buffer = gtksourceview.SourceBuffer()
 		self.text_view = gtksourceview.SourceView(self.buffer)
 		self.text_view.set_wrap_mode(gtk.WRAP_WORD)
+		self.text_view.set_auto_indent(True)
+		self.text_view.set_smart_home_end(True)
 		self.set_font()
 		lang_manager = gtksourceview.SourceLanguagesManager()
 		lang = lang_manager.get_language_from_mime_type(mime)
