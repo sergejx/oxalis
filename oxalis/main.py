@@ -23,6 +23,7 @@ import os
 import pygtk
 pygtk.require('2.0')
 import gtk
+import gobject
 
 import config
 import project
@@ -335,6 +336,36 @@ class Oxalis(object):
 	
 	def upload_cb(self, action):
 		self.project.upload()
+		
+		# Create upload progress dialog
+		self.upload_dlg = gtk.Window()
+		self.upload_dlg.set_title('Uploading')
+		self.upload_dlg.set_resizable(False)
+		self.upload_dlg.set_border_width(10)
+		vbox = gtk.VBox()
+		vbox.set_spacing(10)
+		self.upload_dlg.add(vbox)
+		label = gtk.Label('<b>Uploading ...</b>')
+		label.set_use_markup(True)
+		vbox.pack_start(label)
+		self.progress_bar = gtk.ProgressBar()
+		vbox.pack_start(self.progress_bar)
+		
+		self.upload_dlg.show_all()
+		
+		gobject.timeout_add(100, self.check_upload)
+	
+	def check_upload(self):
+		'''Check upload status and move progressbar
+		
+		This function is called periodically by gobject timer
+		'''
+		if self.project.check_upload() == None:
+			self.progress_bar.pulse()
+			return True
+		else:
+			self.upload_dlg.destroy()
+			return False
 	
 	def properties_cb(self, action):
 		self.project.properties_dialog(self.window)

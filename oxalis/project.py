@@ -276,11 +276,16 @@ class Project(object):
 			sitecopy = subprocess.Popen(('sitecopy',
 				'--rcfile='+rcfile, '--storepath='+storepath, '--init', 'project'))
 			code = sitecopy.wait()
-		sitecopy = subprocess.Popen(('sitecopy',
+		self.sitecopy = subprocess.Popen(('sitecopy',
 			'--rcfile='+rcfile, '--storepath='+storepath, '--update', 'project'))
+	
+	def check_upload(self):
+		'''Checks if upload is completed
 		
-		code = sitecopy.wait()
-		print '>', code
+		Returns return code or None if upload is not completed.
+		'''
+		returncode = self.sitecopy.poll()
+		return returncode
 	
 	def properties_dialog(self, parent_window):
 		'''Display project properties dialog.'''
