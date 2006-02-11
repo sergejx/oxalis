@@ -19,6 +19,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 import os
+from threading import Thread
 
 import pygtk
 pygtk.require('2.0')
@@ -28,6 +29,7 @@ import gobject
 import config
 import project
 import editor
+import server
 
 
 name = 'Oxalis'
@@ -439,6 +441,14 @@ class Oxalis(object):
 		self.project_actions.get_action('DeleteSelected').set_sensitive(False)
 		self.load_file(os.path.join(self.project.dir, 'index.text'), 'page')
 		
+		self.start_server()
+	
+	def start_server(self):
+		server.project = self.project
+		server_thread = Thread(target=server.run)
+		server_thread.setDaemon(True)
+		server_thread.start()
+		
 	def load_file(self, filename, type):
 		if type == 'page':
 			page = project.Page(self.project, filename)
@@ -461,6 +471,7 @@ class Oxalis(object):
 	def run(self):
 		self.make_window()
 		self.window.show_all()
+		gtk.threads_init()
 		gtk.main()
 	
 	def preferences_cb(self, action):
