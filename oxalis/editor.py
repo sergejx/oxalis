@@ -176,19 +176,6 @@ class PageEditor(TabbedEditor):
 		active = self.template_combo_box.get_active_iter()
 		self.page.header['Template'] = self.templates_store.get_value(active, 0)
 		
-	def make_preview(self):
-		self.update_page()
-		
-		html = self.page.process_page()
-		
-		print html
-		#print len(html)
-		
-		dir_uri = 'file://' + os.path.dirname(self.page.path) + '/'
-		self.mozembed.open_stream(dir_uri, 'text/html')
-		self.mozembed.append_data(html, long(len(html)))
-		self.mozembed.close_stream()
-	
 	def save(self):
 		self.update_page()
 		self.page.write_page()
@@ -201,22 +188,6 @@ class TemplateEditor(TabbedEditor):
 		self.set_text(self.template.text)
 		
 		self.url = template.url
-		
-	def make_preview(self):
-		text = self.buffer.get_text(
-			self.buffer.get_start_iter(), self.buffer.get_end_iter())
-		
-		self.template.text = text
-		
-		html = text
-		
-		print html
-		#print len(html)
-		
-		dir_uri = 'file://' + self.template.project.dir + '/'
-		self.mozembed.open_stream(dir_uri, 'text/html')
-		self.mozembed.append_data(html, long(len(html)))
-		self.mozembed.close_stream()
 		
 	def save(self):
 		text = self.buffer.get_text(
