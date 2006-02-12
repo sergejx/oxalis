@@ -123,13 +123,10 @@ class TabbedEditor(Editor, gtk.Notebook):
 		self.append_page(self.mozembed, gtk.Label('Preview'))
 		self.connect('switch-page', self.switch_page)
 	
-	def show_all(self):
-		gtk.Notebook.show_all(self)
-		self.mozembed.realize()
-	
 	def switch_page(self, notebook, page, page_num):
 		if page_num == 1:
-			self.make_preview()
+			self.save()
+			self.mozembed.load_url(self.url)
 
 
 class PageEditor(TabbedEditor):
@@ -147,6 +144,8 @@ class PageEditor(TabbedEditor):
 		
 		self.templates_store.foreach(self.search_template, template)
 		self.set_text(self.page.text)
+		
+		self.url = page.url
 	
 	def search_template(self, model, path, iter, template):
 		if model.get_value(iter, 0) == template:
@@ -200,6 +199,8 @@ class TemplateEditor(TabbedEditor):
 		self.template = template
 		TabbedEditor.__init__(self)
 		self.set_text(self.template.text)
+		
+		self.url = template.url
 		
 	def make_preview(self):
 		text = self.buffer.get_text(

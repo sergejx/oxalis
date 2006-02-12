@@ -312,6 +312,10 @@ class Page(object):
 		self.project = project
 		self.path = path
 		
+		self.url = path[:-5] + '.html'
+		self.url = self.url.replace(
+			project.dir, 'http://127.0.0.1:8000', 1)
+		
 		self.read_page()
 	
 	def read_page(self):
@@ -381,6 +385,8 @@ class Template(object):
 	def __init__(self, project, path):
 		self.project = project
 		self.path = path
+		self.url = path.replace(
+			project.dir, 'http://127.0.0.1:8000', 1)
 		
 		f = file(path, 'r')
 		self.text = f.read()
