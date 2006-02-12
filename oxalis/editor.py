@@ -26,7 +26,7 @@ import gtkmozembed
 import config
 
 
-class Editor(object):
+class Editor(gtk.Notebook):
 	ui = '''
 <ui>
   <menubar name="MenuBar">
@@ -43,6 +43,22 @@ class Editor(object):
   </menubar>
 </ui>
 '''
+	
+	def __init__(self, browser_has_toolbar=False):
+		gtk.Notebook.__init__(self)
+		
+		# Create GtkMozembed
+		self.browser = Browser(browser_has_toolbar)
+
+		self.append_page(self.create_edit_page(), gtk.Label('Edit'))
+		self.append_page(self.browser, gtk.Label('Preview'))
+		self.connect('switch-page', self.switch_page)
+	
+	def switch_page(self, notebook, page, page_num):
+		if page_num == 1:  # Preview
+			self.save()
+			self.browser.load_url(self.url)
+
 
 	def create_text_view(self, mime='text/html'):
 		# Create text view
@@ -65,6 +81,8 @@ class Editor(object):
 		self.create_actions()
 		
 		return text_scrolled
+	
+	create_edit_page = create_text_view
 	
 	def create_actions(self):
 		'''Create editor ActionGroup and store it in self.edit_actions'''
@@ -111,28 +129,12 @@ class Editor(object):
 	def set_font(self):
 		font = config.get('editor', 'font')
 		self.text_view.modify_font(pango.FontDescription(font))
-	
-class TabbedEditor(Editor, gtk.Notebook):
-	def __init__(self):
-		gtk.Notebook.__init__(self)
-		
-		# Create GtkMozembed
-		self.mozembed = gtkmozembed.MozEmbed()
-
-		self.append_page(self.create_text_view(), gtk.Label('Edit'))
-		self.append_page(self.mozembed, gtk.Label('Preview'))
-		self.connect('switch-page', self.switch_page)
-	
-	def switch_page(self, notebook, page, page_num):
-		if page_num == 1:
-			self.save()
-			self.mozembed.load_url(self.url)
 
 
-class PageEditor(TabbedEditor):
+class PageEditor(Editor):
 	def __init__(self, page, templates_store):
 		self.templates_store = templates_store
-		TabbedEditor.__init__(self)
+		Editor.__init__(self)
 
 		self.page = page
 		if 'Title' in self.page.header:
@@ -152,7 +154,7 @@ class PageEditor(TabbedEditor):
 			self.template_combo_box.set_active_iter(iter)
 			return True
 	
-	def create_text_view(self):
+	def create_edit_page(self):
 		self.page_name_entry = gtk.Entry()
 		self.template_combo_box = gtk.ComboBox(self.templates_store)
 		cell = gtk.CellRendererText()
@@ -165,7 +167,7 @@ class PageEditor(TabbedEditor):
 		table.attach(self.page_name_entry, 1, 2, 0, 1, gtk.EXPAND|gtk.FILL, 0)
 		table.attach(gtk.Label('Template:'), 0, 1, 1, 2, 0, 0)
 		table.attach(self.template_combo_box, 1, 2, 1, 2, gtk.EXPAND|gtk.FILL, 0)
-		table.attach(Editor.create_text_view(self), 0, 2, 2, 3)
+		table.attach(self.create_text_view(), 0, 2, 2, 3)
 		
 		return table
 	
@@ -181,10 +183,10 @@ class PageEditor(TabbedEditor):
 		self.page.write_page()
 
 
-class TemplateEditor(TabbedEditor):
+class TemplateEditor(Editor):
 	def __init__(self, template):
 		self.template = template
-		TabbedEditor.__init__(self)
+		Editor.__init__(self)
 		self.set_text(self.template.text)
 		
 		self.url = template.url
@@ -196,20 +198,26 @@ class TemplateEditor(TabbedEditor):
 		self.template.text = text
 		self.template.write()
 
-class StyleEditor(Editor, gtk.VBox):
+
+class StyleEditor(Editor):
 	def __init__(self, filename):
-		gtk.VBox.__init__(self)
+		Editor.__init__(self, True)
 		
 		self.filename = filename
-		
-		self.pack_start(self.create_text_view('text/css'))
+		# Default preview page for CSS will be the main page of the project
+		self.url = 'http://127.0.0.1:8000/'
 		
 		f = file(filename)
 		text = f.read()
 		f.close()
 		
 		self.set_text(text)
+		
+		self.browser.load_url(self.url)
 	
+	def create_edit_page(self):
+		return  self.create_text_view('text/css')
+
 	def save(self):
 		text = self.buffer.get_text(
 			self.buffer.get_start_iter(), self.buffer.get_end_iter())
@@ -217,3 +225,46 @@ class StyleEditor(Editor, gtk.VBox):
 		f = file(self.filename, 'w')
 		f.write(text)
 		f.close()
+	
+	def switch_page(self, notebook, page, page_num):
+		if page_num == 1:
+			self.save()
+			# For CSS we will not load default URL
+			# but only reload page witch user has selected.
+			self.browser.reload()
+
+
+class Browser(gtk.VBox):
+	'''Browser widget used for display preview'''
+	def __init__(self, has_toolbar=True):
+		'''Initialise Browser
+		
+		If has_toolbar is True, browser will have toolbar with address entry
+		'''
+		gtk.VBox.__init__(self)
+		# Create GtkMozembed
+		self.mozembed = gtkmozembed.MozEmbed()
+		
+		if has_toolbar:
+			self.address_entry = gtk.Entry()
+			self.address_entry.connect('activate', self.address_activate_cb)
+			self.pack_start(self.address_entry, False)
+			
+			self.mozembed.connect('location', self.location_cb)
+		
+		self.pack_start(self.mozembed)
+	
+	def address_activate_cb(self, entry):
+		address = entry.get_text()
+		self.mozembed.load_url(address)
+	
+	def load_url(self, url):
+		self.mozembed.load_url(url)
+	
+	def reload(self):
+		self.mozembed.reload(gtkmozembed.FLAG_RELOADNORMAL)
+	
+	def location_cb(self, mozembed):
+		'''Callback function called when browser location has changed'''
+		address = mozembed.get_location()
+		self.address_entry.set_text(address)
