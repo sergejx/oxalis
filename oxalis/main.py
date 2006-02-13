@@ -20,6 +20,7 @@
 
 import os
 from threading import Thread
+import subprocess
 
 import pygtk
 pygtk.require('2.0')
@@ -36,6 +37,14 @@ name = 'Oxalis'
 version = '0.1-alpha3'
 comments = 'Web Site Editor'
 copyright = 'Copyright \302\251 2005-2006 Sergej Chodarev'
+website = 'http://sergejx.mysteria.cz/oxalis/'
+authors = ('Sergej Chodarev',
+	'',
+	'Oxalis includes:',
+	'* Python-Markdown by Yuri Takhteyev',
+	'* smartypants.py by Chad Miller',
+	'Author of original Markdown and SmartyPants is John Gruber'
+)
 
 ui = '''
 <ui>
@@ -480,11 +489,14 @@ class Oxalis(object):
 		pref.destroy()
 	
 	def about_cb(self, action):
+		gtk.about_dialog_set_url_hook(open_url)
 		about = gtk.AboutDialog()
 		about.set_name(name)
 		about.set_version(version)
 		about.set_comments(comments)
 		about.set_copyright(copyright)
+		about.set_website(website)
+		about.set_authors(authors)
 		about.run()
 		about.destroy()
 			
@@ -516,6 +528,10 @@ class PreferencesDialog(gtk.Dialog):
 	def font_set(self, font_button):
 		print font_button.get_font_name()
 		config.set('editor', 'font', font_button.get_font_name())
+
+
+def open_url(dialog, link):
+	subprocess.call(('gnome-open', link))
 
 
 def run():
