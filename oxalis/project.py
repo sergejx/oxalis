@@ -348,10 +348,8 @@ class Page(object):
 		html = smartypants.smartyPants(html)
 		
 		html = self.process_template(html)
-		#print html
-		#print len(html)
-		
-		return html
+		encoding = determine_encoding(html)
+		return html.encode(encoding)
 	
 	def write_html(self):
 		root, ext = os.path.splitext(self.path)
@@ -396,6 +394,21 @@ class Template(object):
 		f = file(self.path, 'w')
 		f.write(self.text)
 		f.close()
+
+
+re_xml_declaration = re.compile('<\?xml.*? encoding=(?P<quote>\'|")(?P<enc>.+?)(?P=quote).*?\?>')
+re_meta = re.compile('<meta \s*http-equiv="Content-Type" \s*content=(?P<quote>\'|").+?;\s*charset=(?P<enc>.+?)(?P=quote).*?>', re.IGNORECASE)
+def determine_encoding(html):
+	'''Determines encoding, in which HTML document should be saved'''
+	match = re_xml_declaration.search(html)
+	if match != None:
+		return match.group('enc')
+	else:
+		match = re_meta.search(html)
+		if match != None:
+			return match.group('enc')
+		else:
+			return 'UTF-8'
 
 
 class ProjectPropertiesDialog(gtk.Dialog):
