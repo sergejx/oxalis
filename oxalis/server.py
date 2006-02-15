@@ -66,4 +66,4 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
 			f.close()
 		
 		else:  # File not found
-			self.send_response(404)
+			self.send_error(404, 'Not Found')
