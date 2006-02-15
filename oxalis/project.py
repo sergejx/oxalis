@@ -396,7 +396,7 @@ class Template(object):
 		self.project = project
 		self.path = path
 		self.full_path = os.path.join(project.dir, '_oxalis', 'templates', path)
-		self.url = 'http://127.0.0.1:8000/_oxalis/templates/' + path
+		self.url = 'http://127.0.0.1:8000/_oxalis?template=' + path
 		
 		self.read()
 	
