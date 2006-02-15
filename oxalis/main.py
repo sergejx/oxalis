@@ -411,21 +411,14 @@ class Oxalis(object):
 		self.project_actions.get_action('DeleteSelected').set_sensitive(False)
 
 	def file_activated(self, tree_view, path, column):
+		'''Callback called when user doubleclicks on item in tree view'''
 		store = tree_view.get_model()
 		
 		iter = store.get_iter(path)
 		filename = store.get_value(iter, 1)
 		type = store.get_value(iter, 2)
 		
-		if type != 'dir':
-			# Unload old editor
-			self.editor.save()
-			self.paned.remove(self.editor)
-			# Remove editor UI and actions
-			self.ui_manager.remove_ui(self.editor_merge_id)
-			self.ui_manager.remove_action_group(self.editor.edit_actions)
-			# Load new editor
-			self.load_file(filename, type)
+		self.load_file(filename, type)
 	
 	def set_file_icon(self, column, cell, model, iter):
 		type = model.get_value(iter, 2)
@@ -460,24 +453,38 @@ class Oxalis(object):
 		server_thread.start()
 		
 	def load_file(self, filename, type):
-		if type == 'page':
-			page = project.Page(filename, self.project)
-			self.editor = editor.PageEditor(page)
-		elif type == 'style':
-			style = project.Style(filename, self.project)
-			self.editor = editor.StyleEditor(style)
-		elif type == 'tpl':
-			tpl = project.Template(filename, self.project)
-			self.editor = editor.TemplateEditor(tpl)
+		'''Loads editor for file
 		
-		self.paned.add2(self.editor)
-		self.editor.show_all()
-		
-		# Add editor UI and actions
-		ui = self.editor.ui
-		actions = self.editor.edit_actions
-		self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
-		self.ui_manager.insert_action_group(actions, 1)
+		If there is already opened editor, it will be unloaded.
+		'''
+		if type in ('page', 'style', 'tpl'):
+			if 'editor' in self.__dict__:
+				# Unload old editor
+				self.editor.save()
+				self.paned.remove(self.editor)
+				# Remove editor UI and actions
+				self.ui_manager.remove_ui(self.editor_merge_id)
+				self.ui_manager.remove_action_group(self.editor.edit_actions)
+				
+			# Load new editor
+			if type == 'page':
+				page = project.Page(filename, self.project)
+				self.editor = editor.PageEditor(page)
+			elif type == 'style':
+				style = project.Style(filename, self.project)
+				self.editor = editor.StyleEditor(style)
+			elif type == 'tpl':
+				tpl = project.Template(filename, self.project)
+				self.editor = editor.TemplateEditor(tpl)
+			
+			self.paned.add2(self.editor)
+			self.editor.show_all()
+			
+			# Add editor UI and actions
+			ui = self.editor.ui
+			actions = self.editor.edit_actions
+			self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
+			self.ui_manager.insert_action_group(actions, 1)
 		
 	def run(self):
 		self.make_window()
