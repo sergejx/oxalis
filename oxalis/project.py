@@ -359,26 +359,15 @@ class Page(object):
 		f.close()
 	
 	def process_template(self, content):
-		self.content = content
 		if 'Template' in self.header:
 			tpl_name = self.header['Template']
 		else:
 			tpl_name = 'default'
 
-		f = file(os.path.join(self.project.dir, '_oxalis', 'templates', tpl_name), 'r')
-		tpl = f.read()
-		f.close()
-		return re.sub('\{(\w+)\}', self.replace, tpl)
-		
-	def replace(self, match):
-		tag = match.group(1)
-		#print tag
-		if tag == 'Content':
-			return self.content
-		elif tag in self.header:
-			return self.header[tag]
-		else:
-			return ''
+		tpl = Template(tpl_name, self.project)
+		tags = self.header.copy()
+		tags['Content'] = content
+		return tpl.process_page(tags)
 
 
 class Style(object):
@@ -402,6 +391,7 @@ class Style(object):
 
 
 class Template(object):
+	tag_re = re.compile('\{(\w+)\}')
 	def __init__(self, path, project):
 		self.project = project
 		self.path = path
@@ -419,6 +409,18 @@ class Template(object):
 		f = file(self.full_path, 'w')
 		f.write(self.text)
 		f.close()
+	
+	def process_page(self, tags):
+		self.tags = tags
+		repl = lambda match: self.replace(match, tags)
+		return self.tag_re.sub(repl, self.text)
+	
+	def replace(self, match, tags):
+		tag = match.group(1)
+		if tag in tags:
+			return tags[tag]
+		else:
+			return ''
 
 
 re_xml_declaration = re.compile('<\?xml.*? encoding=(?P<quote>\'|")(?P<enc>.+?)(?P=quote).*?\?>')
