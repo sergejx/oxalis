@@ -118,7 +118,7 @@ class Project(object):
 		 - display name
 		 - path to the file, relative to project base directory
 		 - type
-		Type can be: dir, page, style, file, tpl
+		Type can be: dir, page, style, image, file, tpl
 		Tree is stored in self.files
 		'''
 		self.files = gtk.TreeStore(str, str, str)
@@ -142,11 +142,11 @@ class Project(object):
 					name += '.html'
 					self.files.append(parent, (name, path, 'page'))
 				elif ext == '.css':
-					name = filename
-					self.files.append(parent, (name, path, 'style'))
+					self.files.append(parent, (filename, path, 'style'))
+				elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
+					self.files.append(parent, (filename, path, 'image'))
 				elif ext != '.html' and filename[0] not in ('.','_'):
-					name = filename
-					self.files.append(parent, (name, path, 'file'))
+					self.files.append(parent, (filename, path, 'file'))
 	
 	def load_templates_list(self):
 		'''Loads list of project templates

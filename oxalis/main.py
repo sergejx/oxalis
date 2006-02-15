@@ -83,7 +83,8 @@ class Oxalis(object):
 		'dir': 'gnome-fs-directory',
 		'page': 'gnome-mime-text-html',
 		'style': 'gnome-mime-text-css',
-		'file': 'gnome-mime-application'}
+		'file': 'gnome-mime-application',
+		'image': 'gnome-mime-image'}
 
 	def make_window(self):
 		self.window = gtk.Window()
