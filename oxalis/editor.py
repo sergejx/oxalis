@@ -44,20 +44,28 @@ class Editor(gtk.Notebook):
 </ui>
 '''
 	
-	def __init__(self, browser_has_toolbar=False):
-		gtk.Notebook.__init__(self)
+	def __init__(self, file, browser_has_toolbar=False):
+		'''Constructor for Editor
 		
-		# Create GtkMozembed
+		* file is object which represents file opened in editor, 
+		these objects are defined in project.py
+		* browser_has_toolbar - enables or disables toolbar
+		with location entry in preview tab
+		'''
+		gtk.Notebook.__init__(self)
+		self.file = file
 		self.browser = Browser(browser_has_toolbar)
 
 		self.append_page(self.create_edit_page(), gtk.Label('Edit'))
 		self.append_page(self.browser, gtk.Label('Preview'))
 		self.connect('switch-page', self.switch_page)
+		
+		self.set_text(file.text)
 	
 	def switch_page(self, notebook, page, page_num):
 		if page_num == 1:  # Preview
 			self.save()
-			self.browser.load_url(self.url)
+			self.browser.load_url(self.file.url)
 
 
 	def create_text_view(self, mime='text/html'):
@@ -83,6 +91,14 @@ class Editor(gtk.Notebook):
 		return text_scrolled
 	
 	create_edit_page = create_text_view
+	
+	def save(self):
+		'''Save edited file'''
+		text = self.buffer.get_text(
+			self.buffer.get_start_iter(), self.buffer.get_end_iter())
+		
+		self.file.text = text
+		self.file.write()
 	
 	def create_actions(self):
 		'''Create editor ActionGroup and store it in self.edit_actions'''
@@ -132,22 +148,18 @@ class Editor(gtk.Notebook):
 
 
 class PageEditor(Editor):
-	def __init__(self, page, templates_store):
-		self.templates_store = templates_store
-		Editor.__init__(self)
+	def __init__(self, file):
+		self.templates_store = file.project.templates
+		Editor.__init__(self, file)
 
-		self.page = page
-		if 'Title' in self.page.header:
-			self.page_name_entry.set_text(self.page.header['Title'])
-		if 'Template' in self.page.header:
-			template = self.page.header['Template']
+		if 'Title' in file.header:
+			self.page_name_entry.set_text(file.header['Title'])
+		if 'Template' in file.header:
+			template = file.header['Template']
 		else:
 			template = 'default'
 		
 		self.templates_store.foreach(self.search_template, template)
-		self.set_text(self.page.text)
-		
-		self.url = page.url
 	
 	def search_template(self, model, path, iter, template):
 		if model.get_value(iter, 0) == template:
@@ -171,61 +183,27 @@ class PageEditor(Editor):
 		
 		return table
 	
-	def update_page(self):
-		self.page.text = self.buffer.get_text(
-			self.buffer.get_start_iter(), self.buffer.get_end_iter())
-		self.page.header['Title'] = self.page_name_entry.get_text()
-		active = self.template_combo_box.get_active_iter()
-		self.page.header['Template'] = self.templates_store.get_value(active, 0)
-		
 	def save(self):
-		self.update_page()
-		self.page.write_page()
+		self.file.header['Title'] = self.page_name_entry.get_text()
+		active = self.template_combo_box.get_active_iter()
+		self.file.header['Template'] = self.templates_store.get_value(active, 0)
+		
+		Editor.save(self)
 
 
 class TemplateEditor(Editor):
-	def __init__(self, template):
-		self.template = template
-		Editor.__init__(self)
-		self.set_text(self.template.text)
-		
-		self.url = template.url
-		
-	def save(self):
-		text = self.buffer.get_text(
-			self.buffer.get_start_iter(), self.buffer.get_end_iter())
-		
-		self.template.text = text
-		self.template.write()
+	def __init__(self, file):
+		Editor.__init__(self, file)
 
 
 class StyleEditor(Editor):
-	def __init__(self, filename):
-		Editor.__init__(self, True)
-		
-		self.filename = filename
-		# Default preview page for CSS will be the main page of the project
-		self.url = 'http://127.0.0.1:8000/'
-		
-		f = file(filename)
-		text = f.read()
-		f.close()
-		
-		self.set_text(text)
-		
-		self.browser.load_url(self.url)
+	def __init__(self, file):
+		Editor.__init__(self, file, True)
+		self.browser.load_url(self.file.url)
 	
 	def create_edit_page(self):
-		return  self.create_text_view('text/css')
+		return self.create_text_view('text/css')
 
-	def save(self):
-		text = self.buffer.get_text(
-			self.buffer.get_start_iter(), self.buffer.get_end_iter())
-		
-		f = file(self.filename, 'w')
-		f.write(text)
-		f.close()
-	
 	def switch_page(self, notebook, page, page_num):
 		if page_num == 1:
 			self.save()

@@ -116,7 +116,7 @@ class Project(object):
 		
 		Tree is gtk.TreeStore with columns:
 		 - display name
-		 - full path
+		 - path to the file, relative to project base directory
 		 - type
 		Type can be: dir, page, style, file, tpl
 		Tree is stored in self.files
@@ -124,9 +124,13 @@ class Project(object):
 		self.files = gtk.TreeStore(str, str, str)
 		self.files.set_sort_column_id(0, gtk.SORT_ASCENDING)
 		
+		# Length of project base ditectory name ( + slash at the end)
+		base_len = len(self.dir) + 1
+		
 		parent = None
 		for dirpath, dirnames, filenames in os.walk(self.dir):
-			if dirpath == self.dir:
+			dirpath = dirpath[base_len:]  # remove base directory from path
+			if dirpath == '':
 				dirnames.remove('_oxalis')
 			else:
 				name = os.path.basename(dirpath)
@@ -154,8 +158,7 @@ class Project(object):
 		tpl_dir = os.path.join(self.dir, '_oxalis', 'templates')
 		for filename in os.listdir(tpl_dir):
 			name = os.path.basename(filename)
-			path = os.path.join(tpl_dir, filename)
-			self.templates.append((name, path, 'tpl'))
+			self.templates.append((name, filename, 'tpl'))
 	
 	def find_parent_dir(self, selected):
 		'''Find parent directory for adding new file to project
@@ -251,15 +254,15 @@ class Project(object):
 		self.templates.remove(selected)
 	
 	def generate(self):
-		for dirpath, dirnames, filenames in os.walk(self.dir):
-			if dirpath == self.dir:
-				dirnames.remove('_oxalis')
-			for filename in filenames:
-				name, ext = os.path.splitext(filename)
-				path = os.path.join(dirpath, filename)
-				if ext == '.text':
-					page = Page(self, path)
-					page.write_html()
+		'''Generate project output files'''
+		self.files.foreach(self.generate_item)
+	
+	def generate_item(self, model, path, iter):
+		type = model.get_value(iter, 2)
+		if type == 'page':
+			path = model.get_value(iter, 1)
+			page = Page(path, self)
+			page.write_html()
 	
 	def upload(self):
 		rcfile = os.path.join(self.dir, '_oxalis', 'sitecopyrc')
@@ -308,18 +311,16 @@ class Project(object):
 class Page(object):
 	header_re = re.compile('(\w+): ?(.*)')
 	
-	def __init__(self, project, path):
+	def __init__(self, path, project):
 		self.project = project
 		self.path = path
+		self.full_path = os.path.join(project.dir, path)
+		self.url = 'http://127.0.0.1:8000/' + path[:-5] + '.html'
 		
-		self.url = path[:-5] + '.html'
-		self.url = self.url.replace(
-			project.dir, 'http://127.0.0.1:8000', 1)
-		
-		self.read_page()
+		self.read()
 	
-	def read_page(self):
-		page = file(self.path)
+	def read(self):
+		page = file(self.full_path)
 		self.header = {}
 		self.text = ''
 		in_body = False
@@ -335,8 +336,8 @@ class Page(object):
 		page.close()
 		#return (header, text)
 	
-	def write_page(self):
-		f = file(self.path, 'w')
+	def write(self):
+		f = file(self.full_path, 'w')
 		for (key, value) in self.header.items():
 			f.write(key + ': ' + value + '\n')
 		f.write('\n')
@@ -352,7 +353,7 @@ class Page(object):
 		return html.encode(encoding)
 	
 	def write_html(self):
-		root, ext = os.path.splitext(self.path)
+		root, ext = os.path.splitext(self.full_path)
 		f = file(root + '.html', 'w')
 		f.write(self.process_page())
 		f.close()
@@ -379,19 +380,43 @@ class Page(object):
 		else:
 			return ''
 
-class Template(object):
-	def __init__(self, project, path):
-		self.project = project
+
+class Style(object):
+	def __init__(self, path, project):
 		self.path = path
-		self.url = path.replace(
-			project.dir, 'http://127.0.0.1:8000', 1)
+		self.project = project
+		self.full_path = os.path.join(project.dir, path)
+		self.url = 'http://127.0.0.1:8000/'
 		
-		f = file(path, 'r')
+		self.read()
+	
+	def read(self):
+		f = file(self.full_path, 'r')
 		self.text = f.read()
 		f.close()
 	
 	def write(self):
-		f = file(self.path, 'w')
+		f = file(self.full_path, 'w')
+		f.write(self.text)
+		f.close()
+
+
+class Template(object):
+	def __init__(self, path, project):
+		self.project = project
+		self.path = path
+		self.full_path = os.path.join(project.dir, '_oxalis', 'templates', path)
+		self.url = 'http://127.0.0.1:8000/_oxalis/templates/' + path
+		
+		self.read()
+	
+	def read(self):
+		f = file(self.full_path, 'r')
+		self.text = f.read()
+		f.close()
+	
+	def write(self):
+		f = file(self.full_path, 'w')
 		f.write(self.text)
 		f.close()
 

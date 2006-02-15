@@ -448,7 +448,7 @@ class Oxalis(object):
 		self.project_actions.set_sensitive(True)
 		# Make DeleteSelected action insensitive while nothing is selected
 		self.project_actions.get_action('DeleteSelected').set_sensitive(False)
-		self.load_file(os.path.join(self.project.dir, 'index.text'), 'page')
+		self.load_file('index.text', 'page')
 		
 		self.start_server()
 	
@@ -460,12 +460,13 @@ class Oxalis(object):
 		
 	def load_file(self, filename, type):
 		if type == 'page':
-			page = project.Page(self.project, filename)
-			self.editor = editor.PageEditor(page, self.project.templates)
+			page = project.Page(filename, self.project)
+			self.editor = editor.PageEditor(page)
 		elif type == 'style':
-			self.editor = editor.StyleEditor(filename)
+			style = project.Style(filename, self.project)
+			self.editor = editor.StyleEditor(style)
 		elif type == 'tpl':
-			tpl = project.Template(self.project, filename)
+			tpl = project.Template(filename, self.project)
 			self.editor = editor.TemplateEditor(tpl)
 		
 		self.paned.add2(self.editor)

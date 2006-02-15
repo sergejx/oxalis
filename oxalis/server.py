@@ -50,7 +50,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
 			self.send_header('Content-Type', 'text/html')
 			self.end_headers()
 			
-			page = Page(project, path)
+			page = Page(path, project)
 			html = page.process_page()
 			self.wfile.write(html)
 		
