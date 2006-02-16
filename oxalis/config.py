@@ -64,7 +64,7 @@ def write():
 	_config.write(f)
 	f.close()
 
-def init(*rc_files):
+def init():
 	for section, values in _defaults.iteritems():
 		_config.add_section(section)
 		for key, value in values.iteritems():
