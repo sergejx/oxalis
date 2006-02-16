@@ -194,7 +194,7 @@ class Project(object):
 		'''
 		if selected == None:
 			parent = None
-			dir = self.dir
+			dir = ''
 		elif self.files.get_value(selected, 2) == 'dir':
 			parent = selected
 			dir = self.files.get_value(selected, 1)
@@ -203,7 +203,7 @@ class Project(object):
 			if parent != None:
 				dir = self.files.get_value(parent, 1)
 			else:
-				dir = self.dir
+				dir = ''
 		return parent, dir
 	
 	def new_page(self, name, selected):
@@ -212,7 +212,7 @@ class Project(object):
 		name - name of page, must ends with .html
 		'''
 		parent, dir = self.find_parent_dir(selected)
-		path = os.path.join(dir, name)
+		path = os.path.join(self.dir, dir, name)
 		path = path[:-4] + 'text'  # Change extension from .html to .text
 		# Create empty page
 		f = file(path, 'w')
@@ -224,7 +224,7 @@ class Project(object):
 	def new_style(self, name, selected):
 		'''Create new CSS style'''
 		parent, dir = self.find_parent_dir(selected)
-		path = os.path.join(dir, name)
+		path = os.path.join(self.dir, dir, name)
 		# Create empty file
 		f = file(path, 'w')
 		f.close()
@@ -234,7 +234,7 @@ class Project(object):
 	def new_dir(self, name, selected):
 		'''Create new directory'''
 		parent, dir = self.find_parent_dir(selected)
-		path = os.path.join(dir, name)
+		path = os.path.join(self.dir, dir, name)
 		os.mkdir(path)
 		
 		self.files.append(parent, (name, path, 'dir'))
@@ -252,7 +252,7 @@ class Project(object):
 		'''Add existing file to project'''
 		parent, dir = self.find_parent_dir(selected)
 		name = os.path.basename(filename)
-		path = os.path.join(dir, name)
+		path = os.path.join(self.dir, dir, name)
 		shutil.copyfile(filename, path)
 		
 		self.files.append(parent, (name, path, 'file'))
@@ -263,6 +263,7 @@ class Project(object):
 		selected - tree iter
 		'''
 		path, type = self.files.get(selected, 1, 2)
+		path = os.path.join(self.dir, path)  # Make absolute path
 		if type == 'dir':
 			shutil.rmtree(path)
 		else:
@@ -275,6 +276,8 @@ class Project(object):
 		selected - tree iter
 		'''
 		path = self.templates.get_value(selected, 1)
+		# Make absolute path
+		path = os.path.join(self.dir, '_oxalis', 'templates', path)
 		os.remove(path)
 		self.templates.remove(selected)
 	
