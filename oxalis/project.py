@@ -107,7 +107,13 @@ class Project(object):
 	def __init__(self, dir):
 		self.dir = dir
 		self.config = RawConfigParser()
+		# Set default configuration
+		self.config.add_section('state')
+		self.config.set('state', 'last_file', 'index.text')
+		self.config.set('state', 'last_template', 'default')
+		# Read configuration
 		self.config.read(os.path.join(self.dir, '_oxalis', 'config'))
+		
 		self.load_files_tree()
 		self.load_templates_list()
 	
@@ -159,6 +165,25 @@ class Project(object):
 		for filename in os.listdir(tpl_dir):
 			name = os.path.basename(filename)
 			self.templates.append((name, filename, 'tpl'))
+	
+	def close(self, comp_file):
+		'''Close project and save last opened files in both components'''
+		self.config.set('state', 'last_file', comp_file['files'][0])
+		self.config.set('state', 'last_template', comp_file['templates'][0])
+		# Save properties
+		f = file(os.path.join(self.dir, '_oxalis', 'config'), 'w')
+		self.config.write(f)
+		f.close
+	
+	def get_file_type(self, filename):
+		'''Get file type from filename'''
+		root, ext = os.path.splitext(filename)
+		if ext == '.text':
+			return 'page'
+		elif ext == '.css':
+			return 'style'
+		elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
+			return 'image'
 	
 	def find_parent_dir(self, selected):
 		'''Find parent directory for adding new file to project

@@ -436,7 +436,12 @@ class Oxalis(object):
 		self.create_paned()
 		self.tree_view.set_model(self.project.files)
 		
-		self.component_file = {'templates': ('default', 'tpl')}
+		last_file = self.project.config.get('state', 'last_file')
+		last_template = self.project.config.get('state', 'last_template')
+		self.component_file = {
+			'files': (last_file, self.project.get_file_type(last_file)),
+			'templates': (last_template, 'tpl')
+		}
 		
 		self.vbox.remove(self.start_panel)
 		self.vbox.pack_start(self.paned)
@@ -445,7 +450,7 @@ class Oxalis(object):
 		self.project_actions.set_sensitive(True)
 		# Make DeleteSelected action insensitive while nothing is selected
 		self.project_actions.get_action('DeleteSelected').set_sensitive(False)
-		self.load_file('index.text', 'page')
+		self.load_file(*self.component_file['files'])
 		
 		self.start_server()
 	
@@ -514,6 +519,8 @@ class Oxalis(object):
 		about.destroy()
 			
 	def quit_cb(self, *args):
+		if 'project' in self.__dict__:
+			self.project.close(self.component_file)
 		if 'editor' in self.__dict__:
 			self.editor.save()
 
