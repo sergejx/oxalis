@@ -409,6 +409,7 @@ class Oxalis(object):
 			self.tree_view.set_model(self.project.templates)
 		# Make DeleteSelected action insensitive while nothing is selected
 		self.project_actions.get_action('DeleteSelected').set_sensitive(False)
+		self.load_file(*self.component_file[component])
 
 	def file_activated(self, tree_view, path, column):
 		'''Callback called when user doubleclicks on item in tree view'''
@@ -435,6 +436,8 @@ class Oxalis(object):
 		self.create_paned()
 		self.tree_view.set_model(self.project.files)
 		
+		self.component_file = {'templates': ('default', 'tpl')}
+		
 		self.vbox.remove(self.start_panel)
 		self.vbox.pack_start(self.paned)
 		self.paned.show_all()
@@ -458,6 +461,7 @@ class Oxalis(object):
 		If there is already opened editor, it will be unloaded.
 		'''
 		if type in ('page', 'style', 'tpl'):
+			self.component_file[self.active_component] = (filename, type)
 			if 'editor' in self.__dict__:
 				# Unload old editor
 				self.editor.save()
