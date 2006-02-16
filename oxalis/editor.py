@@ -26,7 +26,7 @@ import gtkmozembed
 import config
 
 
-class Editor(gtk.Notebook):
+class Editor(gtk.VBox):
 	ui = '''
 <ui>
   <menubar name="MenuBar">
@@ -52,13 +52,25 @@ class Editor(gtk.Notebook):
 		* browser_has_toolbar - enables or disables toolbar
 		with location entry in preview tab
 		'''
-		gtk.Notebook.__init__(self)
+		gtk.VBox.__init__(self)
 		self.file = file
 		self.browser = Browser(browser_has_toolbar)
-
-		self.append_page(self.create_edit_page(), gtk.Label('Edit'))
-		self.append_page(self.browser, gtk.Label('Preview'))
-		self.connect('switch-page', self.switch_page)
+		
+		# Show file name above editor
+		path = self.file.path
+		if path.endswith('.text'):
+			path = path[:-4] + 'html'
+		editor_label = gtk.Label('<b>' + path + '</b>')
+		editor_label.set_use_markup(True)
+		editor_label.set_alignment(0, 0.5)
+		editor_label.set_padding(4, 0)
+		self.pack_start(editor_label, False, padding=4)
+		
+		notebook = gtk.Notebook()
+		notebook.append_page(self.create_edit_page(), gtk.Label('Edit'))
+		notebook.append_page(self.browser, gtk.Label('Preview'))
+		notebook.connect('switch-page', self.switch_page)
+		self.pack_start(notebook)
 		
 		self.set_text(file.text)
 	
