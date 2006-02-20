@@ -24,6 +24,7 @@ import gtksourceview
 import gtkmozembed
 
 import config
+import util
 
 
 class Editor(gtk.VBox):
@@ -184,16 +185,19 @@ class PageEditor(Editor):
 		cell = gtk.CellRendererText()
 		self.template_combo_box.pack_start(cell, True)
 		self.template_combo_box.add_attribute(cell, 'text', 0)
-
 		
-		table = gtk.Table(3, 2)
-		table.attach(gtk.Label('Title:'), 0, 1, 0, 1, 0, 0)
-		table.attach(self.page_name_entry, 1, 2, 0, 1, gtk.EXPAND|gtk.FILL, 0)
-		table.attach(gtk.Label('Template:'), 0, 1, 1, 2, 0, 0)
-		table.attach(self.template_combo_box, 1, 2, 1, 2, gtk.EXPAND|gtk.FILL, 0)
-		table.attach(self.create_text_view(), 0, 2, 2, 3)
+		table = util.make_table((
+			('Title:', self.page_name_entry),
+			('Template:', self.template_combo_box)
+		))
+		table.set_col_spacings(6)
+		table.set_border_width(2)
 		
-		return table
+		vbox = gtk.VBox()
+		vbox.pack_start(table, False)
+		vbox.pack_start(self.create_text_view())
+		
+		return vbox
 	
 	def save(self):
 		self.file.header['Title'] = self.page_name_entry.get_text()

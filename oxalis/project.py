@@ -28,6 +28,7 @@ import gtk
 import markdown
 import smartypants
 
+import util
 
 default_template = '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -480,17 +481,19 @@ class ProjectPropertiesDialog(gtk.Dialog):
 		self.set_default_response(gtk.RESPONSE_OK)
 		
 		self.entries = {}
+		table_rows = []
 		for key in self.keys:
 			self.entries[key] = gtk.Entry()
 			if key in settings:
 				self.entries[key].set_text(settings[key])
-			label = gtk.Label(self.texts[key])
-			hbox = gtk.HBox()
-			hbox.pack_start(label)
-			hbox.pack_start(self.entries[key])
-			self.vbox.pack_start(hbox)
+			table_rows.append((self.texts[key], self.entries[key]))
 		self.entries['passwd'].set_visibility(False)
 		
+		table = util.make_table(table_rows)
+		table.set_border_width(6)
+		table.set_row_spacings(6)
+		table.set_col_spacings(12)
+		self.vbox.pack_start(table)
 		self.vbox.show_all()
 		
 	def get_settings(self):
