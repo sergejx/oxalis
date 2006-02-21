@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name = 'oxalis',
-	version = '0.1-alpha3',
+	version = '0.1-alpha4',
 	description = 'Web Site Editor',
 	author = 'Sergej Chodarev',
 	author_email = 'sergejx@centrum.sk',
