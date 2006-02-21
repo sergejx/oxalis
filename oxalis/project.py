@@ -213,10 +213,11 @@ class Project(object):
 		name - name of page, must ends with .html
 		'''
 		parent, dir = self.find_parent_dir(selected)
-		path = os.path.join(self.dir, dir, name)
+		path = os.path.join(dir, name)
 		path = path[:-4] + 'text'  # Change extension from .html to .text
+		full_path = os.path.join(self.dir, path)
 		# Create empty page
-		f = file(path, 'w')
+		f = file(full_path, 'w')
 		f.write('\n')
 		f.close()
 		
@@ -225,9 +226,10 @@ class Project(object):
 	def new_style(self, name, selected):
 		'''Create new CSS style'''
 		parent, dir = self.find_parent_dir(selected)
-		path = os.path.join(self.dir, dir, name)
+		path = os.path.join(dir, name)
+		full_path = os.path.join(self.dir, path)
 		# Create empty file
-		f = file(path, 'w')
+		f = file(full_path, 'w')
 		f.close()
 		
 		self.files.append(parent, (name, path, 'style'))
@@ -235,26 +237,28 @@ class Project(object):
 	def new_dir(self, name, selected):
 		'''Create new directory'''
 		parent, dir = self.find_parent_dir(selected)
-		path = os.path.join(self.dir, dir, name)
-		os.mkdir(path)
+		path = os.path.join(dir, name)
+		full_path = os.path.join(self.dir, path)
+		os.mkdir(full_path)
 		
 		self.files.append(parent, (name, path, 'dir'))
 	
 	def new_template(self, name):
 		'''Create new template'''
-		path = os.path.join(self.dir, '_oxalis', 'templates', name)
+		full_path = os.path.join(self.dir, '_oxalis', 'templates', name)
 		# Create empty file
-		f = file(path, 'w')
+		f = file(full_path, 'w')
 		f.close()
 		
-		self.templates.append((name, path, 'tpl'))
+		self.templates.append((name, name, 'tpl'))
 	
 	def add_file(self, filename, selected):
 		'''Add existing file to project'''
 		parent, dir = self.find_parent_dir(selected)
 		name = os.path.basename(filename)
-		path = os.path.join(self.dir, dir, name)
-		shutil.copyfile(filename, path)
+		path = os.path.join(dir, name)
+		full_path = os.path.join(self.dir, path)
+		shutil.copyfile(filename, full_path)
 		
 		self.files.append(parent, (name, path, 'file'))
 	
