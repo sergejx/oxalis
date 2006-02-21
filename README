@@ -1,0 +1,14 @@
+Installation
+------------
+
+For installing Oxalis, just run as root
+
+    ./setup.py install
+
+On Ubuntu you will need to install python-dev package, before installing Oxalis
+
+    apt-get install python-dev
+
+After installation you can select Oxalis in Applications -> Development menu or run it with command
+
+    oxalis
