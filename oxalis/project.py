@@ -130,30 +130,44 @@ class Project(object):
 		'''
 		self.files = gtk.TreeStore(str, str, str)
 		self.files.set_sort_column_id(0, gtk.SORT_ASCENDING)
+		self.load_dir('')
+	
+	def load_dir(self, dirpath, parent=None):
+		'''Loads directory to files tree store
 		
-		# Length of project base ditectory name ( + slash at the end)
-		base_len = len(self.dir) + 1
+		dirpath - directory to load, path relative to self.dir
+		parent - gtk.TreeIter of parent directory
+		'''
+		if dirpath != '':  # not root directory
+			name = os.path.basename(dirpath)
+			parent = self.files.append(parent, (name, dirpath, 'dir'))
 		
-		parent = None
-		for dirpath, dirnames, filenames in os.walk(self.dir):
-			dirpath = dirpath[base_len:]  # remove base directory from path
-			if dirpath == '':
-				dirnames.remove('_oxalis')
-			else:
-				name = os.path.basename(dirpath)
-				parent = self.files.append(parent, (name, dirpath, 'dir'))
-			for filename in filenames:
-				name, ext = os.path.splitext(filename)
+		for filename in os.listdir(os.path.join(self.dir, dirpath)):
+			if filename != '_oxalis':
 				path = os.path.join(dirpath, filename)
-				if ext == '.text':
-					name += '.html'
-					self.files.append(parent, (name, path, 'page'))
-				elif ext == '.css':
-					self.files.append(parent, (filename, path, 'style'))
-				elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
-					self.files.append(parent, (filename, path, 'image'))
-				elif ext != '.html' and filename[0] not in ('.','_'):
-					self.files.append(parent, (filename, path, 'file'))
+				full_path = os.path.join(self.dir, path)
+				if os.path.isdir(full_path):
+					self.load_dir(path, parent)
+				else:
+					self.load_file(filename, path, parent)
+				
+	def load_file(self, filename, path, parent):
+		'''Append file to files tree store
+		
+		filename - name of the file
+		path - path relative to self.dir
+		parent - gtk.TreeIter of parent directory
+		'''
+		name, ext = os.path.splitext(filename)
+		if ext == '.text':
+			name += '.html'
+			self.files.append(parent, (name, path, 'page'))
+		elif ext == '.css':
+			self.files.append(parent, (filename, path, 'style'))
+		elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
+			self.files.append(parent, (filename, path, 'image'))
+		elif ext != '.html' and filename[0] != '.':
+			self.files.append(parent, (filename, path, 'file'))
 	
 	def load_templates_list(self):
 		'''Loads list of project templates
