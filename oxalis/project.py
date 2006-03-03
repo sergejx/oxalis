@@ -129,6 +129,7 @@ class Project(object):
 		Tree is stored in self.files
 		'''
 		self.files = gtk.TreeStore(str, str, str)
+		self.files.set_sort_func(0, self.sort_files_store)
 		self.files.set_sort_column_id(0, gtk.SORT_ASCENDING)
 		self.load_dir('')
 	
@@ -168,6 +169,16 @@ class Project(object):
 			self.files.append(parent, (filename, path, 'image'))
 		elif ext != '.html' and filename[0] != '.':
 			self.files.append(parent, (filename, path, 'file'))
+	
+	def sort_files_store(self, model, iter1, iter2):
+		'''Comparison function for sorting files tree store'''
+		name1, type1 = model.get(iter1, 0, 2)
+		name2, type2 = model.get(iter2, 0, 2)
+		if type1 == 'dir' and type2 != 'dir':
+			return -1
+		if type1 != 'dir' and type2 == 'dir':
+			return 1
+		return cmp(name1, name2)
 	
 	def load_templates_list(self):
 		'''Loads list of project templates
