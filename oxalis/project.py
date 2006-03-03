@@ -300,6 +300,49 @@ class Project(object):
 		os.remove(path)
 		self.templates.remove(selected)
 	
+	def move_file(self, file_path, tree_path, position):
+		'''Move file (used with drag&drop)
+		
+		file_path - relative path to the file
+		tree_path - gtk.TreeStore path, where file was dropped
+		position - position, where file was dropped
+		Returns new file path if file was moved or None if not
+		Caller should remove old item from tree store if move was successful
+		'''
+		iter = self.files.get_iter(tree_path)
+		type = self.files.get_value(iter, 2)
+		if (position == gtk.TREE_VIEW_DROP_BEFORE or
+			position == gtk.TREE_VIEW_DROP_AFTER or
+			type != 'dir'):
+			iter = self.files.iter_parent(iter)
+		if iter != None:
+			dir_path = self.files.get_value(iter, 1)
+		else:
+			dir_path = ''
+		file_dir, file_name = os.path.split(file_path)
+		if file_dir == dir_path:
+			return None  # File was dropped to the same directory
+		else:
+			src_path = os.path.join(self.dir, file_path)
+			dest_path = os.path.join(self.dir, dir_path, file_name)
+			shutil.move(src_path, dest_path)
+			
+			# Try to move also generated HTML file
+			root, ext = os.path.splitext(file_name)
+			if ext == '.text':
+				html_src_path = os.path.join(self.dir, file_dir, root + '.html')
+				if os.path.exists(html_src_path):
+					html_dest_path = os.path.join(self.dir, dir_path,
+						root + '.html')
+					shutil.move(html_src_path, html_dest_path)
+			
+			# Add file to the tree store
+			if os.path.isdir(dest_path):
+				self.load_dir(os.path.join(dir_path, file_name), iter)
+			else:
+				self.load_file(file_name, os.path.join(dir_path, file_name), iter)
+			return os.path.join(dir_path, file_name)
+	
 	def generate(self):
 		'''Generate project output files'''
 		self.files.foreach(self.generate_item)

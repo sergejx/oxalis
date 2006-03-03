@@ -210,6 +210,19 @@ class Oxalis(object):
 		self.tree_view.connect('row-activated', self.file_activated)
 		selection = self.tree_view.get_selection()
 		selection.connect('changed', self.selection_changed_cb)
+		
+		# Set up Drag and Drop
+		self.tree_view.enable_model_drag_source(gtk.gdk.BUTTON1_MASK, 
+			[('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET, 0)],
+			gtk.gdk.ACTION_MOVE)
+		self.tree_view.enable_model_drag_dest(
+			[('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET, 0)],
+			gtk.gdk.ACTION_MOVE)
+		self.tree_view.connect("drag-data-get",
+			self.tree_drag_data_get_cb)
+		self.tree_view.connect("drag-data-received",
+			self.tree_drag_data_received_cb)
+		
 		# Create scrolled window
 		tree_scrolled = gtk.ScrolledWindow()
 		tree_scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
@@ -233,6 +246,27 @@ class Oxalis(object):
 		self.paned.add1(nav_panel)
 		
 		self.paned.set_position(config.getint('window', 'sidepanel-width'))
+	
+	def tree_drag_data_get_cb(self,
+			treeview, context, selection, info, timestamp):
+		tree_selection = treeview.get_selection()
+		model, iter = tree_selection.get_selected()
+		file_path = model.get_value(iter, 1)
+		selection.set('file-path', 8, file_path)
+	
+	def tree_drag_data_received_cb(self,
+			treeview, context, x, y, selection, info, timestamp):
+		drop_info = treeview.get_dest_row_at_pos(x, y)
+		if drop_info == None:  # if item was dropped after last tree item
+			drop_info = (len(treeview.get_model())-1,), gtk.TREE_VIEW_DROP_AFTER
+		tree_path, position = drop_info
+		
+		file_path = selection.data
+		new_path = self.project.move_file(file_path, tree_path, position)
+		if new_path != None:
+			context.finish(True, True, timestamp)
+		else:
+			context.finish(False, False, timestamp)
 	
 	def font_changed(self):
 		self.editor.set_font()
