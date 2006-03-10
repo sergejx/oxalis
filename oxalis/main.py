@@ -265,6 +265,10 @@ class Oxalis(object):
 		new_path = self.project.move_file(file_path, tree_path, position)
 		if new_path != None:
 			context.finish(True, True, timestamp)
+			# If moved file is opened in editor, update its path
+			if self.editor.document.path == file_path:
+				self.editor.document.path = new_path
+				self.editor.set_editor_label()
 		else:
 			context.finish(False, False, timestamp)
 	

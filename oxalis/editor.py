@@ -57,15 +57,12 @@ class Editor(gtk.VBox):
 		self.document = document
 		self.browser = Browser(browser_has_toolbar)
 		
-		# Show document path above editor
-		path = self.document.path
-		if path.endswith('.text'):
-			path = path[:-4] + 'html'
-		editor_label = gtk.Label('<b>' + path + '</b>')
-		editor_label.set_use_markup(True)
-		editor_label.set_alignment(0, 0.5)
-		editor_label.set_padding(4, 0)
-		self.pack_start(editor_label, False, padding=4)
+		# Create label above editor for displaying document path
+		self.editor_label = gtk.Label()
+		self.set_editor_label()
+		self.editor_label.set_alignment(0, 0.5)
+		self.editor_label.set_padding(4, 0)
+		self.pack_start(self.editor_label, False, padding=4)
 		
 		notebook = gtk.Notebook()
 		notebook.append_page(self.create_edit_page(), gtk.Label('Edit'))
@@ -74,6 +71,14 @@ class Editor(gtk.VBox):
 		self.pack_start(notebook)
 		
 		self.set_text(document.text)
+	
+	def set_editor_label(self):
+		'''Display document path in editor label'''
+		path = self.document.path
+		if path.endswith('.text'):
+			path = path[:-4] + 'html'
+		self.editor_label.set_markup('<b>' + path + '</b>')
+		
 	
 	def switch_page(self, notebook, page, page_num):
 		if page_num == 1:  # Preview
