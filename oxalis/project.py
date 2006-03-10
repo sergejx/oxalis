@@ -409,19 +409,63 @@ class Project(object):
 			f.close
 
 
-class Page(object):
+class Document(object):
+	'''Abstract base class for documents which can be edited in Oxalis
+	
+	Member variables:
+	  * project - points to project
+	  * path - path to the document, relative to project directry
+	  * url - URL, which can be used to display document preview
+	'''
+	
+	def __init__(self, path, project):
+		'''Initializes document with path and project
+		and reads its contents from the associated file.
+		'''
+		self.project = project
+		self.path = path
+		self.read()
+	
+	def set_path(self, path):
+		self._path = path
+		self._set_full_path(path)
+		self._set_url(path)
+	
+	path = property(lambda self: self._path, set_path, None,
+		'Path to the document')
+	
+	def _set_url(self, path):
+		self.url = None
+	
+	def _set_full_path(self, path):
+		self._full_path = os.path.join(self.project.dir, path)
+	
+	def read(self):
+		'''Read document contents from file'''
+		f = file(self._full_path, 'r')
+		self.text = f.read()
+		f.close()
+	
+	def write(self):
+		'''Write document contents to file'''
+		f = file(self._full_path, 'w')
+		f.write(self.text)
+		f.close()
+
+
+class Page(Document):
+	'''HTML page'''
+	
 	header_re = re.compile('(\w+): ?(.*)')
 	
 	def __init__(self, path, project):
-		self.project = project
-		self.path = path
-		self.full_path = os.path.join(project.dir, path)
+		Document.__init__(self, path, project)
+	
+	def _set_url(self, path):
 		self.url = 'http://127.0.0.1:8000/' + path[:-5] + '.html'
-		
-		self.read()
 	
 	def read(self):
-		page = file(self.full_path)
+		page = file(self._full_path)
 		self.header = {}
 		self.text = ''
 		in_body = False
@@ -435,10 +479,9 @@ class Page(object):
 				if match != None:
 					self.header[match.group(1)] = match.group(2)
 		page.close()
-		#return (header, text)
 	
 	def write(self):
-		f = file(self.full_path, 'w')
+		f = file(self._full_path, 'w')
 		for (key, value) in self.header.items():
 			f.write(key + ': ' + value + '\n')
 		f.write('\n')
@@ -454,7 +497,7 @@ class Page(object):
 		return html.encode(encoding)
 	
 	def write_html(self):
-		root, ext = os.path.splitext(self.full_path)
+		root, ext = os.path.splitext(self._full_path)
 		f = file(root + '.html', 'w')
 		f.write(self.process_page())
 		f.close()
@@ -471,45 +514,30 @@ class Page(object):
 		return tpl.process_page(tags)
 
 
-class Style(object):
+class Style(Document):
+	'''CSS style'''
+	
 	def __init__(self, path, project):
-		self.path = path
-		self.project = project
-		self.full_path = os.path.join(project.dir, path)
+		Document.__init__(self, path, project)
+	
+	def _set_url(self, path):
 		self.url = 'http://127.0.0.1:8000/'
-		
-		self.read()
-	
-	def read(self):
-		f = file(self.full_path, 'r')
-		self.text = f.read()
-		f.close()
-	
-	def write(self):
-		f = file(self.full_path, 'w')
-		f.write(self.text)
-		f.close()
 
 
-class Template(object):
+class Template(Document):
+	'''Template for HTML pages'''
+	
 	tag_re = re.compile('\{(\w+)\}')
+	
 	def __init__(self, path, project):
-		self.project = project
-		self.path = path
-		self.full_path = os.path.join(project.dir, '_oxalis', 'templates', path)
+		Document.__init__(self, path, project)
+	
+	def _set_full_path(self, path):
+		self._full_path = os.path.join(self.project.dir,
+			'_oxalis', 'templates', path)
+	
+	def _set_url(self, path):
 		self.url = 'http://127.0.0.1:8000/_oxalis?template=' + path
-		
-		self.read()
-	
-	def read(self):
-		f = file(self.full_path, 'r')
-		self.text = f.read()
-		f.close()
-	
-	def write(self):
-		f = file(self.full_path, 'w')
-		f.write(self.text)
-		f.close()
 	
 	def process_page(self, tags):
 		self.tags = tags

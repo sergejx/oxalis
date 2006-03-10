@@ -45,20 +45,20 @@ class Editor(gtk.VBox):
 </ui>
 '''
 	
-	def __init__(self, file, browser_has_toolbar=False):
+	def __init__(self, document, browser_has_toolbar=False):
 		'''Constructor for Editor
 		
-		* file is object which represents file opened in editor, 
+		* document is object which represents document opened in editor, 
 		these objects are defined in project.py
 		* browser_has_toolbar - enables or disables toolbar
 		with location entry in preview tab
 		'''
 		gtk.VBox.__init__(self)
-		self.file = file
+		self.document = document
 		self.browser = Browser(browser_has_toolbar)
 		
-		# Show file name above editor
-		path = self.file.path
+		# Show document path above editor
+		path = self.document.path
 		if path.endswith('.text'):
 			path = path[:-4] + 'html'
 		editor_label = gtk.Label('<b>' + path + '</b>')
@@ -73,12 +73,12 @@ class Editor(gtk.VBox):
 		notebook.connect('switch-page', self.switch_page)
 		self.pack_start(notebook)
 		
-		self.set_text(file.text)
+		self.set_text(document.text)
 	
 	def switch_page(self, notebook, page, page_num):
 		if page_num == 1:  # Preview
 			self.save()
-			self.browser.load_url(self.file.url)
+			self.browser.load_url(self.document.url)
 
 
 	def create_text_view(self, mime='text/html'):
@@ -106,12 +106,12 @@ class Editor(gtk.VBox):
 	create_edit_page = create_text_view
 	
 	def save(self):
-		'''Save edited file'''
+		'''Save edited document'''
 		text = self.buffer.get_text(
 			self.buffer.get_start_iter(), self.buffer.get_end_iter())
 		
-		self.file.text = text
-		self.file.write()
+		self.document.text = text
+		self.document.write()
 	
 	def create_actions(self):
 		'''Create editor ActionGroup and store it in self.edit_actions'''
@@ -161,14 +161,14 @@ class Editor(gtk.VBox):
 
 
 class PageEditor(Editor):
-	def __init__(self, file):
-		self.templates_store = file.project.templates
-		Editor.__init__(self, file)
+	def __init__(self, document):
+		self.templates_store = document.project.templates
+		Editor.__init__(self, document)
 
-		if 'Title' in file.header:
-			self.page_name_entry.set_text(file.header['Title'])
-		if 'Template' in file.header:
-			template = file.header['Template']
+		if 'Title' in document.header:
+			self.page_name_entry.set_text(document.header['Title'])
+		if 'Template' in document.header:
+			template = document.header['Template']
 		else:
 			template = 'default'
 		
@@ -200,22 +200,22 @@ class PageEditor(Editor):
 		return vbox
 	
 	def save(self):
-		self.file.header['Title'] = self.page_name_entry.get_text()
+		self.document.header['Title'] = self.page_name_entry.get_text()
 		active = self.template_combo_box.get_active_iter()
-		self.file.header['Template'] = self.templates_store.get_value(active, 0)
+		self.document.header['Template'] = self.templates_store.get_value(active, 0)
 		
 		Editor.save(self)
 
 
 class TemplateEditor(Editor):
-	def __init__(self, file):
-		Editor.__init__(self, file)
+	def __init__(self, document):
+		Editor.__init__(self, document)
 
 
 class StyleEditor(Editor):
-	def __init__(self, file):
-		Editor.__init__(self, file, True)
-		self.browser.load_url(self.file.url)
+	def __init__(self, document):
+		Editor.__init__(self, document, True)
+		self.browser.load_url(self.document.url)
 	
 	def create_edit_page(self):
 		return self.create_text_view('text/css')
