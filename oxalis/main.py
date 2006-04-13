@@ -116,19 +116,23 @@ class Oxalis(object):
 			('NewDirectory', None, 'Directory', None, None, self.new_dir_cb),
 			('NewTemplate', None, 'Template', None, None, self.new_template_cb),
 			('AddFile', gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
-			('RenameSelected', None, 'Rename selected', None, None,
-				self.rename_selected_cb),
-			('DeleteSelected', gtk.STOCK_DELETE, 'Delete selected', None, None,
-				self.delete_selected_cb),
 			('Generate', None, 'Generate', None, None, self.generate_cb),
 			('Upload', None, 'Upload', None, None, self.upload_cb),
 			('Properties', gtk.STOCK_PROPERTIES, None, None, None,
 				self.properties_cb)
 		))
 		self.project_actions.set_sensitive(False)
+		self.selection_actions = gtk.ActionGroup('selection_actions')
+		self.selection_actions.add_actions((
+			('RenameSelected', None, 'Rename selected', None, None,
+				self.rename_selected_cb),
+			('DeleteSelected', gtk.STOCK_DELETE, 'Delete selected', None, None,
+				self.delete_selected_cb)
+		))
 		
 		self.ui_manager.insert_action_group(app_actions, 0)
 		self.ui_manager.insert_action_group(self.project_actions, 0)
+		self.ui_manager.insert_action_group(self.selection_actions, 0)
 		menubar = self.ui_manager.get_widget('/MenuBar')
 		
 		self.vbox = gtk.VBox()
@@ -461,12 +465,10 @@ class Oxalis(object):
 	
 	def selection_changed_cb(self, selection):
 		count = selection.count_selected_rows()
-		delete_action = self.project_actions.get_action('DeleteSelected')
-		# If nothing is selected, DeleteSelected action should be insensitive
 		if count == 0:
-			delete_action.set_sensitive(False)
+			self.selection_actions.set_sensitive(False)
 		else:
-			delete_action.set_sensitive(True)
+			self.selection_actions.set_sensitive(True)
 	
 	def nav_button_clicked(self, button, param):
 		if self.active_component == param:
@@ -484,8 +486,7 @@ class Oxalis(object):
 		else:
 			self.files_button.set_active(False)
 			self.tree_view.set_model(self.project.templates)
-		# Make DeleteSelected action insensitive while nothing is selected
-		self.project_actions.get_action('DeleteSelected').set_sensitive(False)
+		self.selection_actions.set_sensitive(False)  # Nothing is selected
 		self.load_file(*self.component_file[component])
 
 	def file_activated(self, tree_view, path, column):
@@ -525,8 +526,7 @@ class Oxalis(object):
 		self.paned.show_all()
 		
 		self.project_actions.set_sensitive(True)
-		# Make DeleteSelected action insensitive while nothing is selected
-		self.project_actions.get_action('DeleteSelected').set_sensitive(False)
+		self.selection_actions.set_sensitive(False)  # Nothing is selected
 		self.load_file(*self.component_file['files'])
 		
 		self.start_server()
