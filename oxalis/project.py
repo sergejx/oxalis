@@ -287,6 +287,46 @@ class Project(object):
 		
 		self.files.append(parent, (name, path, 'file'))
 	
+	def rename_file(self, selected, new_name):
+		'''Rename selected file
+		
+		selected - tree iter of the selected file
+		'''
+		path, type = self.files.get(selected, 1, 2)
+		full_path = os.path.join(self.dir, path)  # Make absolute path
+		head, tail = os.path.split(path)
+		if type == 'page':
+			new_path = os.path.join(head, new_name[:-5]+'.text')
+		else:
+			new_path = os.path.join(head, new_name)
+		new_full_path = os.path.join(self.dir, new_path)  # Make absolute path
+		
+		os.rename(full_path, new_full_path)
+		
+		# Rename also generated HTML
+		if type == 'page':
+			html_full_path = full_path[:-5]+'.html'
+			if os.path.exists(html_full_path):
+				html_new_full_path = new_full_path[:-5]+'.html'
+				os.rename(html_full_path, html_new_full_path)
+		
+		self.files.set(selected, 0, new_name)
+		self.files.set(selected, 1, new_path)
+	
+	def rename_template(self, selected, new_name):
+		'''Rename selected template
+		
+		selected - tree iter of the selected template
+		'''
+		# TODO: Change name of template in all pages which use it
+		name = self.templates.get_value(selected, 1)
+		full_path = os.path.join(self.dir, '_oxalis', 'templates', name)
+		new_full_path = os.path.join(self.dir, '_oxalis', 'templates', new_name)
+		os.rename(full_path, new_full_path)
+		
+		self.templates.set(selected, 0, new_name)
+		self.templates.set(selected, 1, new_name)
+	
 	def remove_file(self, selected):
 		'''Remove selected file or directory
 		

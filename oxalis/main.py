@@ -57,6 +57,7 @@ ui = '''
         <menuitem action="NewTemplate" />
       </menu>
       <menuitem action="AddFile" />
+      <menuitem action="RenameSelected" />
       <menuitem action="DeleteSelected" />
       <separator />
       <menuitem action="Generate" />
@@ -115,6 +116,8 @@ class Oxalis(object):
 			('NewDirectory', None, 'Directory', None, None, self.new_dir_cb),
 			('NewTemplate', None, 'Template', None, None, self.new_template_cb),
 			('AddFile', gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
+			('RenameSelected', None, 'Rename selected', None, None,
+				self.rename_selected_cb),
 			('DeleteSelected', gtk.STOCK_DELETE, 'Delete selected', None, None,
 				self.delete_selected_cb),
 			('Generate', None, 'Generate', None, None, self.generate_cb),
@@ -328,6 +331,42 @@ class Oxalis(object):
 		
 		if response == gtk.RESPONSE_OK:
 			self.project.add_file(filename, self.get_selected())
+	
+	def rename_selected_cb(self, action):
+		'''Rename selected file'''
+		selected = self.get_selected()
+		if self.active_component == 'files':
+			name, type = self.project.files.get(selected, 0, 2)
+		else:
+			name, type = self.project.templates.get(selected, 0, 2)
+		
+		dialog = gtk.Dialog('Rename', self.window, 
+			buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+				'Rename', gtk.RESPONSE_OK))
+		dialog.set_default_response(gtk.RESPONSE_OK)
+		
+		label = gtk.Label('Name:')
+		entry = gtk.Entry()
+		entry.set_text(name)
+		entry.set_activates_default(True)
+		hbox = gtk.HBox()
+		hbox.pack_start(label)
+		hbox.pack_start(entry)
+		dialog.vbox.pack_start(hbox)
+		hbox.show_all()
+		
+		response = dialog.run()
+		name = entry.get_text()
+		dialog.destroy()
+		
+		if type == 'page' and not name.endswith('.html'):
+			name += '.html'
+		
+		if name != '':
+			if self.active_component == 'files':
+				self.project.rename_file(selected, name)
+			else:
+				self.project.rename_template(selected, name)
 	
 	def delete_selected_cb(self, action):
 		'''Delete selected file, directory or template'''
