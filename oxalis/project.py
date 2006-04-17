@@ -312,6 +312,7 @@ class Project(object):
 		
 		self.files.set(selected, 0, new_name)
 		self.files.set(selected, 1, new_path)
+		return new_path
 	
 	def rename_template(self, selected, new_name):
 		'''Rename selected template
@@ -326,6 +327,7 @@ class Project(object):
 		
 		self.templates.set(selected, 0, new_name)
 		self.templates.set(selected, 1, new_name)
+		return new_name
 	
 	def remove_file(self, selected):
 		'''Remove selected file or directory

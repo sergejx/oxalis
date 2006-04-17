@@ -340,9 +340,9 @@ class Oxalis(object):
 		'''Rename selected file'''
 		selected = self.get_selected()
 		if self.active_component == 'files':
-			name, type = self.project.files.get(selected, 0, 2)
+			name, path, type = self.project.files.get(selected, 0, 1, 2)
 		else:
-			name, type = self.project.templates.get(selected, 0, 2)
+			name, path, type = self.project.templates.get(selected, 0, 1, 2)
 		
 		dialog = gtk.Dialog('Rename', self.window, 
 			buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
@@ -368,9 +368,14 @@ class Oxalis(object):
 		
 		if name != '':
 			if self.active_component == 'files':
-				self.project.rename_file(selected, name)
+				new_path = self.project.rename_file(selected, name)
 			else:
-				self.project.rename_template(selected, name)
+				new_path = self.project.rename_template(selected, name)
+		
+		# If renamed file is opened in editor, update its path
+		if self.editor.document.path == path:
+			self.editor.document.path = new_path
+			self.editor.set_editor_label()
 	
 	def delete_selected_cb(self, action):
 		'''Delete selected file, directory or template'''
