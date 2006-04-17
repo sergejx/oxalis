@@ -112,11 +112,12 @@ class Editor(gtk.VBox):
 	
 	def save(self):
 		'''Save edited document'''
-		text = self.buffer.get_text(
-			self.buffer.get_start_iter(), self.buffer.get_end_iter())
-		
-		self.document.text = text
-		self.document.write()
+		if self.buffer.get_modified():
+			text = self.buffer.get_text(
+				self.buffer.get_start_iter(), self.buffer.get_end_iter())
+			self.document.text = text
+			self.document.write()
+			self.buffer.set_modified(False)
 	
 	def create_actions(self):
 		'''Create editor ActionGroup and store it in self.edit_actions'''
@@ -159,6 +160,7 @@ class Editor(gtk.VBox):
 		self.buffer.begin_not_undoable_action()
 		self.buffer.set_text(text)
 		self.buffer.end_not_undoable_action()
+		self.buffer.set_modified(False)
 	
 	def set_font(self):
 		font = config.get('editor', 'font')
@@ -205,11 +207,28 @@ class PageEditor(Editor):
 		return vbox
 	
 	def save(self):
-		self.document.header['Title'] = self.page_name_entry.get_text()
-		active = self.template_combo_box.get_active_iter()
-		self.document.header['Template'] = self.templates_store.get_value(active, 0)
+		modified = False
 		
-		Editor.save(self)
+		title = self.page_name_entry.get_text()
+		if title != self.document.header['Title']:
+			self.document.header['Title'] = title
+			modified = True
+		
+		active = self.template_combo_box.get_active_iter()
+		template = self.templates_store.get_value(active, 0)
+		if template != self.document.header['Template']:
+			self.document.header['Template'] = template
+			modified = True
+		
+		if self.buffer.get_modified():
+			text = self.buffer.get_text(
+				self.buffer.get_start_iter(), self.buffer.get_end_iter())
+			self.document.text = text
+			modified = True
+		
+		if modified:
+			self.document.write()
+			self.buffer.set_modified(False)
 
 
 class TemplateEditor(Editor):
