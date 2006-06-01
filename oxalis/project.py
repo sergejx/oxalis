@@ -506,21 +506,39 @@ class Page(Document):
 	def _set_url(self, path):
 		self.url = 'http://127.0.0.1:8000/' + path[:-5] + '.html'
 	
-	def read(self):
-		page = file(self._full_path)
+	# Read text only if it is needed
+	def _get_text(self):
+		try:
+			return self._text
+		except AttributeError:
+			self.read_text()
+			return self._text
+	text = property(_get_text)
+	
+	
+	def read_header(self):
+		'''Reads page header and stores it in self.header'''
+		self._page_file = file(self._full_path)
 		self.header = {}
-		self.text = ''
-		in_body = False
-		for line in page:
-			if in_body:
-				self.text += line
-			elif line == '\n':
-				in_body = True
+		for line in self._page_file:
+			if line == '\n':
+				break
 			else:
 				match = self.header_re.match(line)
 				if match != None:
 					self.header[match.group(1)] = match.group(2)
-		page.close()
+	
+	def read_text(self):
+		'''Reads page text and stores it in self._text'''
+		self._text = ""
+		# read_header has left file opened in self.page_file
+		for line in self._page_file:
+			self._text += line
+		
+		self._page_file.close() # We will not need it more
+	
+	def read(self):
+		self.read_header()
 	
 	def write(self):
 		f = file(self._full_path, 'w')
