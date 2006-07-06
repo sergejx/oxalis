@@ -405,7 +405,7 @@ class Project(object):
 		if type == 'page':
 			path = model.get_value(iter, 1)
 			page = Page(path, self)
-			page.write_html()
+			page.generate()
 	
 	def upload(self):
 		rcfile = os.path.join(self.dir, '_oxalis', 'sitecopyrc')
@@ -461,12 +461,9 @@ class Document(object):
 	'''
 	
 	def __init__(self, path, project):
-		'''Initializes document with path and project
-		and reads its contents from the associated file.
-		'''
+		'''Initializes document with path and project.'''
 		self.project = project
 		self.path = path
-		self.read()
 	
 	def set_path(self, path):
 		self._path = path
@@ -480,17 +477,27 @@ class Document(object):
 		self.url = None
 	
 	def _set_full_path(self, path):
-		self._full_path = os.path.join(self.project.dir, path)
+		self.full_path = os.path.join(self.project.dir, path)
 	
-	def read(self):
+	def get_text(self):
+		try:
+			return self._text
+		except AttributeError: # Lazy initialization
+			self.read_text()
+			return self._text
+	def set_text(self, value):
+		self._text = value
+	text = property(get_text, set_text, None, 'Text of the document')
+	
+	def read_text(self):
 		'''Read document contents from file'''
-		f = file(self._full_path, 'r')
-		self.text = f.read()
+		f = file(self.full_path, 'r')
+		self._text = f.read()
 		f.close()
 	
 	def write(self):
 		'''Write document contents to file'''
-		f = file(self._full_path, 'w')
+		f = file(self.full_path, 'w')
 		f.write(self.text)
 		f.close()
 
@@ -502,23 +509,20 @@ class Page(Document):
 	
 	def __init__(self, path, project):
 		Document.__init__(self, path, project)
+		self.read_header()
 	
 	def _set_url(self, path):
 		self.url = 'http://127.0.0.1:8000/' + path[:-5] + '.html'
 	
-	# Read text only if it is needed
-	def _get_text(self):
-		try:
-			return self._text
-		except AttributeError:
-			self.read_text()
-			return self._text
-	text = property(_get_text)
-	
+	def get_html_path(self):
+		root, ext = os.path.splitext(self.full_path)
+		return root + '.html'
+	html_path = property(get_html_path, None, None, 
+		'Path to the HTML file generated from this page')
 	
 	def read_header(self):
 		'''Reads page header and stores it in self.header'''
-		self._page_file = file(self._full_path)
+		self._page_file = file(self.full_path)
 		self.header = {}
 		for line in self._page_file:
 			if line == '\n':
@@ -537,16 +541,26 @@ class Page(Document):
 		
 		self._page_file.close() # We will not need it more
 	
-	def read(self):
-		self.read_header()
-	
 	def write(self):
-		f = file(self._full_path, 'w')
+		f = file(self.full_path, 'w')
 		for (key, value) in self.header.items():
 			f.write(key + ': ' + value + '\n')
 		f.write('\n')
 		f.write(self.text)
 		f.close()
+	
+	def generate(self):
+		'''Generates HTML file'''
+		tpl = Template(self.header['Template'], self.project)
+		# Check if source file or template was modified after HTML file
+		# was generated last time
+		if not os.path.exists(self.html_path) or \
+			os.path.getmtime(self.full_path) > os.path.getmtime(self.html_path) or \
+			os.path.getmtime(tpl.full_path) > os.path.getmtime(self.html_path):
+			
+			f = file(self.html_path, 'w')
+			f.write(self.process_page())
+			f.close()
 	
 	def process_page(self):
 		html = markdown.markdown(self.text)
@@ -555,12 +569,6 @@ class Page(Document):
 		html = self.process_template(html)
 		encoding = determine_encoding(html)
 		return html.encode(encoding)
-	
-	def write_html(self):
-		root, ext = os.path.splitext(self._full_path)
-		f = file(root + '.html', 'w')
-		f.write(self.process_page())
-		f.close()
 	
 	def process_template(self, content):
 		if 'Template' in self.header:
@@ -593,7 +601,7 @@ class Template(Document):
 		Document.__init__(self, path, project)
 	
 	def _set_full_path(self, path):
-		self._full_path = os.path.join(self.project.dir,
+		self.full_path = os.path.join(self.project.dir,
 			'_oxalis', 'templates', path)
 	
 	def _set_url(self, path):
@@ -661,3 +669,5 @@ class ProjectPropertiesDialog(gtk.Dialog):
 		for key in self.keys:
 			settings[key] = self.entries[key].get_text()
 		return settings
+
+# vim:noet:nowrap
