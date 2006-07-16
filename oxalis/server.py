@@ -65,7 +65,10 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
 			else:
 				self.send_error(404, 'Not Found')
 		else:
-			path = os.path.join(project.dir, self.path[1:])
+			base_path = project.get_url_path()
+			request_path = self.path[1:]
+			request_path = request_path[len(base_path):]
+			path = os.path.join(project.dir, request_path)
 			if os.path.isdir(path):
 				path = os.path.join(path, 'index.html')
 			root, ext = os.path.splitext(path)

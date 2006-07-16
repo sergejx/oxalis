@@ -35,3 +35,33 @@ def make_table(rows):
 		table.attach(row[1], 1, 2, i, i+1, gtk.EXPAND|gtk.FILL, 0)
 		i += 1
 	return table
+
+def make_dialog_layout(groups):
+	'''Create gtk.VBox for dialog windows with groups of controls properly
+	indented.
+	
+	groups - sequence of groups of contollers. Each item of sequence contain
+		2 items: group label text and group controllers
+	'''
+	
+	vbox = gtk.VBox()
+	vbox.set_border_width(6)
+	vbox.set_spacing(18)
+	
+	for group in groups:
+		group_box = gtk.VBox()
+		group_box.set_spacing(6)
+		label = gtk.Label()
+		label.set_markup('<b>%s</b>' % group[0])
+		label.set_alignment(0, 0.5)
+		group_box.pack_start(label)
+		
+		alignment = gtk.Alignment(0.5, 0.5, 1, 1)
+		alignment.add(group[1])
+		alignment.set_padding(0, 0, 12, 0)
+		group_box.pack_start(alignment)
+		
+		vbox.pack_start(group_box)
+	return vbox
+
+# vim:noet:nowrap

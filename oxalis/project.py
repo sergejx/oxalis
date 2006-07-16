@@ -112,11 +112,16 @@ class Project(object):
 		self.config.add_section('state')
 		self.config.set('state', 'last_file', 'index.text')
 		self.config.set('state', 'last_template', 'default')
+		self.config.add_section('preview')
+		self.config.set('preview', 'url_path', '/')
 		# Read configuration
 		self.config.read(os.path.join(self.dir, '_oxalis', 'config'))
 		
 		self.load_files_tree()
 		self.load_templates_list()
+		
+	def get_url_path(self):
+		return self.config.get('preview', 'url_path').lstrip('/') + '/'
 	
 	def load_files_tree(self):
 		'''Loads tree of project files
@@ -435,15 +440,18 @@ class Project(object):
 	
 	def properties_dialog(self, parent_window):
 		'''Display project properties dialog.'''
-		settings = dict(self.config.items('upload'))
+		settings = {}
+		settings['upload'] = dict(self.config.items('upload'))
+		settings['preview'] = dict(self.config.items('preview'))
 		dialog = ProjectPropertiesDialog(parent_window, settings)
 		response = dialog.run()
 		settings = dialog.get_settings()
 		dialog.destroy()
 		
 		if response == gtk.RESPONSE_OK:
-			for key, value in settings.items():
-				self.config.set('upload', key, value)
+			for section in settings:
+				for key, value in settings[section].items():
+					self.config.set(section, key, value)
 			
 			# Save properties
 			f = file(os.path.join(self.dir, '_oxalis', 'config'), 'w')
@@ -512,7 +520,8 @@ class Page(Document):
 		self.read_header()
 	
 	def _set_url(self, path):
-		self.url = 'http://127.0.0.1:8000/' + path[:-5] + '.html'
+		self.url = 'http://127.0.0.1:8000/' + \
+			self.project.get_url_path() + path[:-5] + '.html'
 	
 	def get_html_path(self):
 		root, ext = os.path.splitext(self.full_path)
@@ -589,7 +598,7 @@ class Style(Document):
 		Document.__init__(self, path, project)
 	
 	def _set_url(self, path):
-		self.url = 'http://127.0.0.1:8000/'
+		self.url = 'http://127.0.0.1:8000/' + self.project.get_url_path()
 
 
 class Template(Document):
@@ -644,30 +653,61 @@ class ProjectPropertiesDialog(gtk.Dialog):
 	
 	def __init__(self, window = None, settings = {}):
 		gtk.Dialog.__init__(self, 'Project Properties', window,
+			flags=gtk.DIALOG_NO_SEPARATOR,
 			buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
 				gtk.STOCK_OK, gtk.RESPONSE_OK))
 		self.set_default_response(gtk.RESPONSE_OK)
 		
+		# Upload settings
 		self.entries = {}
 		table_rows = []
 		for key in self.keys:
 			self.entries[key] = gtk.Entry()
-			if key in settings:
-				self.entries[key].set_text(settings[key])
+			if key in settings['upload']:
+				self.entries[key].set_text(settings['upload'][key])
 			table_rows.append((self.texts[key], self.entries[key]))
 		self.entries['passwd'].set_visibility(False)
 		
 		table = util.make_table(table_rows)
-		table.set_border_width(6)
 		table.set_row_spacings(6)
 		table.set_col_spacings(12)
-		self.vbox.pack_start(table)
+		
+		# Preview settings
+		vbox = gtk.VBox()
+		vbox.set_spacing(6)
+		
+		hbox = gtk.HBox()
+		hbox.set_spacing(12)
+		hbox.pack_start(gtk.Label('Path in URL:'), False)
+		self.path_entry = gtk.Entry()
+		self.path_entry.set_text(settings['preview']['url_path'])
+		hbox.pack_start(self.path_entry)
+		vbox.pack_start(hbox)
+		description = gtk.Label()
+		description.set_markup(
+			'<small>This setting is used for resolving absolute paths in previews. '
+			'For example if your site will be accessible via adress '
+			'<tt>http://www.example.com/mysite/</tt> enter <tt>mysite</tt></small>')
+		description.set_line_wrap(True)
+		description.set_alignment(0, 0.5)
+		vbox.pack_start(description)
+		
+		# Pack everything
+		box = util.make_dialog_layout((
+			('Upload settings', table),
+			('Preview settings', vbox)
+		))
+		
+		self.vbox.pack_start(box)
 		self.vbox.show_all()
 		
 	def get_settings(self):
 		settings = {}
+		settings['upload'] = {}
 		for key in self.keys:
-			settings[key] = self.entries[key].get_text()
+			settings['upload'][key] = self.entries[key].get_text()
+		settings['preview'] = {}
+		settings['preview']['url_path'] = self.path_entry.get_text()
 		return settings
 
 # vim:noet:nowrap
