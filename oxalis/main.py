@@ -409,14 +409,14 @@ class Oxalis(object):
 		msg_dlg.destroy()
 
 		if response == gtk.RESPONSE_OK:
+			# If removed file is opened in editor, replace it with DummyEditor
+			if self.editor.document.path == path:
+				self.load_file('', 'none')
+				
 			if self.active_component == 'files':
 				self.project.remove_file(selected)
 			else:
 				self.project.remove_template(selected)
-				
-			# If removed file is opened in editor, replace it with DummyEditor
-			if self.editor.document.path == path:
-				self.load_file('', 'none')
 	
 	def ask_name(self, title):
 		dialog = gtk.Dialog('New '+title, self.window, 
