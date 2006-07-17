@@ -386,9 +386,9 @@ class Oxalis(object):
 		'''Delete selected file, directory or template'''
 		selected = self.get_selected()
 		if self.active_component == 'files':
-			name, type = self.project.files.get(selected, 0, 2)
+			name, path, type = self.project.files.get(selected, 0, 1, 2)
 		else:
-			name, type = self.project.templates.get(selected, 0, 2)
+			name, path, type = self.project.templates.get(selected, 0, 1, 2)
 
 		if type == 'dir':
 			message = 'Delete directory "%(name)s" and its contents?' % {'name': name}
@@ -413,6 +413,10 @@ class Oxalis(object):
 				self.project.remove_file(selected)
 			else:
 				self.project.remove_template(selected)
+				
+			# If removed file is opened in editor, replace it with DummyEditor
+			if self.editor.document.path == path:
+				self.load_file('', 'none')
 	
 	def ask_name(self, title):
 		dialog = gtk.Dialog('New '+title, self.window, 
@@ -552,7 +556,10 @@ class Oxalis(object):
 		
 		If there is already opened editor, it will be unloaded.
 		'''
-		if type in ('page', 'style', 'tpl'):
+		if filename == '':
+			type = 'none'
+		
+		if type in ('page', 'style', 'tpl', 'none'):
 			self.component_file[self.active_component] = (filename, type)
 			if 'editor' in self.__dict__:
 				# Unload old editor
@@ -572,6 +579,8 @@ class Oxalis(object):
 			elif type == 'tpl':
 				tpl = project.Template(filename, self.project)
 				self.editor = editor.TemplateEditor(tpl)
+			elif type == 'none':
+				self.editor = editor.DummyEditor()
 			
 			self.paned.add2(self.editor)
 			self.editor.show_all()
@@ -645,3 +654,5 @@ def run():
 	config.init()
 	Oxalis().run()
 	config.write()
+
+# vim:noet:nowrap

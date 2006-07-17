@@ -252,6 +252,20 @@ class StyleEditor(Editor):
 			self.browser.reload()
 
 
+class DummyEditor(gtk.Label):
+	'''Dummy editor, used when no document is opened.'''
+	class DummyDocument:
+		pass
+	def __init__(self):
+		gtk.Label.__init__(self)
+		self.ui = ''
+		self.edit_actions = gtk.ActionGroup('edit_actions')
+		self.document = self.DummyDocument()
+		self.document.path = None
+	def save(self): pass
+	def set_font(self): pass
+
+
 class Browser(gtk.VBox):
 	'''Browser widget used for display preview'''
 	def __init__(self, has_toolbar=True):
@@ -286,3 +300,5 @@ class Browser(gtk.VBox):
 		'''Callback function called when browser location has changed'''
 		address = mozembed.get_location()
 		self.address_entry.set_text(address)
+
+# vim:noet:nowrap
