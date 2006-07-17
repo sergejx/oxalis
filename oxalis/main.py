@@ -243,11 +243,16 @@ class Oxalis(object):
 		self.active_component = 'files'
 		self.files_button.set_active(True)
 		
+		# Create buttons box
+		buttons = gtk.VBox(True, 3)
+		buttons.set_border_width(3)
+		buttons.pack_start(self.files_button)
+		buttons.pack_start(self.templates_button)
+		
 		# Create navigation panel
 		nav_panel = gtk.VBox()
 		nav_panel.pack_start(tree_scrolled)
-		nav_panel.pack_start(self.files_button, False)
-		nav_panel.pack_start(self.templates_button, False)
+		nav_panel.pack_start(buttons, False)
 		
 		self.paned = gtk.HPaned()
 		self.paned.add1(nav_panel)
