@@ -210,13 +210,15 @@ class PageEditor(Editor):
 		modified = False
 		
 		title = self.page_name_entry.get_text()
-		if title != self.document.header['Title']:
+		if ('Title' not in self.document.header or
+		   title != self.document.header['Title']):
 			self.document.header['Title'] = title
 			modified = True
 		
 		active = self.template_combo_box.get_active_iter()
 		template = self.templates_store.get_value(active, 0)
-		if template != self.document.header['Template']:
+		if ('Template' not in self.document.header or
+		   template != self.document.header['Template']):
 			self.document.header['Template'] = template
 			modified = True
 		
