@@ -106,7 +106,7 @@ class Document :
 
     def normalizeEntities(self, text) :
 
-        pairs = [ #("&", "&amp;"),
+        pairs = [ ("&", "&amp;"),
                   ("<", "&lt;"),
                   (">", "&gt;"),
                   ("\"", "&quot;")]
@@ -442,7 +442,7 @@ IMAGE_REFERENCE_RE = r'\!' + BRK + '\s*\[([^\]]*)\]' # ![alt text][2]
 NOT_STRONG_RE = r'( \* )'                        # stand-alone * or _
 AUTOLINK_RE = r'<(http://[^>]*)>'                # <http://www.123.com>
 AUTOMAIL_RE = r'<([^> ]*@[^> ]*)>'               # <me@example.com>
-HTML_RE = r'(\<[^\>]*\>)'                        # <...>
+HTML_RE = r'(\<[a-zA-Z/][^\>]*\>)'               # <...>
 ENTITY_RE = r'(&[\#a-zA-Z0-9]*;)'                # &amp;
 
 class BasePattern:
@@ -479,7 +479,7 @@ class BacktickPattern (BasePattern):
     def handleMatch(self, m, doc) :
         el = doc.createElement(self.tag)
         text = m.group(2).strip()
-        text = text.replace("&", "&amp;")
+        #text = text.replace("&", "&amp;")
         el.appendChild(doc.createTextNode(text))
         return el
 
@@ -1181,7 +1181,7 @@ class Markdown:
         parent_elem.appendChild(pre)
         pre.appendChild(code)
         text = "\n".join(detabbed).rstrip()+"\n"
-        text = text.replace("&", "&amp;")
+        #text = text.replace("&", "&amp;")
         code.appendChild(self.doc.createTextNode(text))
         self._processSection(parent_elem, theRest, inList)
 
