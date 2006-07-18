@@ -129,6 +129,7 @@ class Oxalis(object):
 			('DeleteSelected', gtk.STOCK_DELETE, 'Delete selected', None, None,
 				self.delete_selected_cb)
 		))
+		self.selection_actions.set_sensitive(False)
 		
 		self.ui_manager.insert_action_group(app_actions, 0)
 		self.ui_manager.insert_action_group(self.project_actions, 0)
