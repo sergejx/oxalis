@@ -1,3 +1,16 @@
+Oxalis is web site editor. It is created for editing static web sites.
+
+
+Requirements
+------------
+
+- Python 2.4
+- PyGTK 2.6
+- GnomePythonExtras (you need only GtkMozembed and GtkSourceView)
+- [sitecopy](http://www.lyra.org/sitecopy/)
+   (if you want to use uploading to server)
+
+
 Installation
 ------------
 
@@ -5,10 +18,26 @@ For installing Oxalis, just run as root
 
     ./setup.py install
 
-On Ubuntu you will need to install python-dev package, before installing Oxalis
-
-    apt-get install python-dev
-
-After installation you can select Oxalis in Applications -> Development menu or run it with command
+After installation you can select Oxalis in Applications -> Development menu or
+run it with command
 
     oxalis
+
+
+**Note for Fedora Core users**: If Oxalis don't run and just write error message
+like this:
+
+    ImportError: libgtkembedmoz.so: cannot open shared object file:
+    No such file or directory
+
+create file `/etc/ld.so.conf.d/mozilla.conf` and write path to Mozilla libraries
+in it. For example:
+
+    /usr/lib/mozilla-1.7.13/
+    
+Then run `ldconfig` as root. 
+
+**Note for Ubuntu users**: You will need to install python-dev package, before
+installing Oxalis
+
+    apt-get install python-dev
