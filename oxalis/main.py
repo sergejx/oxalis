@@ -34,7 +34,7 @@ import server
 
 
 name = 'Oxalis'
-version = '0.1-alpha4'
+version = '0.1-beta1'
 comments = 'Web Site Editor'
 copyright = 'Copyright \302\251 2005-2006 Sergej Chodarev'
 website = 'http://sergejx.mysteria.cz/oxalis/'
