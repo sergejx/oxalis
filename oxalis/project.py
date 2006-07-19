@@ -121,7 +121,7 @@ class Project(object):
 		self.load_templates_list()
 		
 	def get_url_path(self):
-		return self.config.get('preview', 'url_path').lstrip('/') + '/'
+		return self.config.get('preview', 'url_path').strip('/') + '/'
 	
 	def load_files_tree(self):
 		'''Loads tree of project files
@@ -476,13 +476,13 @@ class Document(object):
 	def set_path(self, path):
 		self._path = path
 		self._set_full_path(path)
-		self._set_url(path)
 	
 	path = property(lambda self: self._path, set_path, None,
 		'Path to the document')
 	
-	def _set_url(self, path):
-		self.url = None
+	def get_url(self):
+		return None
+	url = property(lambda self: self.get_url())
 	
 	def _set_full_path(self, path):
 		self.full_path = os.path.join(self.project.dir, path)
@@ -519,9 +519,9 @@ class Page(Document):
 		Document.__init__(self, path, project)
 		self.read_header()
 	
-	def _set_url(self, path):
-		self.url = 'http://127.0.0.1:8000/' + \
-			self.project.get_url_path() + path[:-5] + '.html'
+	def get_url(self):
+		return 'http://127.0.0.1:8000/' + \
+			self.project.get_url_path() + self.path[:-5] + '.html'
 	
 	def get_html_path(self):
 		root, ext = os.path.splitext(self.full_path)
@@ -596,9 +596,11 @@ class Style(Document):
 	
 	def __init__(self, path, project):
 		Document.__init__(self, path, project)
+		print 'Hello', self.project.get_url_path()
 	
-	def _set_url(self, path):
-		self.url = 'http://127.0.0.1:8000/' + self.project.get_url_path()
+	def get_url(self):
+		print 'Hello', self.project.get_url_path()
+		return 'http://127.0.0.1:8000/' + self.project.get_url_path()
 
 
 class Template(Document):
@@ -613,8 +615,8 @@ class Template(Document):
 		self.full_path = os.path.join(self.project.dir,
 			'_oxalis', 'templates', path)
 	
-	def _set_url(self, path):
-		self.url = 'http://127.0.0.1:8000/_oxalis?template=' + path
+	def get_url(self):
+		return 'http://127.0.0.1:8000/_oxalis?template=' + path
 	
 	def process_page(self, tags):
 		self.tags = tags
