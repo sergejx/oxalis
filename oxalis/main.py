@@ -446,33 +446,46 @@ class Oxalis(object):
 		self.project.upload()
 		
 		# Create upload progress dialog
-		self.upload_dlg = gtk.Window()
-		self.upload_dlg.set_title('Uploading')
-		self.upload_dlg.set_resizable(False)
-		self.upload_dlg.set_border_width(10)
-		vbox = gtk.VBox()
-		vbox.set_spacing(10)
-		self.upload_dlg.add(vbox)
-		label = gtk.Label('<b>Uploading ...</b>')
-		label.set_use_markup(True)
-		vbox.pack_start(label)
-		self.progress_bar = gtk.ProgressBar()
-		vbox.pack_start(self.progress_bar)
+		self.upload_dlg = gtk.Dialog('Upload', self.window,
+			gtk.DIALOG_NO_SEPARATOR, (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE))
+		self.upload_dlg.set_response_sensitive(gtk.RESPONSE_CLOSE, False)
+		self.upload_dlg.set_default_size(500, 310)
 		
+		# Box with contents of dialog
+		vbox = gtk.VBox()
+		vbox.set_border_width(6)
+		vbox.set_spacing(6)
+		
+		self.progress_bar = gtk.ProgressBar()
+		vbox.pack_start(self.progress_bar, False)
+		
+		self.upload_output = gtk.TextView()
+		scrolled = gtk.ScrolledWindow()
+		scrolled.set_policy(gtk.POLICY_NEVER, gtk.POLICY_ALWAYS)
+		scrolled.add(self.upload_output)
+		vbox.pack_start(scrolled)
+		
+		self.upload_dlg.vbox.pack_start(vbox)
 		self.upload_dlg.show_all()
 		
 		gobject.timeout_add(100, self.check_upload)
+		
+		self.upload_dlg.run()
+		self.upload_dlg.destroy()
 	
 	def check_upload(self):
 		'''Check upload status and move progressbar
 		
 		This function is called periodically by gobject timer
 		'''
-		if self.project.check_upload() == None:
+		returncode, output = self.project.check_upload()
+		self.upload_output.get_buffer().insert_at_cursor(output)
+		if returncode is None:
 			self.progress_bar.pulse()
 			return True
 		else:
-			self.upload_dlg.destroy()
+			self.progress_bar.set_fraction(1.0)
+			self.upload_dlg.set_response_sensitive(gtk.RESPONSE_CLOSE, True)
 			return False
 	
 	def properties_cb(self, action):

@@ -22,6 +22,7 @@ import subprocess
 import string
 import re
 from ConfigParser import RawConfigParser
+import fcntl
 
 import gtk
 
@@ -428,15 +429,28 @@ class Project(object):
 				'--rcfile='+rcfile, '--storepath='+storepath, '--init', 'project'))
 			code = sitecopy.wait()
 		self.sitecopy = subprocess.Popen(('sitecopy',
-			'--rcfile='+rcfile, '--storepath='+storepath, '--update', 'project'))
+			'--rcfile='+rcfile, '--storepath='+storepath, '--update', 'project'),
+			stdout=subprocess.PIPE)
 	
 	def check_upload(self):
 		'''Checks if upload is completed
 		
-		Returns return code or None if upload is not completed.
+		Returns tuple:
+		  - return code, or None if upload is not completed
+		  - string containing output of the sitecopy
 		'''
 		returncode = self.sitecopy.poll()
-		return returncode
+		output = ''
+		
+		# Set up asynchronous reading of sitecopy output
+		fd = self.sitecopy.stdout.fileno()
+		flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+		fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+		
+		try:
+			output = self.sitecopy.stdout.read()
+		finally:
+			return returncode, output
 	
 	def properties_dialog(self, parent_window):
 		'''Display project properties dialog.'''
