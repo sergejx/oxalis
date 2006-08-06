@@ -443,7 +443,14 @@ class Oxalis(object):
 		self.project.generate()
 	
 	def upload_cb(self, action):
-		self.project.upload()
+		result = self.project.upload()
+		
+		if result == False:
+			dlg = gtk.MessageDialog(self.window, 0, gtk.MESSAGE_ERROR, 
+				gtk.BUTTONS_OK, 'Uploading is not configured')
+			dlg.run()
+			dlg.destroy()
+			return
 		
 		# Create upload progress dialog
 		self.upload_dlg = gtk.Dialog('Upload', self.window,

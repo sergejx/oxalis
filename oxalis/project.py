@@ -414,6 +414,16 @@ class Project(object):
 			page.generate()
 	
 	def upload(self):
+		'''Starts uploading of project files to server.
+		
+		Returns True of uploading was started, or False if uploading was not
+		configured.
+		Process of uploading can be monitored using check_upload function.
+		'''
+		for key in ('host', 'remotedir', 'user', 'passwd'):
+			if not self.config.has_option('upload', key):
+				return False
+		
 		rcfile = os.path.join(self.dir, '_oxalis', 'sitecopyrc')
 		storepath = os.path.join(self.dir, '_oxalis', 'sitecopy')
 		
@@ -431,6 +441,8 @@ class Project(object):
 		self.sitecopy = subprocess.Popen(('sitecopy',
 			'--rcfile='+rcfile, '--storepath='+storepath, '--update', 'project'),
 			stdout=subprocess.PIPE)
+		
+		return True
 	
 	def check_upload(self):
 		'''Checks if upload is completed
