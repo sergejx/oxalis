@@ -427,6 +427,18 @@ class Project(object):
 		rcfile = os.path.join(self.dir, '_oxalis', 'sitecopyrc')
 		storepath = os.path.join(self.dir, '_oxalis', 'sitecopy')
 		
+		# Check if we need to initialize sitecopy
+		# It is needed if we upload to given location for the first time
+		need_init = False
+		for key in ('host', 'remotedir'):
+			if self.config.has_option('upload', 'last_'+key):
+				last = self.config.get('upload', 'last_'+key)
+				current = self.config.get('upload', key)
+				if current != last:
+					need_init = True
+		if not os.path.exists(os.path.join(storepath, 'project')):
+			need_init = True
+		
 		# Update sitecopyrc file
 		f = file(rcfile, 'w')
 		tpl = string.Template(sitecopy_rc)
@@ -434,13 +446,16 @@ class Project(object):
 			name='project', local=self.dir))
 		f.close()
 		
-		if not os.path.exists(os.path.join(storepath, 'project')):
+		if need_init:
 			sitecopy = subprocess.Popen(('sitecopy',
 				'--rcfile='+rcfile, '--storepath='+storepath, '--init', 'project'))
 			code = sitecopy.wait()
 		self.sitecopy = subprocess.Popen(('sitecopy',
 			'--rcfile='+rcfile, '--storepath='+storepath, '--update', 'project'),
 			stdout=subprocess.PIPE)
+		
+		for key in ('host', 'remotedir'):
+			self.config.set('upload', 'last_'+key, self.config.get('upload', key))
 		
 		return True
 	
