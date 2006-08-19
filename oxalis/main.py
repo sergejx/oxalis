@@ -287,8 +287,7 @@ class Oxalis(object):
 				context.finish(True, True, timestamp)
 				# If moved file is opened in editor, update its path
 				if self.editor.document.path == file_path:
-					self.editor.document.path = new_path
-					self.editor.set_editor_label()
+					self.update_editor_path(new_path)
 			else:
 				context.finish(False, False, timestamp)
 		elif info == self.DND_URI_LIST: # From file manager
@@ -399,8 +398,7 @@ class Oxalis(object):
 		
 		# If renamed file is opened in editor, update its path
 		if self.editor.document.path == path:
-			self.editor.document.path = new_path
-			self.editor.set_editor_label()
+			self.update_editor_path(new_path)
 	
 	def delete_selected_cb(self, action):
 		'''Delete selected file, directory or template'''
@@ -630,6 +628,13 @@ class Oxalis(object):
 			actions = self.editor.edit_actions
 			self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
 			self.ui_manager.insert_action_group(actions, 1)
+	
+	def update_editor_path(self, new_path):
+		'''Update path of document which is opened in active editor'''
+		self.editor.document.path = new_path
+		self.editor.set_editor_label()
+		self.component_file[self.active_component] = \
+			(new_path, self.component_file[self.active_component][1])
 		
 	def run(self):
 		self.make_window()
