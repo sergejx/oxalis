@@ -217,26 +217,27 @@ class Project(object):
 		elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
 			return 'image'
 	
-	def find_parent_dir(self, selected):
-		'''Find parent directory for adding new file to project
+	def find_parent_dir(self, treeiter, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
+		'''Find parent directory of file associated with treeiter.
 		
-		If directory is selected, returns it, else return parent directory of
-		selected file.
+		If treeiter points to directory, it will be returned.
+		position is for usage with Drag and Drop.		
 		Returns tuple of 2 items: tree iter and path to directory
 		'''
-		if selected == None:
-			parent = None
-			dir = ''
-		elif self.files.get_value(selected, 2) == 'dir':
-			parent = selected
-			dir = self.files.get_value(selected, 1)
+		
+		if treeiter == None:
+			dir_path = ''
 		else:
-			parent = self.files.iter_parent(selected)
-			if parent != None:
-				dir = self.files.get_value(parent, 1)
+			type = self.files.get_value(treeiter, 2)
+			if (position == gtk.TREE_VIEW_DROP_BEFORE or
+				position == gtk.TREE_VIEW_DROP_AFTER or
+				type != 'dir'):
+				treeiter = self.files.iter_parent(treeiter)
+			if treeiter != None:
+				dir_path = self.files.get_value(treeiter, 1)
 			else:
-				dir = ''
-		return parent, dir
+				dir_path = ''
+		return treeiter, dir_path
 	
 	def new_page(self, name, selected):
 		'''Create new page
@@ -283,9 +284,9 @@ class Project(object):
 		
 		self.templates.append((name, name, 'tpl'))
 	
-	def add_file(self, filename, selected):
+	def add_file(self, filename, selected, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
 		'''Add existing file to project'''
-		parent, dir = self.find_parent_dir(selected)
+		parent, dir = self.find_parent_dir(selected, position)
 		name = os.path.basename(filename)
 		path = os.path.join(dir, name)
 		full_path = os.path.join(self.dir, path)
@@ -369,15 +370,7 @@ class Project(object):
 		Caller should remove old item from tree store if move was successful
 		'''
 		iter = self.files.get_iter(tree_path)
-		type = self.files.get_value(iter, 2)
-		if (position == gtk.TREE_VIEW_DROP_BEFORE or
-			position == gtk.TREE_VIEW_DROP_AFTER or
-			type != 'dir'):
-			iter = self.files.iter_parent(iter)
-		if iter != None:
-			dir_path = self.files.get_value(iter, 1)
-		else:
-			dir_path = ''
+		iter, dir_path = self.find_parent_dir(iter, position)
 		file_dir, file_name = os.path.split(file_path)
 		if file_dir == dir_path:
 			return None  # File was dropped to the same directory

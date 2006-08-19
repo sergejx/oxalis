@@ -21,6 +21,7 @@
 import os
 from threading import Thread
 import subprocess
+import urllib
 
 import pygtk
 pygtk.require('2.0')
@@ -86,6 +87,10 @@ class Oxalis(object):
 		'style': 'gnome-mime-text-css',
 		'file': 'gnome-mime-application',
 		'image': 'gnome-mime-image'}
+	
+	# Drag and Drop constants 
+	DND_FILE_PATH = 80
+	DND_URI_LIST = 81
 
 	def make_window(self):
 		self.window = gtk.Window()
@@ -221,10 +226,11 @@ class Oxalis(object):
 		
 		# Set up Drag and Drop
 		self.tree_view.enable_model_drag_source(gtk.gdk.BUTTON1_MASK, 
-			[('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET, 0)],
+			[('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET, self.DND_FILE_PATH)],
 			gtk.gdk.ACTION_MOVE)
 		self.tree_view.enable_model_drag_dest(
-			[('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET, 0)],
+			[('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET, self.DND_FILE_PATH),
+			('text/uri-list', 0, self.DND_URI_LIST)],
 			gtk.gdk.ACTION_MOVE)
 		self.tree_view.connect("drag-data-get",
 			self.tree_drag_data_get_cb)
@@ -274,16 +280,29 @@ class Oxalis(object):
 			drop_info = (len(treeview.get_model())-1,), gtk.TREE_VIEW_DROP_AFTER
 		tree_path, position = drop_info
 		
-		file_path = selection.data
-		new_path = self.project.move_file(file_path, tree_path, position)
-		if new_path != None:
-			context.finish(True, True, timestamp)
-			# If moved file is opened in editor, update its path
-			if self.editor.document.path == file_path:
-				self.editor.document.path = new_path
-				self.editor.set_editor_label()
-		else:
-			context.finish(False, False, timestamp)
+		if info == self.DND_FILE_PATH: # From Oxalis itself
+			file_path = selection.data
+			new_path = self.project.move_file(file_path, tree_path, position)
+			if new_path != None:
+				context.finish(True, True, timestamp)
+				# If moved file is opened in editor, update its path
+				if self.editor.document.path == file_path:
+					self.editor.document.path = new_path
+					self.editor.set_editor_label()
+			else:
+				context.finish(False, False, timestamp)
+		elif info == self.DND_URI_LIST: # From file manager
+			# Extract paths
+			uris = selection.data.strip('\0').split()
+			paths = []
+			for uri in uris:
+				if uri.startswith('file://'):
+					paths.append(urllib.url2pathname(uri[7:]))
+			# Add files
+			for path in paths:
+				if os.path.isfile(path):
+					self.project.add_file(
+						path, self.project.files.get_iter(tree_path), position)
 	
 	def font_changed(self):
 		self.editor.set_font()
