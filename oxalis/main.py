@@ -226,8 +226,8 @@ class Oxalis(object):
 		
 		# Set up Drag and Drop
 		self.tree_view.enable_model_drag_source(gtk.gdk.BUTTON1_MASK, 
-			[('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET, self.DND_FILE_PATH)],
-			gtk.gdk.ACTION_MOVE)
+			[('file-path', gtk.TARGET_SAME_APP, self.DND_FILE_PATH)],
+			gtk.gdk.ACTION_MOVE | gtk.gdk.ACTION_COPY)
 		self.tree_view.enable_model_drag_dest(
 			[('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET, self.DND_FILE_PATH),
 			('text/uri-list', 0, self.DND_URI_LIST)],

@@ -45,6 +45,11 @@ class Editor(gtk.VBox):
 </ui>
 '''
 	
+	# Drag and Drop constants
+	DND_FILE_PATH = 80
+	DND_TEXT = 81
+	DND_TEXT_PLAIN = 82
+	
 	def __init__(self, document, browser_has_toolbar=False):
 		'''Constructor for Editor
 		
@@ -99,10 +104,11 @@ class Editor(gtk.VBox):
 		self.buffer.set_language(lang)
 		self.buffer.set_highlight(True)
 		
-		# Set up Drag&Drop
 		self.text_view.drag_dest_set(0,
-			[('TEXT', 0, 82), ('text/plain', 0, 83)],
+			[('TEXT', 0, self.DND_TEXT), ('text/plain', 0, self.DND_TEXT_PLAIN),
+			('file-path', gtk.TARGET_SAME_APP, self.DND_FILE_PATH)],
 			gtk.gdk.ACTION_COPY)
+		self.text_view.connect('drag-data-received', self.drag_data_received_cb)
 		
 		# Create scrolled window
 		text_scrolled = gtk.ScrolledWindow()
@@ -114,6 +120,16 @@ class Editor(gtk.VBox):
 		return text_scrolled
 	
 	create_edit_page = create_text_view
+	
+	def drag_data_received_cb(self, widget, context, x, y, selection, info, timestamp):
+		if info == self.DND_FILE_PATH: # If file from side panel was dropped
+			i = self.text_view.get_iter_at_location(x, y)
+			# Construct absolute path to file
+			path = '/' + self.document.project.get_url_path() + selection.data
+			if path.endswith('.text'):
+				path = path[:-4] + 'html'
+			self.buffer.insert(i, path)
+			context.finish(True, False, timestamp)
 	
 	def save(self):
 		'''Save edited document'''
