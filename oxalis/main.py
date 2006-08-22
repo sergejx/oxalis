@@ -460,6 +460,18 @@ class Oxalis(object):
 		self.project.generate()
 	
 	def upload_cb(self, action):
+		dlg = gtk.MessageDialog(self.window, 0, gtk.MESSAGE_QUESTION, 0,
+			'Should project be generated before uploading?')
+		dlg.format_secondary_text('''If you made some changes to project and didn't generate it after that, you should generate it now.''')
+		dlg.add_button("Don't generate", gtk.RESPONSE_NO)
+		dlg.add_button('Generate', gtk.RESPONSE_YES)
+		response = dlg.run()
+		dlg.destroy()
+		
+		if response == gtk.RESPONSE_YES:
+			self.generate_cb(None)
+		
+		# Start uploading
 		result = self.project.upload()
 		
 		if result == False:
