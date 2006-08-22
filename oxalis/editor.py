@@ -99,6 +99,11 @@ class Editor(gtk.VBox):
 		self.buffer.set_language(lang)
 		self.buffer.set_highlight(True)
 		
+		# Set up Drag&Drop
+		self.text_view.drag_dest_set(0,
+			[('TEXT', 0, 82), ('text/plain', 0, 83)],
+			gtk.gdk.ACTION_COPY)
+		
 		# Create scrolled window
 		text_scrolled = gtk.ScrolledWindow()
 		text_scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
