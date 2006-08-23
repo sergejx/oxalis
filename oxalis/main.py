@@ -1,5 +1,3 @@
-#! /usr/bin/env python
-
 # Oxalis Web Editor
 #
 # Copyright (C) 2005-2006 Sergej Chodarev
