@@ -650,7 +650,7 @@ class Template(Document):
 			'_oxalis', 'templates', path)
 	
 	def get_url(self):
-		return 'http://127.0.0.1:8000/_oxalis?template=' + path
+		return 'http://127.0.0.1:8000/_oxalis?template=' + self.path
 	
 	def process_page(self, tags):
 		self.tags = tags
