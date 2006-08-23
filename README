@@ -41,3 +41,16 @@ Then run `ldconfig` as root.
 installing Oxalis
 
     apt-get install python-dev
+
+If Oxalis crashes when you click to Preview tab, it is caused by bug #26436 [1].
+To fix it replace line
+
+	Exec=oxalis
+
+with
+
+	Exec=LD_LIBRARY_PATH=/usr/lib/firefox oxalis
+
+in file `/usr/share/applications/oxalis.desktop`
+
+[1]: https://launchpad.net/distros/ubuntu/+source/firefox/+bug/26436
