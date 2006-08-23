@@ -295,7 +295,7 @@ class Oxalis(object):
 				context.finish(False, False, timestamp)
 		elif info == self.DND_URI_LIST: # From file manager
 			# Extract paths
-			uris = selection.data.strip('\0').split()
+			uris = selection.get_uris()
 			paths = []
 			for uri in uris:
 				if uri.startswith('file://'):
