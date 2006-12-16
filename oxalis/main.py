@@ -182,6 +182,7 @@ class Oxalis(object):
 			'New Project', action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
 			buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
 			'Create', gtk.RESPONSE_OK))
+		chooser.set_default_response(gtk.RESPONSE_OK)
 		response = chooser.run()
 		dirname = chooser.get_filename()
 		chooser.destroy()
@@ -195,6 +196,7 @@ class Oxalis(object):
 			'Open Project', action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
 			buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
 			gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+		chooser.set_default_response(gtk.RESPONSE_OK)
 		response = chooser.run()
 		dirname = chooser.get_filename()
 		chooser.destroy()
@@ -357,6 +359,7 @@ class Oxalis(object):
 			action=gtk.FILE_CHOOSER_ACTION_OPEN,
 			buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
 				gtk.STOCK_OK, gtk.RESPONSE_OK))
+		chooser.set_default_response(gtk.RESPONSE_OK)
 		response = chooser.run()
 		filename = chooser.get_filename()
 		chooser.destroy()
