@@ -630,10 +630,8 @@ class Style(Document):
 	
 	def __init__(self, path, project):
 		Document.__init__(self, path, project)
-		print 'Hello', self.project.get_url_path()
 	
 	def get_url(self):
-		print 'Hello', self.project.get_url_path()
 		return 'http://127.0.0.1:8000/' + self.project.get_url_path()
 
 

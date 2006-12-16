@@ -678,7 +678,6 @@ class PreferencesDialog(gtk.Dialog):
 		self.show_all()
 	
 	def font_set(self, font_button):
-		print font_button.get_font_name()
 		config.set('editor', 'font', font_button.get_font_name())
 
 
