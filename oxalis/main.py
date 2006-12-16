@@ -570,8 +570,12 @@ class Oxalis(object):
 		type = model.get_value(iter, 2)
 		if type != 'tpl':
 			icon_theme = gtk.icon_theme_get_default()
-			icon = icon_theme.load_icon(self.icons[type], 24, 0)
-			cell.set_property('pixbuf', icon)
+			if icon_theme.has_icon(self.icons[type]):
+				icon = icon_theme.load_icon(self.icons[type], 24, 0)
+				cell.set_property('pixbuf', icon)
+			elif type in ('page', 'style') and icon_theme.has_icon('text-x-generic'):
+				icon = icon_theme.load_icon('text-x-generic', 24, 0)
+				cell.set_property('pixbuf', icon)
 		else:
 			cell.set_property('pixbuf', None)
 		
