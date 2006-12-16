@@ -30,6 +30,7 @@ import config
 import project
 import editor
 import server
+import util
 
 
 name = 'Oxalis'
@@ -371,24 +372,8 @@ class Oxalis(object):
 		else:
 			name, path, type = self.project.templates.get(selected, 0, 1, 2)
 		
-		dialog = gtk.Dialog('Rename', self.window, 
-			buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-				'Rename', gtk.RESPONSE_OK))
-		dialog.set_default_response(gtk.RESPONSE_OK)
-		
-		label = gtk.Label('Name:')
-		entry = gtk.Entry()
-		entry.set_text(name)
-		entry.set_activates_default(True)
-		hbox = gtk.HBox()
-		hbox.pack_start(label)
-		hbox.pack_start(entry)
-		dialog.vbox.pack_start(hbox)
-		hbox.show_all()
-		
-		response = dialog.run()
-		name = entry.get_text()
-		dialog.destroy()
+		response, name = util.input_dialog(self.window,
+				'Rename', 'Name:', 'Rename', name)
 		
 		if type == 'page' and not name.endswith('.html'):
 			name += '.html'
@@ -440,23 +425,7 @@ class Oxalis(object):
 				self.project.remove_template(selected)
 	
 	def ask_name(self, title):
-		dialog = gtk.Dialog('New '+title, self.window, 
-			buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
-				gtk.STOCK_OK, gtk.RESPONSE_OK))
-		dialog.set_default_response(gtk.RESPONSE_OK)
-		
-		label = gtk.Label('Name:')
-		entry = gtk.Entry()
-		hbox = gtk.HBox()
-		hbox.pack_start(label)
-		hbox.pack_start(entry)
-		dialog.vbox.pack_start(hbox)
-		hbox.show_all()
-		
-		response = dialog.run()
-		name = entry.get_text()
-		dialog.destroy()
-		return response, name
+		return util.input_dialog(self.window, 'New '+title, 'Name:', 'Create')
 	
 	def generate_cb(self, action):
 		self.editor.save()

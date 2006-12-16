@@ -64,4 +64,35 @@ def make_dialog_layout(groups):
 		vbox.pack_start(group_box)
 	return vbox
 
+def input_dialog(parent, title, label, ok_label, value=''):
+	'''Show dialog asking user for input
+	
+	parent - parent window
+	title - title of dialog
+	label - label for text entry
+	ok_label - label for OK button
+	value - default value of text entry
+	
+	Returns tuple: response code, value of text entry
+	'''
+	buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, ok_label, gtk.RESPONSE_OK)
+	dialog = gtk.Dialog(parent=parent, title=title, buttons=buttons)
+	dialog.set_default_response(gtk.RESPONSE_OK)
+	dialog.set_has_separator(False)
+	
+	label = gtk.Label(label)
+	entry = gtk.Entry()
+	entry.set_text(value)
+	entry.set_activates_default(True)
+	hbox = gtk.HBox()
+	hbox.pack_start(label, False, False, 6)
+	hbox.pack_start(entry, True, True, 6)
+	dialog.vbox.pack_start(hbox, True, True, 6)
+	hbox.show_all()
+	
+	response = dialog.run()
+	value = entry.get_text()
+	dialog.destroy()
+	return response, value
+
 # vim:noet:nowrap
