@@ -672,9 +672,9 @@ class PreferencesDialog(gtk.Dialog):
 		font_button = gtk.FontButton(config.get('editor', 'font'))
 		font_button.connect('font-set', self.font_set)
 		box = gtk.HBox()
-		box.pack_start(label)
-		box.pack_start(font_button)
-		self.vbox.pack_start(box)
+		box.pack_start(label, False, False, 6)
+		box.pack_start(font_button, True, True, 6)
+		self.vbox.pack_start(box, True, True, 6)
 		self.show_all()
 	
 	def font_set(self, font_button):
