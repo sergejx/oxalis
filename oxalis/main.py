@@ -81,11 +81,13 @@ ui = '''
 
 class Oxalis(object):
 	icons = {
-		'dir': 'gnome-fs-directory',
-		'page': 'gnome-mime-text-html',
-		'style': 'gnome-mime-text-css',
-		'file': 'gnome-mime-application',
-		'image': 'gnome-mime-image'}
+		'dir': ['gnome-fs-directory', 'folder'],
+		'page': ['gnome-mime-text-html', 'text-html'],
+		'style': ['gnome-mime-text-css', 'text-x-css', 'text-x-generic'],
+		'file': ['gnome-mime-application', 'text-x-preview'],
+		'image': ['gnome-mime-image', 'image-x-generic'],
+		'tpl': []
+	}
 	
 	# Drag and Drop constants 
 	DND_FILE_PATH = 80
@@ -540,14 +542,12 @@ class Oxalis(object):
 	
 	def set_file_icon(self, column, cell, model, iter):
 		type = model.get_value(iter, 2)
-		if type != 'tpl':
-			icon_theme = gtk.icon_theme_get_default()
-			if icon_theme.has_icon(self.icons[type]):
-				icon = icon_theme.load_icon(self.icons[type], 24, 0)
+		icon_theme = gtk.icon_theme_get_default()
+		for icon_name in self.icons[type]:
+			if icon_theme.has_icon(icon_name):
+				icon = icon_theme.load_icon(icon_name, 24, 0)
 				cell.set_property('pixbuf', icon)
-			elif type in ('page', 'style') and icon_theme.has_icon('text-x-generic'):
-				icon = icon_theme.load_icon('text-x-generic', 24, 0)
-				cell.set_property('pixbuf', icon)
+				break
 		else:
 			cell.set_property('pixbuf', None)
 		
