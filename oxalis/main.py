@@ -630,7 +630,7 @@ class Oxalis(object):
 	def run(self):
 		self.make_window()
 		self.window.show_all()
-		gtk.threads_init()
+		gtk.gdk.threads_init()
 		gtk.main()
 	
 	def preferences_cb(self, action):
