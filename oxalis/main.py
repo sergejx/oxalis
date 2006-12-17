@@ -312,7 +312,10 @@ class Oxalis(object):
 						path, self.project.files.get_iter(tree_path), position)
 	
 	def font_changed(self):
-		self.editor.set_font()
+		try:
+			self.editor.set_font()
+		except AttributeError: # there is no editor
+			pass
 	
 	def get_selected(self):
 		'''Returns iter of selected item in tree_view'''
