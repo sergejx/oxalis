@@ -6,7 +6,8 @@ Requirements
 
 - Python 2.4
 - PyGTK 2.6
-- GnomePythonExtras (you need only GtkMozembed and GtkSourceView)
+- GnomePythonDesktop (for GtkSourceView)
+- GnomePythonExtras (for GtkMozembed)
 - [sitecopy](http://www.lyra.org/sitecopy/)
    (if you want to use uploading to server)
 
