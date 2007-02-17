@@ -3,7 +3,7 @@
 # This module contains small web server integrated in Oxalis and used for
 # previews
 #
-# Copyright (C) 2006 Sergej Chodarev
+# Copyright (C) 2006-2007 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -51,9 +51,10 @@ def run():
 
 class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path.startswith('/_oxalis'):
-            param = self.path[len('/_oxalis?'):]
-            param = param.split('=')
+        query_index = self.path.find('?')
+        if query_index != -1:
+            query = self.path[query_index+1:]
+            param = query.split('=')
             if param[0] == 'template':
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/html')
@@ -68,30 +69,29 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
             base_path = project.get_url_path()
             request_path = self.path[1:]
             request_path = request_path[len(base_path):]
-            path = os.path.join(project.dir, request_path)
-            if os.path.isdir(path):
-                path = os.path.join(path, 'index.html')
-            root, ext = os.path.splitext(path)
+            full_path = os.path.join(project.dir, request_path)
+            if os.path.isdir(full_path):
+                request_path = os.path.join(request_path, 'index.html')
+                full_path = os.path.join(full_path, 'index.html')
+            root, ext = os.path.splitext(request_path)
 
             if ext == '.html':  # Pages
-                path = root + '.text'
-
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/html')
                 self.end_headers()
 
-                page = Page(path, project)
+                page = Page(request_path, project)
                 html = page.process_page()
                 self.wfile.write(html)
 
-            elif os.path.exists(path):  # Other files
-                mime = mimetypes.guess_type(path)
+            elif os.path.exists(full_path):  # Other files
+                mime = mimetypes.guess_type(full_path)
 
                 self.send_response(200)
                 self.send_header('Content-Type', mime)
                 self.end_headers()
 
-                f = file(path, 'r')
+                f = file(full_path, 'r')
                 shutil.copyfileobj(f, self.wfile)
                 f.close()
 

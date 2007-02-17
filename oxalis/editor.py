@@ -80,8 +80,6 @@ class Editor(gtk.VBox):
     def set_editor_label(self):
         '''Display document path in editor label'''
         path = self.document.path
-        if path.endswith('.text'):
-            path = path[:-4] + 'html'
         self.editor_label.set_markup('<b>' + path + '</b>')
 
 
@@ -129,8 +127,6 @@ class Editor(gtk.VBox):
             i = self.text_view.get_iter_at_location(x, y)
             # Construct absolute path to file
             path = '/' + self.document.project.get_url_path() + selection.data
-            if path.endswith('.text'):
-                path = path[:-4] + 'html'
             self.buffer.insert(i, path)
             context.finish(True, False, timestamp)
 

@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2006 Sergej Chodarev
+# Copyright (C) 2005-2007 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -61,7 +61,7 @@ def create_project(path):
     config_file = os.path.join(oxalis_dir, 'config')
     config = RawConfigParser()
     config.add_section('project')
-    config.set('project', 'format', '0.1')
+    config.set('project', 'format', '0.2')
     config.add_section('upload')
     f = file(config_file, 'w')
     config.write(f)
@@ -69,7 +69,9 @@ def create_project(path):
     # Make configuration file readable only by owner (it contains FTP password)
     os.chmod(config_file, 0600)
 
-    f = file(os.path.join(path, 'index.text'), 'w')
+    files_dir = os.path.join(oxalis_dir, 'files')
+    os.mkdir(files_dir)
+    f = file(os.path.join(files_dir, 'index.html'), 'w')
     f.write('Title: ' + name)
     f.write('\n\n')
     f.write(name)
@@ -105,10 +107,13 @@ def dir_is_project(directory):
 class Project(object):
     def __init__(self, dir):
         self.dir = dir
+        self.files_dir = os.path.join(dir, '_oxalis', 'files')
+        self.templates_dir = os.path.join(dir, '_oxalis', 'templates')
+
         self.config = RawConfigParser()
         # Set default configuration
         self.config.add_section('state')
-        self.config.set('state', 'last_file', 'index.text')
+        self.config.set('state', 'last_file', 'index.html')
         self.config.set('state', 'last_template', 'default')
         self.config.add_section('preview')
         self.config.set('preview', 'url_path', '/')
@@ -119,7 +124,17 @@ class Project(object):
         self.load_templates_list()
 
     def get_url_path(self):
-        return self.config.get('preview', 'url_path').strip('/') + '/'
+        """Return path part of project preview URL."""
+        path = self.config.get('preview', 'url_path').strip('/')
+        if len(path) == 0:
+            return path
+        else:
+            return path + '/'
+
+    @property
+    def url(self):
+        """Preview URL of project."""
+        return 'http://127.0.0.1:8000/' + self.get_url_path()
 
     def load_files_tree(self):
         '''Loads tree of project files
@@ -163,9 +178,8 @@ class Project(object):
         parent - gtk.TreeIter of parent directory
         '''
         name, ext = os.path.splitext(filename)
-        if ext == '.text':
-            name += '.html'
-            self.files.append(parent, (name, path, 'page'))
+        if ext == '.html':
+            self.files.append(parent, (filename, path, 'page'))
         elif ext == '.css':
             self.files.append(parent, (filename, path, 'style'))
         elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
@@ -207,12 +221,26 @@ class Project(object):
     def get_file_type(self, filename):
         '''Get file type from filename'''
         root, ext = os.path.splitext(filename)
-        if ext == '.text':
+        if ext == '.html':
             return 'page'
         elif ext == '.css':
             return 'style'
         elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
             return 'image'
+
+    def get_document(self, path, type=None):
+        """Get document of specified type identified by path.
+
+        If type is not specified, it will be determined automatically.
+        """
+        if type is None:
+            type = self.get_file_type(path)
+        if type == 'page':
+            return Page(path, self)
+        elif type == 'style':
+            return Style(path, self)
+        elif type == 'tpl':
+            return Template(path, self)
 
     def find_parent_dir(self, treeiter, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
         '''Find parent directory of file associated with treeiter.
@@ -243,24 +271,14 @@ class Project(object):
         '''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
-        path = path[:-4] + 'text'  # Change extension from .html to .text
-        full_path = os.path.join(self.dir, path)
-        # Create empty page
-        f = file(full_path, 'w')
-        f.write('\n')
-        f.close()
-
+        Page.create(path, self)
         self.files.append(parent, (name, path, 'page'))
 
     def new_style(self, name, selected):
         '''Create new CSS style'''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
-        full_path = os.path.join(self.dir, path)
-        # Create empty file
-        f = file(full_path, 'w')
-        f.close()
-
+        Style.create(path, project)
         self.files.append(parent, (name, path, 'style'))
 
     def new_dir(self, name, selected):
@@ -274,11 +292,7 @@ class Project(object):
 
     def new_template(self, name):
         '''Create new template'''
-        full_path = os.path.join(self.dir, '_oxalis', 'templates', name)
-        # Create empty file
-        f = file(full_path, 'w')
-        f.close()
-
+        Template.create(path, project)
         self.templates.append((name, name, 'tpl'))
 
     def add_file(self, filename, selected, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
@@ -297,22 +311,10 @@ class Project(object):
         selected - tree iter of the selected file
         '''
         path, type = self.files.get(selected, 1, 2)
-        full_path = os.path.join(self.dir, path)  # Make absolute path
         head, tail = os.path.split(path)
-        if type == 'page':
-            new_path = os.path.join(head, new_name[:-5]+'.text')
-        else:
-            new_path = os.path.join(head, new_name)
-        new_full_path = os.path.join(self.dir, new_path)  # Make absolute path
-
-        os.rename(full_path, new_full_path)
-
-        # Rename also generated HTML
-        if type == 'page':
-            html_full_path = full_path[:-5]+'.html'
-            if os.path.exists(html_full_path):
-                html_new_full_path = new_full_path[:-5]+'.html'
-                os.rename(html_full_path, html_new_full_path)
+        new_path = os.path.join(head, new_name)
+        document = self.get_document(path, type)
+        document.move(new_path)
 
         self.files.set(selected, 0, new_name)
         self.files.set(selected, 1, new_path)
@@ -325,9 +327,8 @@ class Project(object):
         '''
         # TODO: Change name of template in all pages which use it
         name = self.templates.get_value(selected, 1)
-        full_path = os.path.join(self.dir, '_oxalis', 'templates', name)
-        new_full_path = os.path.join(self.dir, '_oxalis', 'templates', new_name)
-        os.rename(full_path, new_full_path)
+        tpl = self.get_document(name, 'tpl')
+        tpl.move(new_name)
 
         self.templates.set(selected, 0, new_name)
         self.templates.set(selected, 1, new_name)
@@ -339,11 +340,12 @@ class Project(object):
         selected - tree iter
         '''
         path, type = self.files.get(selected, 1, 2)
-        path = os.path.join(self.dir, path)  # Make absolute path
+        full_path = os.path.join(self.dir, path)  # Make absolute path
         if type == 'dir':
             shutil.rmtree(path)
         else:
-            os.remove(path)
+            document = self.get_document(path, type)
+            document.remove()
         self.files.remove(selected)
 
     def remove_template(self, selected):
@@ -353,8 +355,8 @@ class Project(object):
         '''
         path = self.templates.get_value(selected, 1)
         # Make absolute path
-        path = os.path.join(self.dir, '_oxalis', 'templates', path)
-        os.remove(path)
+        document = self.get_document(path, 'tpl')
+        document.remove()
         self.templates.remove(selected)
 
     def move_file(self, file_path, tree_path, position):
@@ -372,21 +374,12 @@ class Project(object):
         if file_dir == dir_path:
             return None  # File was dropped to the same directory
         else:
-            src_path = os.path.join(self.dir, file_path)
-            dest_path = os.path.join(self.dir, dir_path, file_name)
-            shutil.move(src_path, dest_path)
-
-            # Try to move also generated HTML file
-            root, ext = os.path.splitext(file_name)
-            if ext == '.text':
-                html_src_path = os.path.join(self.dir, file_dir, root + '.html')
-                if os.path.exists(html_src_path):
-                    html_dest_path = os.path.join(self.dir, dir_path,
-                        root + '.html')
-                    shutil.move(html_src_path, html_dest_path)
+            dest_path = os.path.join(dir_path, file_name)
+            document = self.get_document(file_path)
+            document.move(dest_path)
 
             # Add file to the tree store
-            if os.path.isdir(dest_path):
+            if os.path.isdir(os.path.join(self.dir, dest_path)):
                 self.load_dir(os.path.join(dir_path, file_name), iter)
             else:
                 self.load_file(file_name, os.path.join(dir_path, file_name), iter)
