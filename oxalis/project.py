@@ -114,7 +114,7 @@ class Project(object):
         # Set default configuration
         self.config.add_section('state')
         self.config.set('state', 'last_file', 'index.html')
-        self.config.set('state', 'last_template', 'default')
+        self.config.set('state', 'last_file_type', 'file')
         self.config.add_section('preview')
         self.config.set('preview', 'url_path', '/')
         # Read configuration
@@ -209,11 +209,8 @@ class Project(object):
             name = os.path.basename(filename)
             self.templates.append((name, filename, 'tpl'))
 
-    def close(self, comp_file):
-        '''Close project and save last opened files in both components'''
-        self.config.set('state', 'last_file', comp_file['files'][0])
-        self.config.set('state', 'last_template', comp_file['templates'][0])
-        # Save properties
+    def close(self):
+        """Close project and save properties"""
         f = file(os.path.join(self.dir, '_oxalis', 'config'), 'w')
         self.config.write(f)
         f.close

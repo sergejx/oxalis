@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2006 Sergej Chodarev
+# Copyright (C) 2005-2007 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@
 import os
 from threading import Thread
 import subprocess
-import urllib
 
 import pygtk
 pygtk.require('2.0')
@@ -28,6 +27,7 @@ import gobject
 
 import config
 import project
+import sidepane
 import editor
 import server
 import util
@@ -80,19 +80,6 @@ ui = '''
 '''
 
 class Oxalis(object):
-    icons = {
-        'dir': ['gnome-fs-directory', 'folder'],
-        'page': ['gnome-mime-text-html', 'text-html'],
-        'style': ['gnome-mime-text-css', 'text-x-css', 'text-x-generic'],
-        'file': ['gnome-mime-application', 'text-x-preview'],
-        'image': ['gnome-mime-image', 'image-x-generic'],
-        'tpl': []
-    }
-
-    # Drag and Drop constants
-    DND_FILE_PATH = 80
-    DND_URI_LIST = 81
-
     def make_window(self):
         self.window = gtk.Window()
         self.window.set_title('Oxalis')
@@ -216,101 +203,10 @@ class Oxalis(object):
                 dlg.destroy()
 
     def create_paned(self):
-        # Create tree view
-        self.tree_view = gtk.TreeView()
-        self.tree_view.set_headers_visible(False)
-        column = gtk.TreeViewColumn()
-        self.tree_view.append_column(column)
-        icon_cell = gtk.CellRendererPixbuf()
-        column.pack_start(icon_cell, False)
-        column.set_cell_data_func(icon_cell, self.set_file_icon)
-        cell = gtk.CellRendererText()
-        column.pack_start(cell, True)
-        column.add_attribute(cell, 'text', 0)
-        self.tree_view.set_search_column(0)
-        self.tree_view.connect('row-activated', self.file_activated)
-        selection = self.tree_view.get_selection()
-        selection.connect('changed', self.selection_changed_cb)
-
-        # Set up Drag and Drop
-        self.tree_view.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
-            [('file-path', gtk.TARGET_SAME_APP, self.DND_FILE_PATH)],
-            gtk.gdk.ACTION_MOVE | gtk.gdk.ACTION_COPY)
-        self.tree_view.enable_model_drag_dest(
-            [('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET,
-              self.DND_FILE_PATH),
-            ('text/uri-list', 0, self.DND_URI_LIST)],
-            gtk.gdk.ACTION_MOVE)
-        self.tree_view.connect("drag-data-get",
-            self.tree_drag_data_get_cb)
-        self.tree_view.connect("drag-data-received",
-            self.tree_drag_data_received_cb)
-
-        # Create scrolled window
-        tree_scrolled = gtk.ScrolledWindow()
-        tree_scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        tree_scrolled.add(self.tree_view)
-
-        # Create navigation buttons
-        self.files_button = gtk.ToggleButton('Files')
-        self.files_button.connect('clicked', self.nav_button_clicked, 'files')
-        self.templates_button = gtk.ToggleButton('Templates')
-        self.templates_button.connect('clicked', self.nav_button_clicked, 'templates')
-        self.active_component = 'files'
-        self.files_button.set_active(True)
-
-        # Create buttons box
-        buttons = gtk.VBox(True, 3)
-        buttons.set_border_width(3)
-        buttons.pack_start(self.files_button)
-        buttons.pack_start(self.templates_button)
-
-        # Create navigation panel
-        nav_panel = gtk.VBox()
-        nav_panel.pack_start(tree_scrolled)
-        nav_panel.pack_start(buttons, False)
-
+        self.sidepane = sidepane.SidePane(self, self.project)
         self.paned = gtk.HPaned()
-        self.paned.add1(nav_panel)
-
+        self.paned.add1(self.sidepane)
         self.paned.set_position(config.getint('window', 'sidepanel-width'))
-
-    def tree_drag_data_get_cb(self,
-            treeview, context, selection, info, timestamp):
-        tree_selection = treeview.get_selection()
-        model, iter = tree_selection.get_selected()
-        file_path = model.get_value(iter, 1)
-        selection.set('file-path', 8, file_path)
-
-    def tree_drag_data_received_cb(self,
-            treeview, context, x, y, selection, info, timestamp):
-        drop_info = treeview.get_dest_row_at_pos(x, y)
-        if drop_info == None:  # if item was dropped after last tree item
-            drop_info = (len(treeview.get_model())-1,), gtk.TREE_VIEW_DROP_AFTER
-        tree_path, position = drop_info
-
-        if info == self.DND_FILE_PATH: # From Oxalis itself
-            file_path = selection.data
-            new_path = self.project.move_file(file_path, tree_path, position)
-            if new_path != None:
-                context.finish(True, True, timestamp)
-                # If moved file is opened in editor, update its path
-                if self.editor.document.path == file_path:
-                    self.update_editor_path(new_path)
-            else:
-                context.finish(False, False, timestamp)
-        elif info == self.DND_URI_LIST: # From file manager
-            # Extract paths
-            uris = selection.get_uris()
-            paths = []
-            for uri in uris:
-                if uri.startswith('file://'):
-                    paths.append(urllib.url2pathname(uri[7:]))
-            # Add files
-            for path in paths:
-                if os.path.isfile(path):
-                    self.project.add_file(
-                        path, self.project.files.get_iter(tree_path), position)
 
     def font_changed(self):
         try:
@@ -318,42 +214,32 @@ class Oxalis(object):
         except AttributeError: # there is no editor
             pass
 
-    def get_selected(self):
-        '''Returns iter of selected item in tree_view'''
-        selection = self.tree_view.get_selection()
-        selected = selection.get_selected()
-        return selected[1]  # selected is tuple (model, iter)
-
     def new_page_cb(self, action):
-        self.files_button.clicked()
         response, name = self.ask_name('Page')
 
         if response == gtk.RESPONSE_OK:
             if name != '':
                 if not name.endswith('.html'):
                     name += '.html'
-                self.project.new_page(name, self.get_selected())
+                self.project.new_page(name, self.sidepane.get_selected()[1])
 
     def new_style_cb(self, action):
-        self.files_button.clicked()
         response, name = self.ask_name('Style')
 
         if response == gtk.RESPONSE_OK:
             if name != '':
                 if not name.endswith('.css'):
                     name += '.css'
-                self.project.new_style(name, self.get_selected())
+                self.project.new_style(name, self.sidepane.get_selected()[1])
 
     def new_dir_cb(self, action):
-        self.files_button.clicked()
         response, name = self.ask_name('Directory')
 
         if response == gtk.RESPONSE_OK:
             if name != '':
-                self.project.new_dir(name, self.get_selected())
+                self.project.new_dir(name, self.sidepane.get_selected()[1])
 
     def new_template_cb(self, action):
-        self.templates_button.clicked()
         response, name = self.ask_name('Template')
 
         if response == gtk.RESPONSE_OK:
@@ -371,15 +257,12 @@ class Oxalis(object):
         chooser.destroy()
 
         if response == gtk.RESPONSE_OK:
-            self.project.add_file(filename, self.get_selected())
+            self.project.add_file(filename, self.sidepane.get_selected()[1])
 
     def rename_selected_cb(self, action):
         '''Rename selected file'''
-        selected = self.get_selected()
-        if self.active_component == 'files':
-            name, path, type = self.project.files.get(selected, 0, 1, 2)
-        else:
-            name, path, type = self.project.templates.get(selected, 0, 1, 2)
+        store, sel_iter = self.sidepane.get_selected()
+        name, path, type = store.get(sel_iter, 0, 1, 2)
 
         response, name = util.input_dialog(self.window,
                 'Rename', 'Name:', 'Rename', name)
@@ -388,10 +271,10 @@ class Oxalis(object):
             name += '.html'
 
         if name != '':
-            if self.active_component == 'files':
-                new_path = self.project.rename_file(selected, name)
+            if type == 'tpl':
+                new_path = self.project.rename_template(sel_iter, name)
             else:
-                new_path = self.project.rename_template(selected, name)
+                new_path = self.project.rename_file(sel_iter, name)
 
         # If renamed file is opened in editor, update its path
         if self.editor.document.path == path:
@@ -399,11 +282,8 @@ class Oxalis(object):
 
     def delete_selected_cb(self, action):
         '''Delete selected file, directory or template'''
-        selected = self.get_selected()
-        if self.active_component == 'files':
-            name, path, type = self.project.files.get(selected, 0, 1, 2)
-        else:
-            name, path, type = self.project.templates.get(selected, 0, 1, 2)
+        store, sel_iter = self.sidepane.get_selected()
+        name, path, type = store.get(sel_iter, 0, 1, 2)
 
         if type == 'dir':
             message = ('Delete directory "%(name)s" and its contents?' %
@@ -429,10 +309,10 @@ class Oxalis(object):
             if self.editor.document.path == path:
                 self.load_file('', 'none')
 
-            if self.active_component == 'files':
-                self.project.remove_file(selected)
+            if type == 'tpl':
+                self.project.remove_template(sel_iter)
             else:
-                self.project.remove_template(selected)
+                self.project.remove_file(sel_iter)
 
     def ask_name(self, title):
         return util.input_dialog(self.window, 'New '+title, 'Name:', 'Create')
@@ -509,65 +389,13 @@ class Oxalis(object):
     def properties_cb(self, action):
         self.project.properties_dialog(self.window)
 
-    def selection_changed_cb(self, selection):
-        count = selection.count_selected_rows()
-        if count == 0:
-            self.selection_actions.set_sensitive(False)
-        else:
-            self.selection_actions.set_sensitive(True)
-
-    def nav_button_clicked(self, button, param):
-        if self.active_component == param:
-            button.set_active(True)
-        else:
-            if button.get_active() == True:
-                self.active_component = param
-                self.switch_component(param)
-
-    def switch_component(self, component):
-        self.active_component = component
-        if component == 'files':
-            self.templates_button.set_active(False)
-            self.tree_view.set_model(self.project.files)
-        else:
-            self.files_button.set_active(False)
-            self.tree_view.set_model(self.project.templates)
-        self.selection_actions.set_sensitive(False)  # Nothing is selected
-        self.load_file(*self.component_file[component])
-
-    def file_activated(self, tree_view, path, column):
-        '''Callback called when user doubleclicks on item in tree view'''
-        store = tree_view.get_model()
-
-        iter = store.get_iter(path)
-        filename = store.get_value(iter, 1)
-        type = store.get_value(iter, 2)
-
-        self.load_file(filename, type)
-
-    def set_file_icon(self, column, cell, model, iter):
-        type = model.get_value(iter, 2)
-        icon_theme = gtk.icon_theme_get_default()
-        for icon_name in self.icons[type]:
-            if icon_theme.has_icon(icon_name):
-                icon = icon_theme.load_icon(icon_name, 24, 0)
-                cell.set_property('pixbuf', icon)
-                break
-        else:
-            cell.set_property('pixbuf', None)
-
     def load_project(self, filename):
         self.project = project.Project(filename)
 
         self.create_paned()
-        self.tree_view.set_model(self.project.files)
 
         last_file = self.project.config.get('state', 'last_file')
-        last_template = self.project.config.get('state', 'last_template')
-        self.component_file = {
-            'files': (last_file, self.project.get_file_type(last_file)),
-            'templates': (last_template, 'tpl')
-        }
+        last_file_type = self.project.config.get('state', 'last_file_type')
 
         self.vbox.remove(self.start_panel)
         self.vbox.pack_start(self.paned)
@@ -575,7 +403,10 @@ class Oxalis(object):
 
         self.project_actions.set_sensitive(True)
         self.selection_actions.set_sensitive(False)  # Nothing is selected
-        self.load_file(*self.component_file['files'])
+        if (last_file_type == 'template'):
+            self.load_file(last_file, 'tpl')
+        else:
+            self.load_file(last_file, self.project.get_file_type(last_file))
 
         self.start_server()
 
@@ -594,7 +425,6 @@ class Oxalis(object):
             type = 'none'
 
         if type in ('page', 'style', 'tpl', 'none'):
-            self.component_file[self.active_component] = (filename, type)
             if 'editor' in self.__dict__:
                 # Unload old editor
                 self.editor.save()
@@ -629,8 +459,6 @@ class Oxalis(object):
         '''Update path of document which is opened in active editor'''
         self.editor.document.path = new_path
         self.editor.set_editor_label()
-        self.component_file[self.active_component] = \
-            (new_path, self.component_file[self.active_component][1])
 
     def run(self):
         self.make_window()
@@ -656,10 +484,17 @@ class Oxalis(object):
         about.destroy()
 
     def quit_cb(self, *args):
-        if 'project' in self.__dict__:
-            self.project.close(self.component_file)
         if 'editor' in self.__dict__:
             self.editor.save()
+            self.project.config.set('state', 'last_file',
+                                    self.editor.document.path)
+            if isinstance(self.editor, editor.TemplateEditor):
+                file_type = 'template'
+            else:
+                file_type = 'file'
+            self.project.config.set('state', 'last_file_type', file_type)
+        if 'project' in self.__dict__:
+            self.project.close()
 
         width, height = self.window.get_size()
         config.set('window', 'width', width)
