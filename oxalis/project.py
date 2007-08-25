@@ -278,7 +278,7 @@ class Project(object):
         '''Create new CSS style'''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
-        Style.create(path, project)
+        Style.create(path, self)
         self.files.append(parent, (name, path, 'style'))
 
     def new_dir(self, name, selected):
@@ -292,7 +292,7 @@ class Project(object):
 
     def new_template(self, name):
         '''Create new template'''
-        Template.create(path, project)
+        Template.create(name, self)
         self.templates.append((name, name, 'tpl'))
 
     def add_file(self, filename, selected, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
