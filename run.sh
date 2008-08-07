@@ -1,2 +1,1 @@
-export PYTHONPATH=.
-python -tt scripts/oxalis
+PYTHONPATH=. python -tt scripts/oxalis
