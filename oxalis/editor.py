@@ -21,7 +21,7 @@ import os.path
 import gtk
 import pango
 import gtksourceview
-import gtkmozembed
+import webkit
 
 import config
 import util
@@ -289,38 +289,50 @@ class DummyEditor(gtk.Label):
 
 
 class Browser(gtk.VBox):
-    '''Browser widget used for display preview'''
-    def __init__(self, has_toolbar=True):
-        '''Initialise Browser
+    """
+    Browser widget for displaying preview.
 
-        If has_toolbar is True, browser will have toolbar with address entry
-        '''
+    WebKit is used as rendering engine.
+
+    Public methods:
+
+    * load_url(url)
+    * reload()
+    """
+
+    def __init__(self, has_toolbar=True):
+        """Create new browser widget.
+
+        If `has_toolbar` is True, browser will have toolbar with address entry.
+        """
         gtk.VBox.__init__(self)
-        # Create GtkMozembed
-        self.mozembed = gtkmozembed.MozEmbed()
+        self.webview = webkit.WebView()
 
         if has_toolbar:
             self.address_entry = gtk.Entry()
-            self.address_entry.connect('activate', self.address_activate_cb)
+            self.address_entry.connect('activate',
+                                       self.on_address_entry_activated)
             self.pack_start(self.address_entry, False)
 
-            self.mozembed.connect('location', self.location_cb)
+            self.webview.connect('navigation-requested',
+                                 self.on_navigation_requested)
 
-        self.pack_start(self.mozembed)
-
-    def address_activate_cb(self, entry):
-        address = entry.get_text()
-        self.mozembed.load_url(address)
+        self.pack_start(self.webview)
 
     def load_url(self, url):
-        self.mozembed.load_url(url)
+        self.webview.open(url)
 
     def reload(self):
-        self.mozembed.reload(gtkmozembed.FLAG_RELOADNORMAL)
+        self.webview.reload()
 
-    def location_cb(self, mozembed):
-        '''Callback function called when browser location has changed'''
-        address = mozembed.get_location()
-        self.address_entry.set_text(address)
+    def on_address_entry_activated(self, entry):
+        address = entry.get_text()
+        self.load_url(address)
+
+    def on_navigation_requested(self, page, frame, request):
+        """Callback function called when browser is going to load new URL."""
+        uri = request.get_uri()
+        self.address_entry.set_text(uri)
+        return False # Continue loading page
 
 # vim:tabstop=4:expandtab
