@@ -23,6 +23,7 @@ import pango
 import gtksourceview
 import webkit
 
+import project
 import config
 import util
 
@@ -202,7 +203,7 @@ class PageEditor(Editor):
         self.templates_store.foreach(self.search_template, template)
 
     def search_template(self, model, path, iter, template):
-        if model.get_value(iter, 0) == template:
+        if model.get_value(iter, project.NAME_COL) == template:
             self.template_combo_box.set_active_iter(iter)
             return True
 
@@ -211,7 +212,7 @@ class PageEditor(Editor):
         self.template_combo_box = gtk.ComboBox(self.templates_store)
         cell = gtk.CellRendererText()
         self.template_combo_box.pack_start(cell, True)
-        self.template_combo_box.add_attribute(cell, 'text', 0)
+        self.template_combo_box.add_attribute(cell, 'text', project.NAME_COL)
 
         table = util.make_table((
             ('Title:', self.page_name_entry),
@@ -236,7 +237,7 @@ class PageEditor(Editor):
             modified = True
 
         active = self.template_combo_box.get_active_iter()
-        template = self.templates_store.get_value(active, 0)
+        template = self.templates_store.get_value(active, project.NAME_COL)
         if ('Template' not in self.document.header or
            template != self.document.header['Template']):
             self.document.header['Template'] = template

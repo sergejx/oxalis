@@ -49,6 +49,11 @@ sitecopy_rc = '''site $name
   exclude _oxalis
 '''
 
+# Constants for column numbers
+NUM_COLUMNS = 3
+NAME_COL, PATH_COL, TYPE_COL = range(NUM_COLUMNS)
+
+
 def create_project(path):
     global default_template
 
@@ -147,8 +152,8 @@ class Project(object):
         Tree is stored in self.files
         '''
         self.files = gtk.TreeStore(str, str, str)
-        self.files.set_sort_func(0, self.sort_files_store)
-        self.files.set_sort_column_id(0, gtk.SORT_ASCENDING)
+        self.files.set_sort_func(NAME_COL, self.sort_files_store)
+        self.files.set_sort_column_id(NAME_COL, gtk.SORT_ASCENDING)
         self.load_dir('')
 
     def load_dir(self, dirpath, parent=None):
@@ -189,8 +194,8 @@ class Project(object):
 
     def sort_files_store(self, model, iter1, iter2):
         '''Comparison function for sorting files tree store'''
-        name1, type1 = model.get(iter1, 0, 2)
-        name2, type2 = model.get(iter2, 0, 2)
+        name1, type1 = model.get(iter1, NAME_COL, TYPE_COL)
+        name2, type2 = model.get(iter2, NAME_COL, TYPE_COL)
         if type1 == 'dir' and type2 != 'dir':
             return -1
         if type1 != 'dir' and type2 == 'dir':
@@ -250,13 +255,13 @@ class Project(object):
         if treeiter == None:
             dir_path = ''
         else:
-            type = self.files.get_value(treeiter, 2)
+            type = self.files.get_value(treeiter, TYPE_COL)
             if (position == gtk.TREE_VIEW_DROP_BEFORE or
                 position == gtk.TREE_VIEW_DROP_AFTER or
                 type != 'dir'):
                 treeiter = self.files.iter_parent(treeiter)
             if treeiter != None:
-                dir_path = self.files.get_value(treeiter, 1)
+                dir_path = self.files.get_value(treeiter, PATH_COL)
             else:
                 dir_path = ''
         return treeiter, dir_path
@@ -307,14 +312,14 @@ class Project(object):
 
         selected - tree iter of the selected file
         '''
-        path, type = self.files.get(selected, 1, 2)
+        path, type = self.files.get(selected, PATH_COL, TYPE_COL)
         head, tail = os.path.split(path)
         new_path = os.path.join(head, new_name)
         document = self.get_document(path, type)
         document.move(new_path)
 
-        self.files.set(selected, 0, new_name)
-        self.files.set(selected, 1, new_path)
+        self.files.set(selected, NAME_COL, new_name)
+        self.files.set(selected, PATH_COL, new_path)
         return new_path
 
     def rename_template(self, selected, new_name):
@@ -323,12 +328,12 @@ class Project(object):
         selected - tree iter of the selected template
         '''
         # TODO: Change name of template in all pages which use it
-        name = self.templates.get_value(selected, 1)
+        name = self.templates.get_value(selected, PATH_COL)
         tpl = self.get_document(name, 'tpl')
         tpl.move(new_name)
 
-        self.templates.set(selected, 0, new_name)
-        self.templates.set(selected, 1, new_name)
+        self.templates.set(selected, NAME_COL, new_name)
+        self.templates.set(selected, PATH_COL, new_name)
         return new_name
 
     def remove_file(self, selected):
@@ -336,7 +341,7 @@ class Project(object):
 
         selected - tree iter
         '''
-        path, type = self.files.get(selected, 1, 2)
+        path, type = self.files.get(selected, PATH_COL, TYPE_COL)
         full_path = os.path.join(self.dir, path)  # Make absolute path
         if type == 'dir':
             shutil.rmtree(path)
@@ -350,7 +355,7 @@ class Project(object):
 
         selected - tree iter
         '''
-        path = self.templates.get_value(selected, 1)
+        path = self.templates.get_value(selected, PATH_COL)
         # Make absolute path
         document = self.get_document(path, 'tpl')
         document.remove()
@@ -387,9 +392,9 @@ class Project(object):
         self.files.foreach(self.generate_item)
 
     def generate_item(self, model, path, iter):
-        type = model.get_value(iter, 2)
+        type = model.get_value(iter, TYPE_COL)
         if type == 'page':
-            path = model.get_value(iter, 1)
+            path = model.get_value(iter, PATH_COL)
             page = Page(path, self)
             page.generate()
 

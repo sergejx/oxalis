@@ -262,7 +262,8 @@ class Oxalis(object):
     def rename_selected_cb(self, action):
         '''Rename selected file'''
         store, sel_iter = self.sidepane.get_selected()
-        name, path, type = store.get(sel_iter, 0, 1, 2)
+        name, path, type = store.get(sel_iter,
+                project.NAME_COL, project.PATH_COL, project.TYPE_COL)
 
         response, name = util.input_dialog(self.window,
                 'Rename', 'Name:', 'Rename', name)
@@ -283,7 +284,8 @@ class Oxalis(object):
     def delete_selected_cb(self, action):
         '''Delete selected file, directory or template'''
         store, sel_iter = self.sidepane.get_selected()
-        name, path, type = store.get(sel_iter, 0, 1, 2)
+        name, path, type = store.get(sel_iter,
+                project.NAME_COL, project.PATH_COL, project.TYPE_COL)
 
         if type == 'dir':
             message = ('Delete directory "%(name)s" and its contents?' %

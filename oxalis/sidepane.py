@@ -21,6 +21,8 @@ import urllib
 
 import gtk
 
+import project
+
 class SidePane(gtk.VPaned):
     """Side panel with list of files and templates"""
 
@@ -98,8 +100,8 @@ class SidePane(gtk.VPaned):
         column.set_cell_data_func(icon_cell, self._set_file_icon_cb)
         cell = gtk.CellRendererText()
         column.pack_start(cell, True)
-        column.add_attribute(cell, 'text', 0)
-        view.set_search_column(0)
+        column.add_attribute(cell, 'text', project.NAME_COL)
+        view.set_search_column(project.NAME_COL)
         view.connect('row-activated', self._on_file_activated)
         selection = view.get_selection()
         selection.connect('changed', self._on_selection_changed, name)
@@ -124,7 +126,7 @@ class SidePane(gtk.VPaned):
     ### Callbacks ###
 
     def _set_file_icon_cb(self, column, cell, model, iter):
-        type = model.get_value(iter, 2)
+        type = model.get_value(iter, project.TYPE_COL)
         icon_theme = gtk.icon_theme_get_default()
         for icon_name in self.icons[type]:
             if icon_theme.has_icon(icon_name):
@@ -139,8 +141,8 @@ class SidePane(gtk.VPaned):
         store = tree_view.get_model()
 
         iter = store.get_iter(path)
-        filename = store.get_value(iter, 1)
-        type = store.get_value(iter, 2)
+        filename = store.get_value(iter, project.PATH_COL)
+        type = store.get_value(iter, project.TYPE_COL)
 
         self.application.load_file(filename, type)
 
@@ -160,7 +162,7 @@ class SidePane(gtk.VPaned):
             treeview, context, selection, info, timestamp):
         tree_selection = treeview.get_selection()
         model, iter = tree_selection.get_selected()
-        file_path = model.get_value(iter, 1)
+        file_path = model.get_value(iter, project.PATH_COL)
         selection.set('file-path', 8, file_path)
 
     def _tree_drag_data_received_cb(self,
