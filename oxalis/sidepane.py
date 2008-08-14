@@ -76,7 +76,7 @@ class SidePane(gtk.VPaned):
 
     def get_selected(self):
         """Returns selected item in files_view
-        
+
         Returns tuple: (model, iter)
         """
         selection = self.files_view.get_selection()
