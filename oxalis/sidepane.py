@@ -140,11 +140,10 @@ class SidePane(gtk.VPaned):
         """Callback called when user doubleclicks on item in tree view"""
         store = tree_view.get_model()
 
-        iter = store.get_iter(path)
-        filename = store.get_value(iter, project.PATH_COL)
-        type = store.get_value(iter, project.TYPE_COL)
+        itr = store.get_iter(path)
+        doc = store.get_value(itr, project.OBJECT_COL)
 
-        self.application.load_file(filename, type)
+        self.application.load_file(doc)
 
     def _on_selection_changed(self, selection, name):
         count = selection.count_selected_rows()

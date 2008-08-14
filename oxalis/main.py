@@ -27,6 +27,7 @@ import gobject
 
 import config
 import project
+import document
 import sidepane
 import editor
 import server
@@ -309,7 +310,7 @@ class Oxalis(object):
         if response == gtk.RESPONSE_OK:
             # If removed file is opened in editor, replace it with DummyEditor
             if self.editor.document.path == path:
-                self.load_file('', 'none')
+                self.load_file(None)
 
             if type == 'tpl':
                 self.project.remove_template(sel_iter)
@@ -406,9 +407,9 @@ class Oxalis(object):
         self.project_actions.set_sensitive(True)
         self.selection_actions.set_sensitive(False)  # Nothing is selected
         if (last_file_type == 'template'):
-            self.load_file(last_file, 'tpl')
+            self.load_file(document.Template(last_file, self.project))
         else:
-            self.load_file(last_file, self.project.get_file_type(last_file))
+            self.load_file(self.project.get_document(last_file))
 
         self.start_server()
 
@@ -418,44 +419,35 @@ class Oxalis(object):
         server_thread.setDaemon(True)
         server_thread.start()
 
-    def load_file(self, filename, type):
-        '''Loads editor for file
+    def load_file(self, doc):
+        """Load editor for file.
+
+        doc -- document object for loaded file
 
         If there is already opened editor, it will be unloaded.
-        '''
-        if filename == '':
-            type = 'none'
+        """
+        if 'editor' in self.__dict__:
+            # Unload old editor
+            self.editor.save()
+            self.paned.remove(self.editor)
+            # Remove editor UI and actions
+            self.ui_manager.remove_ui(self.editor_merge_id)
+            self.ui_manager.remove_action_group(self.editor.edit_actions)
 
-        if type in ('page', 'style', 'tpl', 'none'):
-            if 'editor' in self.__dict__:
-                # Unload old editor
-                self.editor.save()
-                self.paned.remove(self.editor)
-                # Remove editor UI and actions
-                self.ui_manager.remove_ui(self.editor_merge_id)
-                self.ui_manager.remove_action_group(self.editor.edit_actions)
+        # Load new editor
+        if doc is not None:
+            self.editor = doc.create_editor()
+        else:
+            self.editor = editor.DummyEditor()
 
-            # Load new editor
-            if type == 'page':
-                page = project.Page(filename, self.project)
-                self.editor = editor.PageEditor(page)
-            elif type == 'style':
-                style = project.Style(filename, self.project)
-                self.editor = editor.StyleEditor(style)
-            elif type == 'tpl':
-                tpl = project.Template(filename, self.project)
-                self.editor = editor.TemplateEditor(tpl)
-            elif type == 'none':
-                self.editor = editor.DummyEditor()
+        self.paned.add2(self.editor)
+        self.editor.show_all()
 
-            self.paned.add2(self.editor)
-            self.editor.show_all()
-
-            # Add editor UI and actions
-            ui = self.editor.ui
-            actions = self.editor.edit_actions
-            self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
-            self.ui_manager.insert_action_group(actions, 1)
+        # Add editor UI and actions
+        ui = self.editor.ui
+        actions = self.editor.edit_actions
+        self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
+        self.ui_manager.insert_action_group(actions, 1)
 
     def update_editor_path(self, new_path):
         '''Update path of document which is opened in active editor'''

@@ -50,8 +50,8 @@ sitecopy_rc = '''site $name
 '''
 
 # Constants for column numbers
-NUM_COLUMNS = 3
-NAME_COL, PATH_COL, TYPE_COL = range(NUM_COLUMNS)
+NUM_COLUMNS = 4
+OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(NUM_COLUMNS)
 
 
 def create_project(path):
@@ -145,13 +145,14 @@ class Project(object):
         '''Loads tree of project files
 
         Tree is gtk.TreeStore with columns:
+         - document object
          - display name
          - path to the file, relative to project base directory
          - type
         Type can be: dir, page, style, image, file, tpl
         Tree is stored in self.files
         '''
-        self.files = gtk.TreeStore(str, str, str)
+        self.files = gtk.TreeStore(object, str, str, str)
         self.files.set_sort_func(NAME_COL, self.sort_files_store)
         self.files.set_sort_column_id(NAME_COL, gtk.SORT_ASCENDING)
         self.load_dir('')
@@ -164,7 +165,7 @@ class Project(object):
         '''
         if dirpath != '':  # not root directory
             name = os.path.basename(dirpath)
-            parent = self.files.append(parent, (name, dirpath, 'dir'))
+            parent = self.files.append(parent, (None, name, dirpath, 'dir'))
 
         for filename in os.listdir(os.path.join(self.dir, dirpath)):
             if filename != '_oxalis':
@@ -184,13 +185,15 @@ class Project(object):
         '''
         name, ext = os.path.splitext(filename)
         if ext == '.html':
-            self.files.append(parent, (filename, path, 'page'))
+            obj = Page(path, self)
+            self.files.append(parent, (obj, filename, path, 'page'))
         elif ext == '.css':
-            self.files.append(parent, (filename, path, 'style'))
+            obj = Style(path, self)
+            self.files.append(parent, (obj, filename, path, 'style'))
         elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
-            self.files.append(parent, (filename, path, 'image'))
+            self.files.append(parent, (None, filename, path, 'image'))
         elif ext != '.html' and filename[0] != '.':
-            self.files.append(parent, (filename, path, 'file'))
+            self.files.append(parent, (None, filename, path, 'file'))
 
     def sort_files_store(self, model, iter1, iter2):
         '''Comparison function for sorting files tree store'''
@@ -207,12 +210,13 @@ class Project(object):
 
         List is stored in self.templates and has same columns as self.files
         '''
-        self.templates = gtk.ListStore(str, str, str)
+        self.templates = gtk.ListStore(object, str, str, str)
 
         tpl_dir = os.path.join(self.dir, '_oxalis', 'templates')
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
-            self.templates.append((name, filename, 'tpl'))
+            obj = Template(name, self)
+            self.templates.append((obj, name, filename, 'tpl'))
 
     def close(self):
         """Close project and save properties"""
@@ -273,15 +277,15 @@ class Project(object):
         '''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
-        Page.create(path, self)
-        self.files.append(parent, (name, path, 'page'))
+        obj = Page.create(path, self)
+        self.files.append(parent, (obj, name, path, 'page'))
 
     def new_style(self, name, selected):
         '''Create new CSS style'''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
-        Style.create(path, self)
-        self.files.append(parent, (name, path, 'style'))
+        obj = Style.create(path, self)
+        self.files.append(parent, (obj, name, path, 'style'))
 
     def new_dir(self, name, selected):
         '''Create new directory'''
@@ -290,12 +294,12 @@ class Project(object):
         full_path = os.path.join(self.dir, path)
         os.mkdir(full_path)
 
-        self.files.append(parent, (name, path, 'dir'))
+        self.files.append(parent, (None, name, path, 'dir'))
 
     def new_template(self, name):
         '''Create new template'''
-        Template.create(name, self)
-        self.templates.append((name, name, 'tpl'))
+        obj = Template.create(name, self)
+        self.templates.append((obj, name, name, 'tpl'))
 
     def add_file(self, filename, selected, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
         '''Add existing file to project'''
@@ -305,7 +309,7 @@ class Project(object):
         full_path = os.path.join(self.dir, path)
         shutil.copyfile(filename, full_path)
 
-        self.files.append(parent, (name, path, 'file'))
+        self.files.append(parent, (None, name, path, 'file'))
 
     def rename_file(self, selected, new_name):
         '''Rename selected file

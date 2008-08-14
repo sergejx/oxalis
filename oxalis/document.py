@@ -22,6 +22,8 @@ import re
 import markdown
 import smartypants
 
+import editor
+
 class Document(object):
     """Abstract base class for documents which can be edited in Oxalis.
 
@@ -112,6 +114,7 @@ class Page(Document):
         f = file(full_path, 'w')
         f.write('\n')
         f.close()
+        return Page(path, project)
 
     def move(self, new_path):
         old_source_path = self.source_path
@@ -150,6 +153,9 @@ class Page(Document):
         f.write('\n')
         f.write(self.text)
         f.close()
+
+    def create_editor(self):
+        return editor.PageEditor(self)
 
     def generate(self):
         '''Generates HTML file'''
@@ -220,6 +226,10 @@ class Style(Document):
         full_path = os.path.join(project.dir, path)
         f = file(full_path, 'w')
         f.close()
+        return Style(path, project)
+
+    def create_editor(self):
+        return editor.StyleEditor(self)
 
 
 class Template(Document):
@@ -245,6 +255,10 @@ class Template(Document):
         full_path = os.path.join(project.templates_dir, path)
         f = file(full_path, 'w')
         f.close()
+        return Template(path, project)
+
+    def create_editor(self):
+        return editor.TemplateEditor(self)
 
     def process_page(self, tags):
         self.tags = tags
