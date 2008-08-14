@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2007 Sergej Chodarev
+# Copyright (C) 2005-2008 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -234,19 +234,28 @@ class Project(object):
         elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
             return 'image'
 
-    def get_document(self, path, type=None):
-        """Get document of specified type identified by path.
+    def get_document(self, path, template=False):
+        """Get document identified by path.
 
-        If type is not specified, it will be determined automatically.
+        Function searches specified path in files or templates tree model.
         """
-        if type is None:
-            type = self.get_file_type(path)
-        if type == 'page':
-            return Page(path, self)
-        elif type == 'style':
-            return Style(path, self)
-        elif type == 'tpl':
-            return Template(path, self)
+
+        def find_document(model, tree_path, itr, data):
+            path, obj = model.get(itr, PATH_COL, OBJECT_COL)
+            if path == data['path']:
+                data['document'] = obj
+                return True
+            else:
+                return False
+
+        if template:
+            model = self.templates
+        else:
+            model = self.files
+        data = {'path': path, 'document': None}
+        # data['document'] is used for returning found object
+        model.foreach(find_document, data)
+        return data['document']
 
     def find_parent_dir(self, treeiter, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
         '''Find parent directory of file associated with treeiter.
@@ -319,7 +328,7 @@ class Project(object):
         path, type = self.files.get(selected, PATH_COL, TYPE_COL)
         head, tail = os.path.split(path)
         new_path = os.path.join(head, new_name)
-        document = self.get_document(path, type)
+        document = self.get_document(path)
         document.move(new_path)
 
         self.files.set(selected, NAME_COL, new_name)
@@ -333,7 +342,7 @@ class Project(object):
         '''
         # TODO: Change name of template in all pages which use it
         name = self.templates.get_value(selected, PATH_COL)
-        tpl = self.get_document(name, 'tpl')
+        tpl = self.get_document(name, True)
         tpl.move(new_name)
 
         self.templates.set(selected, NAME_COL, new_name)
@@ -346,11 +355,10 @@ class Project(object):
         selected - tree iter
         '''
         path, type = self.files.get(selected, PATH_COL, TYPE_COL)
-        full_path = os.path.join(self.dir, path)  # Make absolute path
         if type == 'dir':
             shutil.rmtree(path)
         else:
-            document = self.get_document(path, type)
+            document = self.get_document(path)
             document.remove()
         self.files.remove(selected)
 
@@ -360,8 +368,7 @@ class Project(object):
         selected - tree iter
         '''
         path = self.templates.get_value(selected, PATH_COL)
-        # Make absolute path
-        document = self.get_document(path, 'tpl')
+        document = self.get_document(path, True)
         document.remove()
         self.templates.remove(selected)
 

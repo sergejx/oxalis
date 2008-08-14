@@ -406,10 +406,10 @@ class Oxalis(object):
 
         self.project_actions.set_sensitive(True)
         self.selection_actions.set_sensitive(False)  # Nothing is selected
-        if (last_file_type == 'template'):
-            self.load_file(document.Template(last_file, self.project))
-        else:
-            self.load_file(self.project.get_document(last_file))
+
+        doc = self.project.get_document(last_file,
+                                        last_file_type == 'template')
+        self.load_file(doc)
 
         self.start_server()
 

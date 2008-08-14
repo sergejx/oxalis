@@ -24,8 +24,6 @@ from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 import mimetypes
 import shutil
 
-from project import Page, Template
-
 # Global variables
 project = None
 
@@ -60,7 +58,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-Type', 'text/html')
                 self.end_headers()
 
-                tpl = Template(param[1], project)
+                tpl = project.get_document(param[1], True)
                 html = tpl.process_page(page_for_templates)
                 self.wfile.write(html)
             else:
@@ -80,7 +78,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-Type', 'text/html')
                 self.end_headers()
 
-                page = Page(request_path, project)
+                page = project.get_document(request_path)
                 html = page.process_page()
                 self.wfile.write(html)
 
