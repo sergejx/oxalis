@@ -32,12 +32,14 @@ class Document(object):
       * path - path to the document, relative to project directry
       * url - URL, which can be used to display document preview
         (should be defined in subclasses)
+      * tree_iter -- tree iter that points to document in tree model
     """
 
     def __init__(self, path, project):
         '''Initializes document with path and project.'''
         self.project = project
         self.path = path
+        self.tree_iter = None
 
     def set_path(self, path):
         self._path = path

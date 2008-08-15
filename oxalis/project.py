@@ -186,10 +186,12 @@ class Project(object):
         name, ext = os.path.splitext(filename)
         if ext == '.html':
             obj = Page(path, self)
-            self.files.append(parent, (obj, filename, path, 'page'))
+            itr = self.files.append(parent, (obj, filename, path, 'page'))
+            obj.tree_iter = itr
         elif ext == '.css':
             obj = Style(path, self)
-            self.files.append(parent, (obj, filename, path, 'style'))
+            itr = self.files.append(parent, (obj, filename, path, 'style'))
+            obj.tree_iter = itr
         elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
             self.files.append(parent, (None, filename, path, 'image'))
         elif ext != '.html' and filename[0] != '.':
@@ -216,7 +218,8 @@ class Project(object):
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
             obj = Template(name, self)
-            self.templates.append((obj, name, filename, 'tpl'))
+            itr = self.templates.append((obj, name, filename, 'tpl'))
+            obj.tree_iter = itr
 
     def close(self):
         """Close project and save properties"""
@@ -287,14 +290,16 @@ class Project(object):
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
         obj = Page.create(path, self)
-        self.files.append(parent, (obj, name, path, 'page'))
+        itr = self.files.append(parent, (obj, name, path, 'page'))
+        obj.tree_iter = itr
 
     def new_style(self, name, selected):
         '''Create new CSS style'''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
         obj = Style.create(path, self)
-        self.files.append(parent, (obj, name, path, 'style'))
+        itr = self.files.append(parent, (obj, name, path, 'style'))
+        obj.tree_iter = itr
 
     def new_dir(self, name, selected):
         '''Create new directory'''
@@ -308,7 +313,8 @@ class Project(object):
     def new_template(self, name):
         '''Create new template'''
         obj = Template.create(name, self)
-        self.templates.append((obj, name, name, 'tpl'))
+        itr = self.templates.append((obj, name, name, 'tpl'))
+        obj.tree_iter = itr
 
     def add_file(self, filename, selected, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
         '''Add existing file to project'''
