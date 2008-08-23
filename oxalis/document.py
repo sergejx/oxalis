@@ -35,6 +35,7 @@ class Document(object):
     Member variables:
       * project - points to project
       * path - path to the document, relative to project directry
+      * name - file name of document
       * url - URL, which can be used to display document preview
         (should be defined in subclasses)
       * tree_iter -- tree iter that points to document in tree model
@@ -55,6 +56,11 @@ class Document(object):
 
     def _set_full_path(self, path):
         self.full_path = os.path.join(self.project.dir, path)
+
+    def get_name(self):
+        """Get file name of document."""
+        return os.path.basename(self.path)
+    name = property(get_name)
 
     def move(self, new_path):
         """Move document to new_path."""
