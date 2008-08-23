@@ -71,6 +71,7 @@ class Document(object):
     def remove(self):
         """Remove document."""
         os.remove(self.full_path)
+        self.project.files.remove(self.tree_iter)
 
     def get_text(self):
         try:
@@ -274,6 +275,11 @@ class Template(Document):
         f.close()
         return Template(path, project)
 
+    def remove(self):
+        """Remove template (overrides Document.remove())."""
+        os.remove(self.full_path)
+        self.project.templates.remove(self.tree_iter)
+
     def create_editor(self):
         return editor.TemplateEditor(self)
 
@@ -299,6 +305,11 @@ class Directory(Document):
         full_path = os.path.join(project.dir, path)
         os.mkdir(full_path)
         return Directory(path, project)
+
+    def remove(self):
+        """Remove directory (overrides Document.remove())."""
+        shutil.rmtree(self.full_path)
+        self.project.files.remove(self.tree_iter)
 
 
 class File(Document):

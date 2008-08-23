@@ -359,29 +359,6 @@ class Project(object):
         self.templates.set(selected, PATH_COL, new_name)
         return new_name
 
-    def remove_file(self, selected):
-        '''Remove selected file or directory
-
-        selected - tree iter
-        '''
-        path, type = self.files.get(selected, PATH_COL, TYPE_COL)
-        if type == 'dir':
-            shutil.rmtree(path)
-        else:
-            document = self.get_document(path)
-            document.remove()
-        self.files.remove(selected)
-
-    def remove_template(self, selected):
-        '''Remove selected template
-
-        selected - tree iter
-        '''
-        path = self.templates.get_value(selected, PATH_COL)
-        document = self.get_document(path, True)
-        document.remove()
-        self.templates.remove(selected)
-
     def move_file(self, file_path, tree_path, position):
         '''Move file (used with drag&drop)
 

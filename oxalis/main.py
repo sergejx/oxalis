@@ -284,16 +284,14 @@ class Oxalis(object):
 
     def delete_selected_cb(self, action):
         '''Delete selected file, directory or template'''
-        store, sel_iter = self.sidepane.get_selected()
-        name, path, type = store.get(sel_iter,
-                project.NAME_COL, project.PATH_COL, project.TYPE_COL)
+        obj = self.sidepane.get_selected_document()
 
-        if type == 'dir':
+        if isinstance(obj, document.Directory):
             message = ('Delete directory "%(name)s" and its contents?' %
-                       {'name': name})
+                       {'name': obj.name})
             message2 = 'If you delete the directory, all of its files and its subdirectories will be permanently lost.'
         else:
-            message = 'Delete "%(name)s"?' % {'name': name}
+            message = 'Delete "%(name)s"?' % {'name': obj.name}
             message2 = 'If you delete the item, it will be permanently lost.'
 
         # Create message dialog
@@ -309,13 +307,9 @@ class Oxalis(object):
 
         if response == gtk.RESPONSE_OK:
             # If removed file is opened in editor, replace it with DummyEditor
-            if self.editor.document.path == path:
+            if self.editor.document == obj:
                 self.load_file(None)
-
-            if type == 'tpl':
-                self.project.remove_template(sel_iter)
-            else:
-                self.project.remove_file(sel_iter)
+            obj.remove()
 
     def ask_name(self, title):
         return util.input_dialog(self.window, 'New '+title, 'Name:', 'Create')
