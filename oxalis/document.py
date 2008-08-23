@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2007 Sergej Chodarev
+# Copyright (C) 2005-2008 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,11 +18,16 @@
 
 import os
 import re
+import shutil
 
 import markdown
 import smartypants
 
 import editor
+
+class NoEditorException(Exception):
+    """Exception raised if no editor can be created for document."""
+    pass
 
 class Document(object):
     """Abstract base class for documents which can be edited in Oxalis.
@@ -82,6 +87,10 @@ class Document(object):
         f = file(self.full_path, 'w')
         f.write(self.text)
         f.close()
+
+    def create_editor(self):
+        """Return new editor component for document."""
+        raise NoEditorException
 
 
 class Page(Document):
@@ -273,5 +282,28 @@ class Template(Document):
             return tags[tag]
         else:
             return ''
+
+class Directory(Document):
+    def __init__(self, path, project):
+        Document.__init__(self, path, project)
+
+    @staticmethod
+    def create(path, project):
+        """Create new directory."""
+        full_path = os.path.join(project.dir, path)
+        os.mkdir(full_path)
+        return Directory(path, project)
+
+
+class File(Document):
+    def __init__(self, path, project):
+        Document.__init__(self, path, project)
+
+    @staticmethod
+    def add_to_project(path, project, filename):
+        """Copy file to project"""
+        full_path = os.path.join(project.dir, path)
+        shutil.copyfile(filename, full_path)
+        return File(path, project)
 
 # vim:tabstop=4:expandtab

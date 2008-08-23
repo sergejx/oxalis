@@ -165,7 +165,9 @@ class Project(object):
         '''
         if dirpath != '':  # not root directory
             name = os.path.basename(dirpath)
-            parent = self.files.append(parent, (None, name, dirpath, 'dir'))
+            obj = Directory(dirpath, self)
+            parent = self.files.append(parent, (obj, name, dirpath, 'dir'))
+            obj.tree_iter = parent
 
         for filename in os.listdir(os.path.join(self.dir, dirpath)):
             if filename != '_oxalis':
@@ -193,9 +195,13 @@ class Project(object):
             itr = self.files.append(parent, (obj, filename, path, 'style'))
             obj.tree_iter = itr
         elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
-            self.files.append(parent, (None, filename, path, 'image'))
+            obj = File(path, self)
+            itr = self.files.append(parent, (obj, filename, path, 'image'))
+            obj.tree_iter = itr
         elif ext != '.html' and filename[0] != '.':
-            self.files.append(parent, (None, filename, path, 'file'))
+            obj = File(path, self)
+            itr = self.files.append(parent, (obj, filename, path, 'file'))
+            obj.tree_iter = itr
 
     def sort_files_store(self, model, iter1, iter2):
         '''Comparison function for sorting files tree store'''
@@ -305,10 +311,9 @@ class Project(object):
         '''Create new directory'''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
-        full_path = os.path.join(self.dir, path)
-        os.mkdir(full_path)
-
-        self.files.append(parent, (None, name, path, 'dir'))
+        obj = Directory.create(path, self)
+        itr = self.files.append(parent, (obj, name, path, 'dir'))
+        obj.tree_iter = itr
 
     def new_template(self, name):
         '''Create new template'''
@@ -321,10 +326,9 @@ class Project(object):
         parent, dir = self.find_parent_dir(selected, position)
         name = os.path.basename(filename)
         path = os.path.join(dir, name)
-        full_path = os.path.join(self.dir, path)
-        shutil.copyfile(filename, full_path)
-
-        self.files.append(parent, (None, name, path, 'file'))
+        obj = File.add_to_project(path, self, filename)
+        itr = self.files.append(parent, (obj, name, path, 'file'))
+        obj.tree_iter = itr
 
     def rename_file(self, selected, new_name):
         '''Rename selected file
