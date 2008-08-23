@@ -87,6 +87,14 @@ class SidePane(gtk.VPaned):
         selected = selection.get_selected()
         return selected
 
+    def get_selected_document(self):
+        """Return selected document in side pane.
+
+        Returned object is subclass of document.Document.
+        """
+        model, itr = self.get_selected()
+        return model.get_value(itr, project.OBJECT_COL)
+
     ### Helpers ###
 
     def _create_tree_view(self, name):
