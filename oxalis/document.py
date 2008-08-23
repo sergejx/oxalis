@@ -23,6 +23,7 @@ import shutil
 import markdown
 import smartypants
 
+import project
 import editor
 
 class NoEditorException(Exception):
@@ -67,6 +68,16 @@ class Document(object):
         old_full_path = self.full_path
         self.path = new_path
         os.rename(old_full_path, self.full_path)
+
+    def rename(self, new_name):
+        """Rename document."""
+        head, tail = os.path.split(self.path)
+        new_path = os.path.join(head, new_name)
+        self.move(new_path)
+
+        self.project.files.set(self.tree_iter, project.NAME_COL, new_name)
+        self.project.files.set(self.tree_iter, project.PATH_COL, new_path)
+        return new_path
 
     def remove(self):
         """Remove document."""
@@ -274,6 +285,15 @@ class Template(Document):
         f = file(full_path, 'w')
         f.close()
         return Template(path, project)
+
+    def rename(self, new_name):
+        """Rename template."""
+        # TODO: Change name of template in all pages which use it
+        self.move(new_name)
+
+        self.project.templates.set(self.tree_iter, project.NAME_COL, new_name)
+        self.project.templates.set(self.tree_iter, project.PATH_COL, new_name)
+        return new_name
 
     def remove(self):
         """Remove template (overrides Document.remove())."""

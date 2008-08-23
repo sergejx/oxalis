@@ -330,35 +330,6 @@ class Project(object):
         itr = self.files.append(parent, (obj, name, path, 'file'))
         obj.tree_iter = itr
 
-    def rename_file(self, selected, new_name):
-        '''Rename selected file
-
-        selected - tree iter of the selected file
-        '''
-        path, type = self.files.get(selected, PATH_COL, TYPE_COL)
-        head, tail = os.path.split(path)
-        new_path = os.path.join(head, new_name)
-        document = self.get_document(path)
-        document.move(new_path)
-
-        self.files.set(selected, NAME_COL, new_name)
-        self.files.set(selected, PATH_COL, new_path)
-        return new_path
-
-    def rename_template(self, selected, new_name):
-        '''Rename selected template
-
-        selected - tree iter of the selected template
-        '''
-        # TODO: Change name of template in all pages which use it
-        name = self.templates.get_value(selected, PATH_COL)
-        tpl = self.get_document(name, True)
-        tpl.move(new_name)
-
-        self.templates.set(selected, NAME_COL, new_name)
-        self.templates.set(selected, PATH_COL, new_name)
-        return new_name
-
     def move_file(self, file_path, tree_path, position):
         '''Move file (used with drag&drop)
 

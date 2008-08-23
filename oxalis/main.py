@@ -262,24 +262,19 @@ class Oxalis(object):
 
     def rename_selected_cb(self, action):
         '''Rename selected file'''
-        store, sel_iter = self.sidepane.get_selected()
-        name, path, type = store.get(sel_iter,
-                project.NAME_COL, project.PATH_COL, project.TYPE_COL)
+        obj = self.sidepane.get_selected_document()
 
         response, name = util.input_dialog(self.window,
-                'Rename', 'Name:', 'Rename', name)
+                'Rename', 'Name:', 'Rename', obj.name)
 
         if type == 'page' and not name.endswith('.html'):
             name += '.html'
 
         if name != '':
-            if type == 'tpl':
-                new_path = self.project.rename_template(sel_iter, name)
-            else:
-                new_path = self.project.rename_file(sel_iter, name)
+            new_path = obj.rename(name)
 
         # If renamed file is opened in editor, update its path
-        if self.editor.document.path == path:
+        if self.editor.document == obj:
             self.update_editor_path(new_path)
 
     def delete_selected_cb(self, action):
