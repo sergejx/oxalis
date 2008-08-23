@@ -33,12 +33,12 @@ import server
 import util
 
 
-name = 'Oxalis'
-version = '0.1'
-comments = 'Web Site Editor'
-copyright = 'Copyright \302\251 2005-2006 Sergej Chodarev'
-website = 'http://sergejx.mysteria.cz/oxalis/'
-authors = ('Sergej Chodarev',
+NAME = 'Oxalis'
+VERSION = '0.1'
+COMMENTS = 'Web Site Editor'
+COPYRIGHT = 'Copyright \302\251 2005-2006 Sergej Chodarev'
+WEBSITE = 'http://sergejx.mysteria.cz/oxalis/'
+AUTHORS = ('Sergej Chodarev',
     '',
     'Oxalis includes:',
     '* Python-Markdown by Yuri Takhteyev',
@@ -474,12 +474,12 @@ class Oxalis(object):
     def about_cb(self, action):
         gtk.about_dialog_set_url_hook(open_url)
         about = gtk.AboutDialog()
-        about.set_name(name)
-        about.set_version(version)
-        about.set_comments(comments)
-        about.set_copyright(copyright)
-        about.set_website(website)
-        about.set_authors(authors)
+        about.set_name(NAME)
+        about.set_version(VERSION)
+        about.set_comments(COMMENTS)
+        about.set_copyright(COPYRIGHT)
+        about.set_website(WEBSITE)
+        about.set_authors(AUTHORS)
         about.run()
         about.destroy()
 
