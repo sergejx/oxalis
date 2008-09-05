@@ -63,8 +63,8 @@ class Document(object):
         return os.path.basename(self.path)
     name = property(get_name)
 
-    def move(self, new_path):
-        """Move document to new_path."""
+    def _move_files(self, new_path):
+        """Move document files to new_path."""
         old_full_path = self.full_path
         self.path = new_path
         os.rename(old_full_path, self.full_path)
@@ -73,7 +73,7 @@ class Document(object):
         """Rename document."""
         head, tail = os.path.split(self.path)
         new_path = os.path.join(head, new_name)
-        self.move(new_path)
+        self._move_files(new_path)
 
         self.project.files.set(self.tree_iter, project.NAME_COL, new_name)
         self.project.files.set(self.tree_iter, project.PATH_COL, new_path)
@@ -145,9 +145,9 @@ class Page(Document):
         f.close()
         return Page(path, project)
 
-    def move(self, new_path):
+    def _move_files(self, new_path):
         old_source_path = self.source_path
-        Document.move(self, new_path)
+        Document._move_files(self, new_path)
         os.renames(old_source_path, self.source_path)
 
     def remove(self):
@@ -289,7 +289,7 @@ class Template(Document):
     def rename(self, new_name):
         """Rename template."""
         # TODO: Change name of template in all pages which use it
-        self.move(new_name)
+        self._move_files(new_name)
 
         self.project.templates.set(self.tree_iter, project.NAME_COL, new_name)
         self.project.templates.set(self.tree_iter, project.PATH_COL, new_name)
