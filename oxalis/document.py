@@ -69,6 +69,17 @@ class Document(object):
         self.path = new_path
         os.rename(old_full_path, self.full_path)
 
+    def update_path(self):
+        """Update document path based on parent path and document name."""
+        parent_iter = self.project.files.iter_parent(self.tree_iter)
+        if parent_iter is not None:
+            parent = self.project.files.get_value(parent_iter, project.OBJECT_COL)
+            dir_path = parent.path
+        else:
+            dir_path = ""
+        self.path = os.path.join(dir_path, self.name)
+        self.project.files.set(self.tree_iter, project.PATH_COL, self.path)
+
     def rename(self, new_name):
         """Rename document."""
         head, tail = os.path.split(self.path)
@@ -331,6 +342,22 @@ class Directory(WithSource):
         full_path = os.path.join(project.dir, path)
         os.mkdir(full_path)
         return Directory(path, project)
+
+    def rename(self, new_name):
+        super(Directory, self).rename(new_name)
+        self.update_path()
+
+    def update_path(self):
+        """Update directory path based on parent path and directory name.
+
+        Also recursively updates children documents.
+        Overrides Document.update_path().
+        """
+        super(Directory, self).update_path()
+        tree_path = self.project.files.get_path(self.tree_iter)
+        for row in self.project.files[tree_path].iterchildren():
+            obj = row[project.OBJECT_COL]
+            obj.update_path()
 
     def remove(self):
         """Remove directory (overrides Document.remove())."""
