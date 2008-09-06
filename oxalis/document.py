@@ -111,7 +111,27 @@ class Document(object):
         raise NoEditorException
 
 
-class Page(Document):
+class WithSource(Document):
+    """Document witch has source representation in project.files_dir."""
+
+    @property
+    def source_path(self):
+        """Full path to source of document."""
+        return os.path.join(self.project.files_dir, self.path)
+
+    def _move_files(self, new_path):
+        """Move file and its source (overrides Document._move_files())."""
+        old_source_path = self.source_path
+        super(WithSource, self)._move_files(new_path)
+        os.renames(old_source_path, self.source_path)
+
+    def remove(self):
+        """Remove file and its source (overrides Document.remove())."""
+        os.remove(self.source_path)
+        super(WithSource, self).remove()
+
+
+class Page(WithSource):
     '''HTML page'''
 
     _header_re = re.compile('(\w+): ?(.*)')
@@ -124,11 +144,6 @@ class Page(Document):
     def url(self):
         """Preview URL of document"""
         return self.project.url + self.path
-
-    @property
-    def source_path(self):
-        """Full path to source file of page."""
-        return os.path.join(self.project.files_dir, self.path)
 
     @staticmethod
     def create(path, project):
@@ -144,15 +159,6 @@ class Page(Document):
         f.write('\n')
         f.close()
         return Page(path, project)
-
-    def _move_files(self, new_path):
-        old_source_path = self.source_path
-        Document._move_files(self, new_path)
-        os.renames(old_source_path, self.source_path)
-
-    def remove(self):
-        os.remove(self.source_path)
-        Document.remove(self)
 
     def read_header(self):
         '''Reads page header and stores it in self.header'''
@@ -315,7 +321,7 @@ class Template(Document):
         else:
             return ''
 
-class Directory(Document):
+class Directory(WithSource):
     def __init__(self, path, project):
         Document.__init__(self, path, project)
 
@@ -329,6 +335,7 @@ class Directory(Document):
     def remove(self):
         """Remove directory (overrides Document.remove())."""
         shutil.rmtree(self.full_path)
+        shutil.rmtree(self.source_path)
         self.project.files.remove(self.tree_iter)
 
 
