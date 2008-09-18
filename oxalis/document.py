@@ -40,6 +40,7 @@ class Document(object):
       * url - URL, which can be used to display document preview
         (should be defined in subclasses)
       * tree_iter -- tree iter that points to document in tree model
+      * model -- gtk.TreeModel in which document is stored
     """
 
     def __init__(self, path, project):
@@ -47,6 +48,7 @@ class Document(object):
         self.project = project
         self.path = path
         self.tree_iter = None
+        self.model = project.files
 
     def set_path(self, path):
         self._path = path
@@ -63,6 +65,17 @@ class Document(object):
         return os.path.basename(self.path)
     name = property(get_name)
 
+    @property
+    def parent(self):
+        """Parent document."""
+        parent_itr = self.model.iter_parent(self.tree_iter)
+        if parent_itr is not None:
+            parent = self.model.get_value(parent_itr, project.OBJECT_COL)
+        else:
+            # Dummy document representing tree root
+            parent = Document("", self.project)
+        return parent
+
     def _move_files(self, new_path):
         """Move document files to new_path."""
         old_full_path = self.full_path
@@ -71,14 +84,9 @@ class Document(object):
 
     def update_path(self):
         """Update document path based on parent path and document name."""
-        parent_iter = self.project.files.iter_parent(self.tree_iter)
-        if parent_iter is not None:
-            parent = self.project.files.get_value(parent_iter, project.OBJECT_COL)
-            dir_path = parent.path
-        else:
-            dir_path = ""
+        dir_path = self.parent.path
         self.path = os.path.join(dir_path, self.name)
-        self.project.files.set(self.tree_iter, project.PATH_COL, self.path)
+        self.model.set(self.tree_iter, project.PATH_COL, self.path)
 
     def rename(self, new_name):
         """Rename document."""
@@ -86,14 +94,14 @@ class Document(object):
         new_path = os.path.join(head, new_name)
         self._move_files(new_path)
 
-        self.project.files.set(self.tree_iter, project.NAME_COL, new_name)
-        self.project.files.set(self.tree_iter, project.PATH_COL, new_path)
+        self.model.set(self.tree_iter, project.NAME_COL, new_name)
+        self.model.set(self.tree_iter, project.PATH_COL, new_path)
         return new_path
 
     def remove(self):
         """Remove document."""
         os.remove(self.full_path)
-        self.project.files.remove(self.tree_iter)
+        self.model.remove(self.tree_iter)
 
     def get_text(self):
         try:
@@ -285,6 +293,7 @@ class Template(Document):
 
     def __init__(self, path, project):
         Document.__init__(self, path, project)
+        self.model = project.templates
 
     def _set_full_path(self, path):
         self.full_path = os.path.join(self.project.templates_dir, path)
@@ -306,16 +315,7 @@ class Template(Document):
     def rename(self, new_name):
         """Rename template."""
         # TODO: Change name of template in all pages which use it
-        self._move_files(new_name)
-
-        self.project.templates.set(self.tree_iter, project.NAME_COL, new_name)
-        self.project.templates.set(self.tree_iter, project.PATH_COL, new_name)
-        return new_name
-
-    def remove(self):
-        """Remove template (overrides Document.remove())."""
-        os.remove(self.full_path)
-        self.project.templates.remove(self.tree_iter)
+        return super(Template, self).rename(new_name)
 
     def create_editor(self):
         return editor.TemplateEditor(self)
@@ -354,8 +354,8 @@ class Directory(WithSource):
         Overrides Document.update_path().
         """
         super(Directory, self).update_path()
-        tree_path = self.project.files.get_path(self.tree_iter)
-        for row in self.project.files[tree_path].iterchildren():
+        tree_path = self.model.get_path(self.tree_iter)
+        for row in self.model[tree_path].iterchildren():
             obj = row[project.OBJECT_COL]
             obj.update_path()
 
@@ -363,7 +363,7 @@ class Directory(WithSource):
         """Remove directory (overrides Document.remove())."""
         shutil.rmtree(self.full_path)
         shutil.rmtree(self.source_path)
-        self.project.files.remove(self.tree_iter)
+        self.model.remove(self.tree_iter)
 
 
 class File(Document):
