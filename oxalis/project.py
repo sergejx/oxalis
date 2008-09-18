@@ -339,22 +339,18 @@ class Project(object):
         Returns new file path if file was moved or None if not
         Caller should remove old item from tree store if move was successful
         '''
-        iter = self.files.get_iter(tree_path)
-        iter, dir_path = self.find_parent_dir(iter, position)
+        itr = self.files.get_iter(tree_path)
+        itr, dir_path = self.find_parent_dir(itr, position)
         file_dir, file_name = os.path.split(file_path)
         if file_dir == dir_path:
             return None  # File was dropped to the same directory
         else:
-            dest_path = os.path.join(dir_path, file_name)
-            document = self.get_document(file_path)
-            document.move(dest_path)
-
-            # Add file to the tree store
-            if os.path.isdir(os.path.join(self.dir, dest_path)):
-                self.load_dir(os.path.join(dir_path, file_name), iter)
+            obj = self.get_document(file_path)
+            if itr is not None:
+                dest = self.files.get_value(itr, OBJECT_COL)
             else:
-                self.load_file(file_name, os.path.join(dir_path, file_name), iter)
-            return os.path.join(dir_path, file_name)
+                dest = Document("", self)
+            obj.move(dest)
 
     def generate(self):
         '''Generate project output files'''

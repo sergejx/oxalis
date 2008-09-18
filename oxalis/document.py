@@ -82,6 +82,23 @@ class Document(object):
         self.path = new_path
         os.rename(old_full_path, self.full_path)
 
+    def _move_tree_row(self, destination):
+        row_data = self.model.get(self.tree_iter,
+            *range(project.NUM_COLUMNS))
+        new_iter = self.model.append(destination.tree_iter, row_data)
+        self.model.remove(self.tree_iter)
+        self.tree_iter = new_iter
+
+    def move(self, destination):
+        """Move document to different directory.
+
+        destination -- directory object
+        """
+        dest_path = os.path.join(destination.path, self.name)
+        self._move_files(dest_path)
+        self._move_tree_row(destination)
+        return dest_path
+
     def update_path(self):
         """Update document path based on parent path and document name."""
         dir_path = self.parent.path
@@ -342,6 +359,22 @@ class Directory(WithSource):
         full_path = os.path.join(project.dir, path)
         os.mkdir(full_path)
         return Directory(path, project)
+
+    def _move_tree_row(self, destination):
+        # Move data in tree
+        old_iter = self.tree_iter
+        row_data = self.model.get(self.tree_iter,
+            *range(project.NUM_COLUMNS))
+        self.tree_iter = self.model.append(destination.tree_iter, row_data)
+
+        # Move children
+        tree_path = self.model.get_path(old_iter)
+        for row in self.model[tree_path].iterchildren():
+            obj = row[project.OBJECT_COL]
+            obj._move_tree_row(self)
+
+        # Remove old row
+        self.model.remove(old_iter)
 
     def rename(self, new_name):
         super(Directory, self).rename(new_name)
