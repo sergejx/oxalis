@@ -1,7 +1,0 @@
-pre_install() {
-  echo "Install sitecopy if you want to use uploading to server"
-}
-
-op=$1
-shift
-$op $*
