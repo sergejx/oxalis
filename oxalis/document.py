@@ -172,29 +172,19 @@ class Page(WithSource):
 
     _header_re = re.compile('(\w+): ?(.*)')
 
-    def __init__(self, path, project):
-        Document.__init__(self, path, project)
+    def __init__(self, path, project, create=False):
+        """Initialize page. If create=True, create new page file."""
+        super(Page, self).__init__(path, project)
+        if create:
+            src = file(self.source_path, 'w')
+            src.write('\n')
+            file(self.full_path, 'w')
         self.read_header()
 
     @property
     def url(self):
         """Preview URL of document"""
         return self.project.url + self.path
-
-    @staticmethod
-    def create(path, project):
-        """Create new page."""
-        # Create empty source file
-        source_path = os.path.join(project.files_dir, path)
-        f = file(source_path, 'w')
-        f.write('\n')
-        f.close()
-        # Create empty HTML file
-        full_path = os.path.join(project.dir, path)
-        f = file(full_path, 'w')
-        f.write('\n')
-        f.close()
-        return Page(path, project)
 
     def read_header(self):
         '''Reads page header and stores it in self.header'''
@@ -282,22 +272,15 @@ class Page(WithSource):
 class Style(Document):
     '''CSS style'''
 
-    def __init__(self, path, project):
-        Document.__init__(self, path, project)
+    def __init__(self, path, project, create=False):
+        super(Style, self).__init__(path, project)
+        if create:
+            file(self.full_path, 'w')
 
     @property
     def url(self):
         """Preview URL of document"""
         return self.project.url
-
-    @staticmethod
-    def create(path, project):
-        """Create new style."""
-        # Create empty file
-        full_path = os.path.join(project.dir, path)
-        f = file(full_path, 'w')
-        f.close()
-        return Style(path, project)
 
     def create_editor(self):
         return editor.StyleEditor(self)
@@ -308,9 +291,11 @@ class Template(Document):
 
     tag_re = re.compile('\{(\w+)\}')
 
-    def __init__(self, path, project):
-        Document.__init__(self, path, project)
+    def __init__(self, path, project, create=False):
+        super(Template, self).__init__(path, project)
         self.model = project.templates
+        if create:
+            file(self.full_path, 'w')
 
     def _set_full_path(self, path):
         self.full_path = os.path.join(self.project.templates_dir, path)
@@ -319,15 +304,6 @@ class Template(Document):
     def url(self):
         """Preview URL of document"""
         return self.project.url + '?template=' + self.path
-
-    @staticmethod
-    def create(path, project):
-        """Create new template."""
-        # Create empty file
-        full_path = os.path.join(project.templates_dir, path)
-        f = file(full_path, 'w')
-        f.close()
-        return Template(path, project)
 
     def rename(self, new_name):
         """Rename template."""
@@ -350,15 +326,11 @@ class Template(Document):
             return ''
 
 class Directory(WithSource):
-    def __init__(self, path, project):
-        Document.__init__(self, path, project)
-
-    @staticmethod
-    def create(path, project):
-        """Create new directory."""
-        full_path = os.path.join(project.dir, path)
-        os.mkdir(full_path)
-        return Directory(path, project)
+    def __init__(self, path, project, create=False):
+        super(Directory, self).__init__(path, project)
+        if create:
+            os.mkdir(self.source_path)
+            os.mkdir(self.full_path)
 
     def _move_tree_row(self, destination):
         # Move data in tree

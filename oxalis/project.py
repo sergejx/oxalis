@@ -295,7 +295,7 @@ class Project(object):
         '''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
-        obj = Page.create(path, self)
+        obj = Page(path, self, True)
         itr = self.files.append(parent, (obj, name, path, 'page'))
         obj.tree_iter = itr
 
@@ -303,7 +303,7 @@ class Project(object):
         '''Create new CSS style'''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
-        obj = Style.create(path, self)
+        obj = Style(path, self, True)
         itr = self.files.append(parent, (obj, name, path, 'style'))
         obj.tree_iter = itr
 
@@ -311,13 +311,13 @@ class Project(object):
         '''Create new directory'''
         parent, dir = self.find_parent_dir(selected)
         path = os.path.join(dir, name)
-        obj = Directory.create(path, self)
+        obj = Directory(path, self, True)
         itr = self.files.append(parent, (obj, name, path, 'dir'))
         obj.tree_iter = itr
 
     def new_template(self, name):
         '''Create new template'''
-        obj = Template.create(name, self)
+        obj = Template(name, self, True)
         itr = self.templates.append((obj, name, name, 'tpl'))
         obj.tree_iter = itr
 
