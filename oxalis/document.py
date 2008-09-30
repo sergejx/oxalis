@@ -172,14 +172,19 @@ class Page(WithSource):
 
     _header_re = re.compile('(\w+): ?(.*)')
 
-    def __init__(self, path, project, create=False):
-        """Initialize page. If create=True, create new page file."""
+    def __init__(self, path, project, parent, create=False):
+        """Initialize page.
+
+        * parent - gtk.TreeIter of parent directory
+        * if create == True, create new page file
+        """
         super(Page, self).__init__(path, project)
         if create:
             src = file(self.source_path, 'w')
             src.write('\n')
             file(self.full_path, 'w')
         self.read_header()
+        self.iter = self.model.append(parent, (self, self.name, path, 'page'))
 
     @property
     def url(self):
@@ -272,10 +277,11 @@ class Page(WithSource):
 class Style(Document):
     '''CSS style'''
 
-    def __init__(self, path, project, create=False):
+    def __init__(self, path, project, parent, create=False):
         super(Style, self).__init__(path, project)
         if create:
             file(self.full_path, 'w')
+        self.iter = self.model.append(parent, (self, self.name, path, 'style'))
 
     @property
     def url(self):
@@ -296,6 +302,7 @@ class Template(Document):
         self.model = project.templates
         if create:
             file(self.full_path, 'w')
+        self.iter = self.model.append((self, self.name, path, 'tpl'))
 
     def _set_full_path(self, path):
         self.full_path = os.path.join(self.project.templates_dir, path)
@@ -326,11 +333,12 @@ class Template(Document):
             return ''
 
 class Directory(WithSource):
-    def __init__(self, path, project, create=False):
+    def __init__(self, path, project, parent, create=False):
         super(Directory, self).__init__(path, project)
         if create:
             os.mkdir(self.source_path)
             os.mkdir(self.full_path)
+        self.iter = self.model.append(parent, (self, self.name, path, 'dir'))
 
     def _move_tree_row(self, destination):
         # Move data in tree
@@ -372,14 +380,21 @@ class Directory(WithSource):
 
 
 class File(Document):
-    def __init__(self, path, project):
+    def __init__(self, path, project, parent):
         Document.__init__(self, path, project)
 
+        ext = os.path.splitext(path)[1]
+        if ext in ('.png', '.jpeg', '.jpg', '.gif'):
+            tp = 'image'
+        else:
+            tp = 'file'
+        self.iter = self.model.append(parent, (self, self.name, path, tp))
+
     @staticmethod
-    def add_to_project(path, project, filename):
+    def add_to_project(path, project, parent, filename):
         """Copy file to project"""
         full_path = os.path.join(project.dir, path)
         shutil.copyfile(filename, full_path)
-        return File(path, project)
+        return File(path, project, parent)
 
 # vim:tabstop=4:expandtab

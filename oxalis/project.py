@@ -164,10 +164,8 @@ class Project(object):
         parent - gtk.TreeIter of parent directory
         '''
         if dirpath != '':  # not root directory
-            name = os.path.basename(dirpath)
-            obj = Directory(dirpath, self)
-            parent = self.files.append(parent, (obj, name, dirpath, 'dir'))
-            obj.tree_iter = parent
+            obj = Directory(dirpath, self, parent)
+            parent = obj.tree_iter
 
         for filename in os.listdir(os.path.join(self.dir, dirpath)):
             if filename != '_oxalis':
@@ -187,21 +185,11 @@ class Project(object):
         '''
         name, ext = os.path.splitext(filename)
         if ext == '.html':
-            obj = Page(path, self)
-            itr = self.files.append(parent, (obj, filename, path, 'page'))
-            obj.tree_iter = itr
+            Page(path, self, parent)
         elif ext == '.css':
-            obj = Style(path, self)
-            itr = self.files.append(parent, (obj, filename, path, 'style'))
-            obj.tree_iter = itr
-        elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
-            obj = File(path, self)
-            itr = self.files.append(parent, (obj, filename, path, 'image'))
-            obj.tree_iter = itr
-        elif ext != '.html' and filename[0] != '.':
-            obj = File(path, self)
-            itr = self.files.append(parent, (obj, filename, path, 'file'))
-            obj.tree_iter = itr
+            Style(path, self, parent)
+        elif filename[0] != '.':
+            File(path, self, parent)
 
     def sort_files_store(self, model, iter1, iter2):
         '''Comparison function for sorting files tree store'''
@@ -223,9 +211,7 @@ class Project(object):
         tpl_dir = os.path.join(self.dir, '_oxalis', 'templates')
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
-            obj = Template(name, self)
-            itr = self.templates.append((obj, name, filename, 'tpl'))
-            obj.tree_iter = itr
+            Template(name, self)
 
     def close(self):
         """Close project and save properties"""
@@ -293,42 +279,32 @@ class Project(object):
 
         name - name of page, must ends with .html
         '''
-        parent, dir = self.find_parent_dir(selected)
-        path = os.path.join(dir, name)
-        obj = Page(path, self, True)
-        itr = self.files.append(parent, (obj, name, path, 'page'))
-        obj.tree_iter = itr
+        parent, dir_path = self.find_parent_dir(selected)
+        path = os.path.join(dir_path, name)
+        Page(path, self, parent, True)
 
     def new_style(self, name, selected):
         '''Create new CSS style'''
-        parent, dir = self.find_parent_dir(selected)
-        path = os.path.join(dir, name)
-        obj = Style(path, self, True)
-        itr = self.files.append(parent, (obj, name, path, 'style'))
-        obj.tree_iter = itr
+        parent, dir_path = self.find_parent_dir(selected)
+        path = os.path.join(dir_path, name)
+        Style(path, self, parent, True)
 
     def new_dir(self, name, selected):
         '''Create new directory'''
-        parent, dir = self.find_parent_dir(selected)
-        path = os.path.join(dir, name)
-        obj = Directory(path, self, True)
-        itr = self.files.append(parent, (obj, name, path, 'dir'))
-        obj.tree_iter = itr
+        parent, dir_path = self.find_parent_dir(selected)
+        path = os.path.join(dir_path, name)
+        Directory(path, self, parent, True)
 
     def new_template(self, name):
         '''Create new template'''
-        obj = Template(name, self, True)
-        itr = self.templates.append((obj, name, name, 'tpl'))
-        obj.tree_iter = itr
+        Template(name, self, True)
 
     def add_file(self, filename, selected, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
         '''Add existing file to project'''
-        parent, dir = self.find_parent_dir(selected, position)
+        parent, dir_path = self.find_parent_dir(selected, position)
         name = os.path.basename(filename)
-        path = os.path.join(dir, name)
-        obj = File.add_to_project(path, self, filename)
-        itr = self.files.append(parent, (obj, name, path, 'file'))
-        obj.tree_iter = itr
+        path = os.path.join(dir_path, name)
+        File.add_to_project(path, self, parent, filename)
 
     def move_file(self, file_path, tree_path, position):
         '''Move file (used with drag&drop)
@@ -357,11 +333,9 @@ class Project(object):
         self.files.foreach(self.generate_item)
 
     def generate_item(self, model, path, iter):
-        type = model.get_value(iter, TYPE_COL)
-        if type == 'page':
-            path = model.get_value(iter, PATH_COL)
-            page = Page(path, self)
-            page.generate()
+        obj, tp = model.get_value(iter, OBJECT_COL, TYPE_COL)
+        if tp == 'page':
+            obj.generate()
 
     def upload(self):
         '''Starts uploading of project files to server.
