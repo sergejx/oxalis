@@ -120,6 +120,24 @@ class Document(object):
         os.remove(self.full_path)
         self.model.remove(self.tree_iter)
 
+    def create_editor(self):
+        """Return new editor component for document."""
+        raise NoEditorException
+
+class Editable(Document):
+    """
+    Base class for editable documents.
+
+    Contains methods for reading and modifying document text.
+
+    Property:
+      - text
+
+    Methods:
+      - read_text()
+      - write()
+    """
+
     def get_text(self):
         try:
             return self._text
@@ -142,10 +160,6 @@ class Document(object):
         f.write(self.text)
         f.close()
 
-    def create_editor(self):
-        """Return new editor component for document."""
-        raise NoEditorException
-
 
 class WithSource(Document):
     """Document witch has source representation in project.files_dir."""
@@ -167,7 +181,7 @@ class WithSource(Document):
         super(WithSource, self).remove()
 
 
-class Page(WithSource):
+class Page(Editable, WithSource):
     '''HTML page'''
 
     _header_re = re.compile('(\w+): ?(.*)')
@@ -274,7 +288,7 @@ class Page(WithSource):
                 return 'UTF-8'
 
 
-class Style(Document):
+class Style(Editable):
     '''CSS style'''
 
     def __init__(self, path, project, parent, create=False):
@@ -292,7 +306,7 @@ class Style(Document):
         return editor.StyleEditor(self)
 
 
-class Template(Document):
+class Template(Editable):
     '''Template for HTML pages'''
 
     tag_re = re.compile('\{(\w+)\}')
