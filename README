@@ -8,6 +8,7 @@ Requirements
 - PyGTK 2.6
 - GnomePythonDesktop (for GtkSourceView)
 - [PyWebKitGtk](http://code.google.com/p/pywebkitgtk/)
+- [Markdown in Python](http://www.freewisdom.org/projects/python-markdown/)
 - [sitecopy](http://www.lyra.org/sitecopy/)
    (if you want to use uploading to server)
 

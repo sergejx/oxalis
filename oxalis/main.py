@@ -42,7 +42,6 @@ WEBSITE = 'http://sergejx.mysteria.cz/oxalis/'
 AUTHORS = ('Sergej Chodarev',
     '',
     'Oxalis includes:',
-    '* Python-Markdown by Yuri Takhteyev',
     '* smartypants.py by Chad Miller',
     'Author of original Markdown and SmartyPants is John Gruber'
 )
