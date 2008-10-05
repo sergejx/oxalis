@@ -198,7 +198,7 @@ class Page(Editable, WithSource):
             src.write('\n')
             file(self.full_path, 'w')
         self.read_header()
-        self.iter = self.model.append(parent, (self, self.name, path, 'page'))
+        self.tree_iter = self.model.append(parent, (self, self.name, path, 'page'))
 
     @property
     def url(self):
@@ -295,7 +295,7 @@ class Style(Editable):
         super(Style, self).__init__(path, project)
         if create:
             file(self.full_path, 'w')
-        self.iter = self.model.append(parent, (self, self.name, path, 'style'))
+        self.tree_iter = self.model.append(parent, (self, self.name, path, 'style'))
 
     @property
     def url(self):
@@ -316,7 +316,7 @@ class Template(Editable):
         self.model = project.templates
         if create:
             file(self.full_path, 'w')
-        self.iter = self.model.append((self, self.name, path, 'tpl'))
+        self.tree_iter = self.model.append((self, self.name, path, 'tpl'))
 
     def _set_full_path(self, path):
         self.full_path = os.path.join(self.project.templates_dir, path)
@@ -352,7 +352,7 @@ class Directory(WithSource):
         if create:
             os.mkdir(self.source_path)
             os.mkdir(self.full_path)
-        self.iter = self.model.append(parent, (self, self.name, path, 'dir'))
+        self.tree_iter = self.model.append(parent, (self, self.name, path, 'dir'))
 
     def _move_tree_row(self, destination):
         # Move data in tree
@@ -402,7 +402,7 @@ class File(Document):
             tp = 'image'
         else:
             tp = 'file'
-        self.iter = self.model.append(parent, (self, self.name, path, tp))
+        self.tree_iter = self.model.append(parent, (self, self.name, path, tp))
 
     @staticmethod
     def add_to_project(path, project, parent, filename):
