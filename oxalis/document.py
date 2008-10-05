@@ -239,7 +239,7 @@ class Page(Editable, WithSource):
 
     def generate(self):
         '''Generates HTML file'''
-        tpl = Template(self.header['Template'], self.project)
+        tpl = self.project.get_document(self.header['Template'], True)
         # Check if source file or template was modified after HTML file
         # was generated last time
         if not os.path.exists(self.source_path) or \
@@ -263,7 +263,7 @@ class Page(Editable, WithSource):
         else:
             tpl_name = 'default'
 
-        tpl = Template(tpl_name, self.project)
+        tpl = self.project.get_document(tpl_name, True)
         tags = self.header.copy()
         tags['Content'] = content
         return tpl.process_page(tags)
