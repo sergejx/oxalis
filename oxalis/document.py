@@ -50,20 +50,15 @@ class Document(object):
         self.tree_iter = None
         self.model = project.files
 
-    def set_path(self, path):
-        self._path = path
-        self._set_full_path(path)
+    @property
+    def full_path(self):
+        """Full path to document file."""
+        return os.path.join(self.project.dir, self.path)
 
-    path = property(lambda self: self._path, set_path, None,
-        'Path to the document')
-
-    def _set_full_path(self, path):
-        self.full_path = os.path.join(self.project.dir, path)
-
-    def get_name(self):
-        """Get file name of document."""
+    @property
+    def name(self):
+        """File name of document."""
         return os.path.basename(self.path)
-    name = property(get_name)
 
     @property
     def parent(self):
@@ -318,8 +313,9 @@ class Template(Editable):
             file(self.full_path, 'w')
         self.tree_iter = self.model.append((self, self.name, path, 'tpl'))
 
-    def _set_full_path(self, path):
-        self.full_path = os.path.join(self.project.templates_dir, path)
+    @property
+    def full_path(self):
+        return os.path.join(self.project.templates_dir, self.path)
 
     @property
     def url(self):
