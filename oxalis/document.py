@@ -31,20 +31,40 @@ class NoEditorException(Exception):
     pass
 
 class Document(object):
-    """Abstract base class for documents which can be edited in Oxalis.
+    """
+    Abstract base class for documents which can be part of Oxalis project.
 
     Member variables:
-      * project - points to project
-      * path - path to the document, relative to project directry
-      * name - file name of document
-      * url - URL, which can be used to display document preview
+      - path -- path to the document, relative to project directory
+      - project -- points to project
+      - tree_iter -- tree iter pointing to document in tree model
+      - model -- tree model in which document is stored
+                 (default -- project.files)
+
+    Properties:
+      - full_path -- full path to the document file
+      - name -- file name of document
+      - url -- URL, which can be used to display document preview
         (should be defined in subclasses)
-      * tree_iter -- tree iter that points to document in tree model
-      * model -- gtk.TreeModel in which document is stored
+      - parent -- parent document
+
+    Methods:
+      - move(destination) -- move document to different directory
+      - update_path() -- update document path based on parent path
+      - rename(new_name)
+      - remove()
+      - create_editor() -- create editor for document
     """
 
     def __init__(self, path, project):
-        '''Initializes document with path and project.'''
+        """
+        Initialize document with path and project.
+
+        Constructors of subclasses typically have these additional arguments:
+          - parent -- tree iter of parent directory
+          - create -- if create == True, constructor will create new document
+                      on disk
+        """
         self.project = project
         self.path = path
         self.tree_iter = None
@@ -62,7 +82,12 @@ class Document(object):
 
     @property
     def parent(self):
-        """Parent document."""
+        """
+        Parent document.
+
+        If document has no parent, special Document object is used with path
+        set to "".
+        """
         parent_itr = self.model.iter_parent(self.tree_iter)
         if parent_itr is not None:
             parent = self.model.get_value(parent_itr, project.OBJECT_COL)
@@ -78,6 +103,11 @@ class Document(object):
         os.rename(old_full_path, self.full_path)
 
     def _move_tree_row(self, destination):
+        """
+        Move document tree row to new location.
+
+        destination -- new parent document
+        """
         row_data = self.model.get(self.tree_iter,
             *range(project.NUM_COLUMNS))
         new_iter = self.model.append(destination.tree_iter, row_data)
@@ -157,7 +187,14 @@ class Editable(Document):
 
 
 class WithSource(Document):
-    """Document witch has source representation in project.files_dir."""
+    """
+    Document with source representation in project.files_dir.
+
+    Property:
+      - source_path -- full path to source file
+
+    Class also redefines some methods from Document to work with source files.
+    """
 
     @property
     def source_path(self):
