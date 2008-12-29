@@ -1,7 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2006 Sergej Chodarev
-# Based on code from Quod Libet written by Joe Wreschnig
+# Copyright (C) 2006,2008 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,55 +19,74 @@
 from ConfigParser import RawConfigParser
 import os
 
-_conffile = os.path.expanduser('~/.oxalis')
-_defaults = {
-    'window': {
-        'width': 600,
-        'height': 440,
-        'sidepanel-width': 160
-    },
-    'editor': {
-        'font': 'Monospace 10'
-    }
+XDG_CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME") \
+                  or os.path.expanduser("~/.config")
+
+SETTINGS_DEFAULTS = {
+    'font': 'Monospace 10',
 }
 
-_config = RawConfigParser()
-get = _config.get
-getboolean = _config.getboolean
-getint = _config.getint
-getfloat = _config.getfloat
+STATE_DEFAULTS = {
+    'width': 800,
+    'height': 600,
+    'sidepanel-width': 160,
+}
 
-notifiers = {}
+class Configuration(object):
+    """
+    Simple configuration system based on ConfigParser but without sections and
+    with change notification.
+    """
 
+    def __init__(self, directory, name, defaults={}):
+        """
+        Create confituration object from file stored in `directory` and with
+        specified `name`.
 
-def set(section, key, value):
-    _config.set(section, key, value)
-    notify(section, key)
+        If `directory` is set to "$CONFIG" it will be replaced with user
+        configuration directory.
+        """
+        self.config = RawConfigParser(defaults)
+        if directory == "$CONFIG":
+            self.directory = os.path.join(XDG_CONFIG_HOME, "oxalis")
+        else:
+            self.directory = directory
+        self.name = name
+        self.filename = os.path.join(self.directory, name + ".cfg")
+        if os.path.exists(self.filename):
+            self.config.read(self.filename)
+        if not self.config.has_section(self.name):
+            self.config.add_section(self.name)
+        self.notifiers = {}
 
-def add_notify(section, key, function):
-    if (section, key) not in notifiers:
-        notifiers[(section, key)] = []
-    notifiers[(section, key)].append(function)
+    def set(self, key, value):
+        self.config.set(self.name, key, value)
+        self.notify(key)
 
-def notify(section, key):
-    if (section, key) in notifiers:
-        for function in notifiers[(section, key)]:
-            function()
+    def get(self, key):
+        return self.config.get(self.name, key)
 
-def write():
-    if not os.path.isdir(os.path.dirname(_conffile)):
-        os.makedirs(os.path.dirname(_conffile))
-    f = file(_conffile, "w")
-    _config.write(f)
-    f.close()
+    def getint(self, key):
+        return self.config.getint(self.name, key)
 
-def init():
-    for section, values in _defaults.iteritems():
-        _config.add_section(section)
-        for key, value in values.iteritems():
-            _config.set(section, key, value)
+    def add_notify(self, key, function):
+        """Add function which would be called after change of the key."""
+        if key not in self.notifiers:
+            self.notifiers[key] = []
+        self.notifiers[key].append(function)
 
-    if os.path.exists(_conffile):
-        _config.read(_conffile)
+    def notify(self, key):
+        if key in self.notifiers:
+            for function in self.notifiers[key]:
+                function()
 
-# vim:tabstop=4:expandtab
+    def write(self):
+        """Write configuraion to file."""
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+        self.config.write(file(self.filename, "w"))
+
+# Read application configuration
+settings = Configuration("$CONFIG", "settings", SETTINGS_DEFAULTS)
+state = Configuration("$CONFIG", "state", STATE_DEFAULTS)
+

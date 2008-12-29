@@ -141,12 +141,12 @@ class Oxalis(object):
 
         self.window.add(self.vbox)
 
-        width = config.getint('window', 'width')
-        height = config.getint('window', 'height')
+        width = config.state.getint('width')
+        height = config.state.getint('height')
         self.window.resize(width, height)
 
 
-        config.add_notify('editor', 'font', self.font_changed)
+        config.settings.add_notify('font', self.font_changed)
 
     def create_start_panel(self):
         new = gtk.Button('New project')
@@ -206,7 +206,7 @@ class Oxalis(object):
         self.sidepane = sidepane.SidePane(self, self.project)
         self.paned = gtk.HPaned()
         self.paned.add1(self.sidepane)
-        self.paned.set_position(config.getint('window', 'sidepanel-width'))
+        self.paned.set_position(config.state.getint('sidepanel-width'))
 
     def font_changed(self):
         try:
@@ -484,10 +484,12 @@ class Oxalis(object):
             self.project.close()
 
         width, height = self.window.get_size()
-        config.set('window', 'width', width)
-        config.set('window', 'height', height)
+        config.state.set('width', width)
+        config.state.set('height', height)
         if 'paned' in self.__dict__:
-            config.set('window', 'sidepanel-width', self.paned.get_position())
+            config.state.set('sidepanel-width', self.paned.get_position())
+        config.settings.write()
+        config.state.write()
         gtk.main_quit()
 
 
@@ -497,7 +499,7 @@ class PreferencesDialog(gtk.Dialog):
         gtk.Dialog.__init__(self, 'Oxalis Preferences', parent,
                             buttons=buttons)
         label = gtk.Label('Editor font:')
-        font_button = gtk.FontButton(config.get('editor', 'font'))
+        font_button = gtk.FontButton(config.settings.get('font'))
         font_button.connect('font-set', self.font_set)
         box = gtk.HBox()
         box.pack_start(label, False, False, 6)
@@ -506,16 +508,14 @@ class PreferencesDialog(gtk.Dialog):
         self.show_all()
 
     def font_set(self, font_button):
-        config.set('editor', 'font', font_button.get_font_name())
+        config.settings.set('font', font_button.get_font_name())
 
 
 def open_url(dialog, link):
     subprocess.call(('gnome-open', link))
 
 
-def run():
-    config.init()
-    Oxalis().run()
-    config.write()
 
-# vim:tabstop=4:expandtab
+def run():
+    Oxalis().run()
+
