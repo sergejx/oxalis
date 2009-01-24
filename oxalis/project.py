@@ -92,6 +92,10 @@ def create_project(path):
     f.write('\n================')
     f.close()
 
+    # Create empty HTML representation of index page
+    f = file(os.path.join(path, 'index.html'), 'w')
+    f.close()
+
     templates_dir = os.path.join(oxalis_dir, 'templates')
     os.mkdir(templates_dir)
 
