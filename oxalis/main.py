@@ -384,8 +384,8 @@ class Oxalis(object):
 
         self.create_paned()
 
-        last_file = self.project.config.get('state', 'last_file')
-        last_file_type = self.project.config.get('state', 'last_file_type')
+        last_file = self.project.state.get('last_document')
+        last_file_type = self.project.state.get('last_document_type')
 
         self.vbox.remove(self.start_panel)
         self.vbox.pack_start(self.paned)
@@ -472,13 +472,12 @@ class Oxalis(object):
     def quit_cb(self, *args):
         if 'editor' in self.__dict__:
             self.editor.save()
-            self.project.config.set('state', 'last_file',
-                                    self.editor.document.path)
+            self.project.state.set('last_document', self.editor.document.path)
             if isinstance(self.editor, editor.TemplateEditor):
                 file_type = 'template'
             else:
                 file_type = 'file'
-            self.project.config.set('state', 'last_file_type', file_type)
+            self.project.state.set('last_document_type', file_type)
         if 'project' in self.__dict__:
             self.project.close()
 

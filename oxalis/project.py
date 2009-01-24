@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2008 Sergej Chodarev
+# Copyright (C) 2005-2009 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import gtk
 
 import util
 from document import *
+from config import Configuration
 
 default_template = '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -49,6 +50,15 @@ sitecopy_rc = '''site $name
   exclude _oxalis
 '''
 
+CONFIG_DEFAULTS = {
+    'url_path': "/",
+}
+
+STATE_DEFAULTS = {
+    'last_document': "index.html",
+    'last_document_type': 'file',
+}
+
 # Constants for column numbers
 NUM_COLUMNS = 4
 OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(NUM_COLUMNS)
@@ -63,16 +73,15 @@ def create_project(path):
     os.mkdir(oxalis_dir)
 
     # Write project configuration
-    config_file = os.path.join(oxalis_dir, 'config')
-    config = RawConfigParser()
-    config.add_section('project')
-    config.set('project', 'format', '0.2')
-    config.add_section('upload')
-    f = file(config_file, 'w')
-    config.write(f)
-    f.close()
-    # Make configuration file readable only by owner (it contains FTP password)
-    os.chmod(config_file, 0600)
+    config = Configuration(oxalis_dir, 'config', CONFIG_DEFAULTS)
+    config.set('project_format', '0.2')
+    config.write()
+
+    upload_conf = Configuration(oxalis_dir, 'upload')
+    upload_conf.write()
+    # Make upload configuration file readable only by owner
+    # (it contains FTP password)
+    os.chmod(os.path.join(oxalis_dir, 'upload.cfg'), 0600)
 
     files_dir = os.path.join(oxalis_dir, 'files')
     os.mkdir(files_dir)
@@ -110,27 +119,22 @@ def dir_is_project(directory):
 
 
 class Project(object):
-    def __init__(self, dir):
-        self.dir = dir
-        self.files_dir = os.path.join(dir, '_oxalis', 'files')
-        self.templates_dir = os.path.join(dir, '_oxalis', 'templates')
+    def __init__(self, directory):
+        self.directory = directory
+        self.config_dir = os.path.join(self.directory, "_oxalis")
+        self.files_dir = os.path.join(self.config_dir, 'files')
+        self.templates_dir = os.path.join(self.config_dir, 'templates')
 
-        self.config = RawConfigParser()
-        # Set default configuration
-        self.config.add_section('state')
-        self.config.set('state', 'last_file', 'index.html')
-        self.config.set('state', 'last_file_type', 'file')
-        self.config.add_section('preview')
-        self.config.set('preview', 'url_path', '/')
-        # Read configuration
-        self.config.read(os.path.join(self.dir, '_oxalis', 'config'))
+        self.config = Configuration(self.config_dir, 'config', CONFIG_DEFAULTS)
+        self.state = Configuration(self.config_dir, 'state', STATE_DEFAULTS)
+        self.upload_conf = Configuration(self.config_dir, 'upload')
 
         self.load_files_tree()
         self.load_templates_list()
 
     def get_url_path(self):
         """Return path part of project preview URL."""
-        path = self.config.get('preview', 'url_path').strip('/')
+        path = self.config.get('url_path').strip('/')
         if len(path) == 0:
             return path
         else:
@@ -160,17 +164,17 @@ class Project(object):
     def load_dir(self, dirpath, parent=None):
         '''Loads directory to files tree store
 
-        dirpath - directory to load, path relative to self.dir
+        dirpath - directory to load, path relative to self.directory
         parent - gtk.TreeIter of parent directory
         '''
         if dirpath != '':  # not root directory
             obj = Directory(dirpath, self, parent)
             parent = obj.tree_iter
 
-        for filename in os.listdir(os.path.join(self.dir, dirpath)):
+        for filename in os.listdir(os.path.join(self.directory, dirpath)):
             if filename != '_oxalis':
                 path = os.path.join(dirpath, filename)
-                full_path = os.path.join(self.dir, path)
+                full_path = os.path.join(self.directory, path)
                 if os.path.isdir(full_path):
                     self.load_dir(path, parent)
                 else:
@@ -180,7 +184,7 @@ class Project(object):
         '''Append file to files tree store
 
         filename - name of the file
-        path - path relative to self.dir
+        path - path relative to self.directory
         parent - gtk.TreeIter of parent directory
         '''
         name, ext = os.path.splitext(filename)
@@ -208,16 +212,14 @@ class Project(object):
         '''
         self.templates = gtk.ListStore(object, str, str, str)
 
-        tpl_dir = os.path.join(self.dir, '_oxalis', 'templates')
+        tpl_dir = os.path.join(self.directory, '_oxalis', 'templates')
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
             Template(name, self)
 
     def close(self):
-        """Close project and save properties"""
-        f = file(os.path.join(self.dir, '_oxalis', 'config'), 'w')
-        self.config.write(f)
-        f.close
+        """Close project and save its state"""
+        self.state.write()
 
     def get_file_type(self, filename):
         '''Get file type from filename'''
@@ -345,19 +347,19 @@ class Project(object):
         Process of uploading can be monitored using check_upload function.
         '''
         for key in ('host', 'remotedir', 'user', 'passwd'):
-            if not self.config.has_option('upload', key):
+            if not self.upload_conf.has_option(key):
                 return False
 
-        rcfile = os.path.join(self.dir, '_oxalis', 'sitecopyrc')
-        storepath = os.path.join(self.dir, '_oxalis', 'sitecopy')
+        rcfile = os.path.join(self.config_dir, "sitecopyrc")
+        storepath = os.path.join(self.config_dir, "sitecopy")
 
         # Check if we need to initialize sitecopy
         # It is needed if we upload to given location for the first time
         need_init = False
         for key in ('host', 'remotedir'):
-            if self.config.has_option('upload', 'last_'+key):
-                last = self.config.get('upload', 'last_'+key)
-                current = self.config.get('upload', key)
+            if self.upload_conf.has_option('last_'+key):
+                last = self.upload_conf.get('last_'+key)
+                current = self.upload_conf.get(key)
                 if current != last:
                     need_init = True
         if not os.path.exists(os.path.join(storepath, 'project')):
@@ -366,8 +368,8 @@ class Project(object):
         # Update sitecopyrc file
         f = file(rcfile, 'w')
         tpl = string.Template(sitecopy_rc)
-        f.write(tpl.substitute(dict(self.config.items('upload')),
-            name='project', local=self.dir))
+        f.write(tpl.substitute(dict(self.upload_conf.items()),
+            name='project', local=self.directory))
         f.close()
 
         if need_init:
@@ -379,7 +381,7 @@ class Project(object):
             stdout=subprocess.PIPE)
 
         for key in ('host', 'remotedir'):
-            self.config.set('upload', 'last_'+key, self.config.get('upload', key))
+            self.upload_conf.set('last_'+key, self.upload_conf.get(key))
 
         return True
 
@@ -406,22 +408,22 @@ class Project(object):
     def properties_dialog(self, parent_window):
         '''Display project properties dialog.'''
         settings = {}
-        settings['upload'] = dict(self.config.items('upload'))
-        settings['preview'] = dict(self.config.items('preview'))
+        settings['upload'] = dict(self.upload_conf.items())
+        settings['preview'] = dict(self.config.items())
         dialog = ProjectPropertiesDialog(parent_window, settings)
         response = dialog.run()
         settings = dialog.get_settings()
         dialog.destroy()
 
         if response == gtk.RESPONSE_OK:
-            for section in settings:
-                for key, value in settings[section].items():
-                    self.config.set(section, key, value)
-
+            self.config.set('url_path', settings['preview']['url_path'])
+            self.upload_conf.set('host', settings['upload']['host'])
+            self.upload_conf.set('user', settings['upload']['user'])
+            self.upload_conf.set('passwd', settings['upload']['passwd'])
+            self.upload_conf.set('remotedir', settings['upload']['remotedir'])
             # Save properties
-            f = file(os.path.join(self.dir, '_oxalis', 'config'), 'w')
-            self.config.write(f)
-            f.close
+            self.config.write()
+            self.upload_conf.write()
 
 
 class ProjectPropertiesDialog(gtk.Dialog):

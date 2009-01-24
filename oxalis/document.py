@@ -73,7 +73,7 @@ class Document(object):
     @property
     def full_path(self):
         """Full path to document file."""
-        return os.path.join(self.project.dir, self.path)
+        return os.path.join(self.project.directory, self.path)
 
     @property
     def name(self):
@@ -440,7 +440,7 @@ class File(Document):
     @staticmethod
     def add_to_project(path, project, parent, filename):
         """Copy file to project"""
-        full_path = os.path.join(project.dir, path)
+        full_path = os.path.join(project.directory, path)
         shutil.copyfile(filename, full_path)
         return File(path, project, parent)
 

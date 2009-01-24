@@ -69,6 +69,12 @@ class Configuration(object):
     def getint(self, key):
         return self.config.getint(self.name, key)
 
+    def has_option(self, key):
+        return self.config.has_option(self.name, key)
+
+    def items(self):
+        return self.config.items(self.name)
+
     def add_notify(self, key, function):
         """Add function which would be called after change of the key."""
         if key not in self.notifiers:

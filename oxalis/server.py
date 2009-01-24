@@ -67,7 +67,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
             base_path = project.get_url_path()
             request_path = self.path[1:]
             request_path = request_path[len(base_path):]
-            full_path = os.path.join(project.dir, request_path)
+            full_path = os.path.join(project.directory, request_path)
             if os.path.isdir(full_path):
                 request_path = os.path.join(request_path, 'index.html')
                 full_path = os.path.join(full_path, 'index.html')
