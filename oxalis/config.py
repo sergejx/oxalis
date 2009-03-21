@@ -46,7 +46,8 @@ class Configuration(object):
         If `directory` is set to "$CONFIG" it will be replaced with user
         configuration directory.
         """
-        self.config = RawConfigParser(defaults)
+        self.notifiers = {}
+        self.config = RawConfigParser()
         if directory == "$CONFIG":
             self.directory = os.path.join(XDG_CONFIG_HOME, "oxalis")
         else:
@@ -57,7 +58,10 @@ class Configuration(object):
             self.config.read(self.filename)
         if not self.config.has_section(self.name):
             self.config.add_section(self.name)
-        self.notifiers = {}
+        # Fill defaults
+        for key, value in defaults.items():
+            if not self.has_option(key):
+                self.set(key, value)
 
     def set(self, key, value):
         self.config.set(self.name, key, value)
