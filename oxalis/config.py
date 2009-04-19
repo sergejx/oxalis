@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2006,2008 Sergej Chodarev
+# Copyright (C) 2006,2008-2009 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,19 +23,20 @@ XDG_CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME") \
                   or os.path.expanduser("~/.config")
 
 SETTINGS_DEFAULTS = {
-    'font': 'Monospace 10',
+    'editor': {
+        'font': 'Monospace 10',
+    },
+    'state': {
+        'width': 800,
+        'height': 600,
+        'sidepanel-width': 160,
+    },
 }
 
-STATE_DEFAULTS = {
-    'width': 800,
-    'height': 600,
-    'sidepanel-width': 160,
-}
-
-class Configuration(object):
+class Configuration(RawConfigParser):
     """
-    Simple configuration system based on ConfigParser but without sections and
-    with change notification.
+    Configuration system based on ConfigParser with better defaults mechanism
+    and with change notification.
     """
 
     def __init__(self, directory, name, defaults={}):
@@ -46,57 +47,47 @@ class Configuration(object):
         If `directory` is set to "$CONFIG" it will be replaced with user
         configuration directory.
         """
+        RawConfigParser.__init__(self)
         self.notifiers = {}
-        self.config = RawConfigParser()
+
         if directory == "$CONFIG":
             self.directory = os.path.join(XDG_CONFIG_HOME, "oxalis")
         else:
             self.directory = directory
         self.name = name
-        self.filename = os.path.join(self.directory, name + ".cfg")
+        self.filename = os.path.join(self.directory, name)
         if os.path.exists(self.filename):
-            self.config.read(self.filename)
-        if not self.config.has_section(self.name):
-            self.config.add_section(self.name)
+            self.read(self.filename)
+
         # Fill defaults
-        for key, value in defaults.items():
-            if not self.has_option(key):
-                self.set(key, value)
+        for section, values in defaults.items():
+            if not self.has_section(section):
+                self.add_section(section)
+            for key, value in values.items():
+                if not self.has_option(section, key):
+                    self.set(section, key, value)
 
-    def set(self, key, value):
-        self.config.set(self.name, key, value)
-        self.notify(key)
+    def set(self, section, key, value):
+        RawConfigParser.set(self, section, key, value)
+        self.notify(section, key)
 
-    def get(self, key):
-        return self.config.get(self.name, key)
-
-    def getint(self, key):
-        return self.config.getint(self.name, key)
-
-    def has_option(self, key):
-        return self.config.has_option(self.name, key)
-
-    def items(self):
-        return self.config.items(self.name)
-
-    def add_notify(self, key, function):
+    def add_notify(self, section, key, function):
         """Add function which would be called after change of the key."""
-        if key not in self.notifiers:
-            self.notifiers[key] = []
-        self.notifiers[key].append(function)
+        if (section, key) not in self.notifiers:
+            self.notifiers[(section, key)] = []
+        self.notifiers[(section, key)].append(function)
 
-    def notify(self, key):
-        if key in self.notifiers:
-            for function in self.notifiers[key]:
+    def notify(self, section, key):
+        if (section, key) in self.notifiers:
+            for function in self.notifiers[(section, key)]:
                 function()
 
     def write(self):
         """Write configuraion to file."""
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
-        self.config.write(file(self.filename, "w"))
+        RawConfigParser.write(self, file(self.filename, "w"))
 
 # Read application configuration
 settings = Configuration("$CONFIG", "settings", SETTINGS_DEFAULTS)
-state = Configuration("$CONFIG", "state", STATE_DEFAULTS)
 
