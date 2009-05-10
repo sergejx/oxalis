@@ -84,9 +84,7 @@ def create_project(path):
     # (it contains FTP password)
     os.chmod(os.path.join(oxalis_dir, 'config'), 0600)
 
-    files_dir = os.path.join(oxalis_dir, 'files')
-    os.mkdir(files_dir)
-    f = file(os.path.join(files_dir, 'index.html'), 'w')
+    f = file(os.path.join(path, 'index.text'), 'w')
     f.write('Title: ' + name)
     f.write('\n\n')
     f.write(name)
@@ -127,7 +125,6 @@ class Project(object):
     def __init__(self, directory):
         self.directory = directory
         self.config_dir = os.path.join(self.directory, "_oxalis")
-        self.files_dir = os.path.join(self.config_dir, 'files')
         self.templates_dir = os.path.join(self.config_dir, 'templates')
 
         self.config = Configuration(self.config_dir, 'config', CONFIG_DEFAULTS)
@@ -193,6 +190,8 @@ class Project(object):
         name, ext = os.path.splitext(filename)
         if ext == '.html':
             Page(path, self, parent)
+        elif ext == '.text':
+            pass # Ignore page sources
         elif ext == '.css':
             Style(path, self, parent)
         elif filename[0] != '.':

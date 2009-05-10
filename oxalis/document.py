@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2008 Sergej Chodarev
+# Copyright (C) 2005-2009 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -186,34 +186,7 @@ class Editable(Document):
         f.close()
 
 
-class WithSource(Document):
-    """
-    Document with source representation in project.files_dir.
-
-    Property:
-      - source_path -- full path to source file
-
-    Class also redefines some methods from Document to work with source files.
-    """
-
-    @property
-    def source_path(self):
-        """Full path to source of document."""
-        return os.path.join(self.project.files_dir, self.path)
-
-    def _move_files(self, new_path):
-        """Move file and its source (overrides Document._move_files())."""
-        old_source_path = self.source_path
-        super(WithSource, self)._move_files(new_path)
-        os.renames(old_source_path, self.source_path)
-
-    def remove(self):
-        """Remove file and its source (overrides Document.remove())."""
-        os.remove(self.source_path)
-        super(WithSource, self).remove()
-
-
-class Page(Editable, WithSource):
+class Page(Editable):
     '''HTML page'''
 
     _header_re = re.compile('(\w+): ?(.*)')
@@ -236,6 +209,12 @@ class Page(Editable, WithSource):
     def url(self):
         """Preview URL of document"""
         return self.project.url + self.path
+
+    @property
+    def source_path(self):
+        """Full path to source of document."""
+        root, ext = os.path.splitext(self.full_path)
+        return root + ".text"
 
     def read_header(self):
         '''Reads page header and stores it in self.header'''
@@ -265,6 +244,17 @@ class Page(Editable, WithSource):
         f.write('\n')
         f.write(self.text)
         f.close()
+
+    def _move_files(self, new_path):
+        """Move file and its source (overrides Document._move_files())."""
+        old_source_path = self.source_path
+        super(Page, self)._move_files(new_path)
+        os.renames(old_source_path, self.source_path)
+
+    def remove(self):
+        """Remove file and its source (overrides Document.remove())."""
+        os.remove(self.source_path)
+        super(WithSource, self).remove()
 
     def create_editor(self):
         return editor.PageEditor(self)
@@ -379,11 +369,10 @@ class Template(Editable):
         else:
             return ''
 
-class Directory(WithSource):
+class Directory(Document):
     def __init__(self, path, project, parent, create=False):
         super(Directory, self).__init__(path, project)
         if create:
-            os.mkdir(self.source_path)
             os.mkdir(self.full_path)
         self.tree_iter = self.model.append(parent, (self, self.name, path, 'dir'))
 
@@ -422,7 +411,6 @@ class Directory(WithSource):
     def remove(self):
         """Remove directory (overrides Document.remove())."""
         shutil.rmtree(self.full_path)
-        shutil.rmtree(self.source_path)
         self.model.remove(self.tree_iter)
 
 
