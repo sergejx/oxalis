@@ -30,9 +30,9 @@ class NoEditorException(Exception):
     """Exception raised if no editor can be created for document."""
     pass
 
-class Document(object):
+class File(object):
     """
-    Abstract base class for documents which can be part of Oxalis project.
+    File inside Oxalis project.
 
     Member variables:
       - path -- path to the document, relative to project directory
@@ -56,7 +56,7 @@ class Document(object):
       - create_editor() -- create editor for document
     """
 
-    def __init__(self, path, project):
+    def __init__(self, path, project, parent=None):
         """
         Initialize document with path and project.
 
@@ -69,6 +69,21 @@ class Document(object):
         self.path = path
         self.tree_iter = None
         self.model = project.files
+
+        if parent is not None:
+            ext = os.path.splitext(path)[1]
+            if ext in ('.png', '.jpeg', '.jpg', '.gif'):
+                typ = 'image'
+            else:
+                typ = 'file'
+            self.tree_iter = self.model.append(parent, (self, self.name, path, typ))
+
+    @staticmethod
+    def add_to_project(path, project, parent, filename):
+        """Copy file to project"""
+        full_path = os.path.join(project.directory, path)
+        shutil.copyfile(filename, full_path)
+        return File(path, project, parent)
 
     @property
     def full_path(self):
@@ -93,7 +108,7 @@ class Document(object):
             parent = self.model.get_value(parent_itr, project.OBJECT_COL)
         else:
             # Dummy document representing tree root
-            parent = Document("", self.project)
+            parent = File("", self.project)
         return parent
 
     def _move_files(self, new_path):
@@ -149,7 +164,53 @@ class Document(object):
         """Return new editor component for document."""
         raise NoEditorException
 
-class Editable(Document):
+
+class Directory(File):
+    def __init__(self, path, project, parent, create=False):
+        super(Directory, self).__init__(path, project)
+        if create:
+            os.mkdir(self.full_path)
+        self.tree_iter = self.model.append(parent, (self, self.name, path, 'dir'))
+
+    def _move_tree_row(self, destination):
+        # Move data in tree
+        old_iter = self.tree_iter
+        row_data = self.model.get(self.tree_iter,
+            *range(project.NUM_COLUMNS))
+        self.tree_iter = self.model.append(destination.tree_iter, row_data)
+
+        # Move children
+        tree_path = self.model.get_path(old_iter)
+        for row in self.model[tree_path].iterchildren():
+            obj = row[project.OBJECT_COL]
+            obj._move_tree_row(self)
+
+        # Remove old row
+        self.model.remove(old_iter)
+
+    def rename(self, new_name):
+        super(Directory, self).rename(new_name)
+        self.update_path()
+
+    def update_path(self):
+        """Update directory path based on parent path and directory name.
+
+        Also recursively updates children documents.
+        Overrides Document.update_path().
+        """
+        super(Directory, self).update_path()
+        tree_path = self.model.get_path(self.tree_iter)
+        for row in self.model[tree_path].iterchildren():
+            obj = row[project.OBJECT_COL]
+            obj.update_path()
+
+    def remove(self):
+        """Remove directory (overrides Document.remove())."""
+        shutil.rmtree(self.full_path)
+        self.model.remove(self.tree_iter)
+
+
+class Editable(File):
     """
     Base class for editable documents.
 
@@ -254,7 +315,7 @@ class Page(Editable):
     def remove(self):
         """Remove file and its source (overrides Document.remove())."""
         os.remove(self.source_path)
-        super(WithSource, self).remove()
+        super(Page, self).remove()
 
     def create_editor(self):
         return editor.PageEditor(self)
@@ -369,67 +430,3 @@ class Template(Editable):
         else:
             return ''
 
-class Directory(Document):
-    def __init__(self, path, project, parent, create=False):
-        super(Directory, self).__init__(path, project)
-        if create:
-            os.mkdir(self.full_path)
-        self.tree_iter = self.model.append(parent, (self, self.name, path, 'dir'))
-
-    def _move_tree_row(self, destination):
-        # Move data in tree
-        old_iter = self.tree_iter
-        row_data = self.model.get(self.tree_iter,
-            *range(project.NUM_COLUMNS))
-        self.tree_iter = self.model.append(destination.tree_iter, row_data)
-
-        # Move children
-        tree_path = self.model.get_path(old_iter)
-        for row in self.model[tree_path].iterchildren():
-            obj = row[project.OBJECT_COL]
-            obj._move_tree_row(self)
-
-        # Remove old row
-        self.model.remove(old_iter)
-
-    def rename(self, new_name):
-        super(Directory, self).rename(new_name)
-        self.update_path()
-
-    def update_path(self):
-        """Update directory path based on parent path and directory name.
-
-        Also recursively updates children documents.
-        Overrides Document.update_path().
-        """
-        super(Directory, self).update_path()
-        tree_path = self.model.get_path(self.tree_iter)
-        for row in self.model[tree_path].iterchildren():
-            obj = row[project.OBJECT_COL]
-            obj.update_path()
-
-    def remove(self):
-        """Remove directory (overrides Document.remove())."""
-        shutil.rmtree(self.full_path)
-        self.model.remove(self.tree_iter)
-
-
-class File(Document):
-    def __init__(self, path, project, parent):
-        Document.__init__(self, path, project)
-
-        ext = os.path.splitext(path)[1]
-        if ext in ('.png', '.jpeg', '.jpg', '.gif'):
-            tp = 'image'
-        else:
-            tp = 'file'
-        self.tree_iter = self.model.append(parent, (self, self.name, path, tp))
-
-    @staticmethod
-    def add_to_project(path, project, parent, filename):
-        """Copy file to project"""
-        full_path = os.path.join(project.directory, path)
-        shutil.copyfile(filename, full_path)
-        return File(path, project, parent)
-
-# vim:tabstop=4:expandtab

@@ -329,7 +329,7 @@ class Project(object):
             if itr is not None:
                 dest = self.files.get_value(itr, OBJECT_COL)
             else:
-                dest = Document("", self)
+                dest = File("", self)
             obj.move(dest)
 
     def generate(self):
