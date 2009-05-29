@@ -164,6 +164,28 @@ class File(object):
         """Return new editor component for document."""
         raise NoEditorException
 
+    def get_text(self):
+        try:
+            return self._text
+        except AttributeError: # Lazy initialization
+            self.read_text()
+            return self._text
+    def set_text(self, value):
+        self._text = value
+    text = property(get_text, set_text, None, 'Text of the document')
+
+    def read_text(self):
+        '''Read document contents from file'''
+        f = file(self.full_path, 'r')
+        self._text = f.read()
+        f.close()
+
+    def write(self):
+        '''Write document contents to file'''
+        f = file(self.full_path, 'w')
+        f.write(self.text)
+        f.close()
+
 
 class Directory(File):
     def __init__(self, path, project, parent, create=False):
@@ -210,44 +232,7 @@ class Directory(File):
         self.model.remove(self.tree_iter)
 
 
-class Editable(File):
-    """
-    Base class for editable documents.
-
-    Contains methods for reading and modifying document text.
-
-    Property:
-      - text
-
-    Methods:
-      - read_text()
-      - write()
-    """
-
-    def get_text(self):
-        try:
-            return self._text
-        except AttributeError: # Lazy initialization
-            self.read_text()
-            return self._text
-    def set_text(self, value):
-        self._text = value
-    text = property(get_text, set_text, None, 'Text of the document')
-
-    def read_text(self):
-        '''Read document contents from file'''
-        f = file(self.full_path, 'r')
-        self._text = f.read()
-        f.close()
-
-    def write(self):
-        '''Write document contents to file'''
-        f = file(self.full_path, 'w')
-        f.write(self.text)
-        f.close()
-
-
-class Page(Editable):
+class Page(File):
     '''HTML page'''
 
     _header_re = re.compile('(\w+): ?(.*)')
@@ -371,7 +356,7 @@ class Page(Editable):
                 return 'UTF-8'
 
 
-class Style(Editable):
+class Style(File):
     '''CSS style'''
 
     def __init__(self, path, project, parent, create=False):
@@ -389,7 +374,7 @@ class Style(Editable):
         return editor.StyleEditor(self)
 
 
-class Template(Editable):
+class Template(File):
     '''Template for HTML pages'''
 
     tag_re = re.compile('\{(\w+)\}')
