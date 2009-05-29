@@ -17,10 +17,8 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 import os
-import shutil
 import subprocess
 import string
-from ConfigParser import RawConfigParser
 import fcntl
 
 import gtk
