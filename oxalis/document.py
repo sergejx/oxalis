@@ -40,30 +40,13 @@ class File(object):
       - tree_iter -- tree iter pointing to document in tree model
       - model -- tree model in which document is stored
                  (default -- project.files)
-
-    Properties:
-      - full_path -- full path to the document file
-      - name -- file name of document
-      - url -- URL, which can be used to display document preview
-        (should be defined in subclasses)
-      - parent -- parent document
-
-    Methods:
-      - move(destination) -- move document to different directory
-      - update_path() -- update document path based on parent path
-      - rename(new_name)
-      - remove()
-      - create_editor() -- create editor for document
     """
 
     def __init__(self, path, project, parent=None):
         """
-        Initialize document with path and project.
+        Create object representing file at specified path inside the project.
 
-        Constructors of subclasses typically have these additional arguments:
-          - parent -- tree iter of parent directory
-          - create -- if create == True, constructor will create new document
-                      on disk
+        parent -- tree iter of parent directory.
         """
         self.project = project
         self.path = path
@@ -84,6 +67,8 @@ class File(object):
         full_path = os.path.join(project.directory, path)
         shutil.copyfile(filename, full_path)
         return File(path, project, parent)
+
+    # Properties
 
     @property
     def full_path(self):
@@ -111,6 +96,18 @@ class File(object):
             parent = File("", self.project)
         return parent
 
+    # File operations
+
+    def move(self, destination):
+        """Move document to different directory.
+
+        destination -- directory object
+        """
+        dest_path = os.path.join(destination.path, self.name)
+        self._move_files(dest_path)
+        self._move_tree_row(destination)
+        return dest_path
+
     def _move_files(self, new_path):
         """Move document files to new_path."""
         old_full_path = self.full_path
@@ -128,16 +125,6 @@ class File(object):
         new_iter = self.model.append(destination.tree_iter, row_data)
         self.model.remove(self.tree_iter)
         self.tree_iter = new_iter
-
-    def move(self, destination):
-        """Move document to different directory.
-
-        destination -- directory object
-        """
-        dest_path = os.path.join(destination.path, self.name)
-        self._move_files(dest_path)
-        self._move_tree_row(destination)
-        return dest_path
 
     def update_path(self):
         """Update document path based on parent path and document name."""
@@ -160,34 +147,40 @@ class File(object):
         os.remove(self.full_path)
         self.model.remove(self.tree_iter)
 
-    def create_editor(self):
-        """Return new editor component for document."""
-        raise NoEditorException
+    # File contents operations
 
-    def get_text(self):
-        try:
-            return self._text
-        except AttributeError: # Lazy initialization
-            self.read_text()
-            return self._text
-    def set_text(self, value):
-        self._text = value
-    text = property(get_text, set_text, None, 'Text of the document')
-
-    def read_text(self):
-        '''Read document contents from file'''
+    def read(self):
+        """Read document contents from file"""
         f = file(self.full_path, 'r')
         self._text = f.read()
         f.close()
 
     def write(self):
-        '''Write document contents to file'''
+        """Write document contents to file"""
         f = file(self.full_path, 'w')
         f.write(self.text)
         f.close()
 
+    def get_text(self):
+        try:
+            return self._text
+        except AttributeError: # Lazy initialization
+            self.read()
+            return self._text
+
+    def set_text(self, value):
+        self._text = value
+
+    text = property(get_text, set_text, None, "Text of the document")
+
+    def create_editor(self):
+        """Return new editor component for document."""
+        raise NoEditorException
+
 
 class Directory(File):
+    """Directory in Oxalis project."""
+
     def __init__(self, path, project, parent, create=False):
         super(Directory, self).__init__(path, project)
         if create:
@@ -274,7 +267,7 @@ class Page(File):
                 if match != None:
                     self.header[match.group(1)] = match.group(2)
 
-    def read_text(self):
+    def read(self):
         '''Reads page text and stores it in self._text'''
         self._text = ""
         # read_header has left file opened in self.page_file
