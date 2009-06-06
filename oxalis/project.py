@@ -51,12 +51,15 @@ sitecopy_rc = '''site $name
 '''
 
 CONFIG_DEFAULTS = {
-    'url_path': "/",
-}
-
-STATE_DEFAULTS = {
-    'last_document': "index.html",
-    'last_document_type': 'file',
+    'project': {},
+    'preview': {
+        'url_path': "/",
+    },
+    'state': {
+        'last_document': "index.html",
+        'last_document_type': 'file',
+    },
+    'upload': {},
 }
 
 # Constants for column numbers
@@ -74,18 +77,14 @@ def create_project(path):
 
     # Write project configuration
     config = Configuration(oxalis_dir, 'config', CONFIG_DEFAULTS)
-    config.set('project_format', '0.2')
+    config.set('project', 'format', '0.1')
     config.write()
 
-    upload_conf = Configuration(oxalis_dir, 'upload')
-    upload_conf.write()
-    # Make upload configuration file readable only by owner
+    # Make configuration file readable only by owner
     # (it contains FTP password)
-    os.chmod(os.path.join(oxalis_dir, 'upload.cfg'), 0600)
+    os.chmod(os.path.join(oxalis_dir, 'config'), 0600)
 
-    files_dir = os.path.join(oxalis_dir, 'files')
-    os.mkdir(files_dir)
-    f = file(os.path.join(files_dir, 'index.html'), 'w')
+    f = file(os.path.join(path, 'index.text'), 'w')
     f.write('Title: ' + name)
     f.write('\n\n')
     f.write(name)
@@ -126,19 +125,16 @@ class Project(object):
     def __init__(self, directory):
         self.directory = directory
         self.config_dir = os.path.join(self.directory, "_oxalis")
-        self.files_dir = os.path.join(self.config_dir, 'files')
         self.templates_dir = os.path.join(self.config_dir, 'templates')
 
         self.config = Configuration(self.config_dir, 'config', CONFIG_DEFAULTS)
-        self.state = Configuration(self.config_dir, 'state', STATE_DEFAULTS)
-        self.upload_conf = Configuration(self.config_dir, 'upload')
 
         self.load_files_tree()
         self.load_templates_list()
 
     def get_url_path(self):
         """Return path part of project preview URL."""
-        path = self.config.get('url_path').strip('/')
+        path = self.config.get('preview', 'url_path').strip('/')
         if len(path) == 0:
             return path
         else:
@@ -194,6 +190,8 @@ class Project(object):
         name, ext = os.path.splitext(filename)
         if ext == '.html':
             Page(path, self, parent)
+        elif ext == '.text':
+            pass # Ignore page sources
         elif ext == '.css':
             Style(path, self, parent)
         elif filename[0] != '.':
@@ -223,7 +221,7 @@ class Project(object):
 
     def close(self):
         """Close project and save its state"""
-        self.state.write()
+        self.config.write()
 
     def get_file_type(self, filename):
         '''Get file type from filename'''
@@ -351,7 +349,7 @@ class Project(object):
         Process of uploading can be monitored using check_upload function.
         '''
         for key in ('host', 'remotedir', 'user', 'passwd'):
-            if not self.upload_conf.has_option(key):
+            if not self.config.has_option('upload', key):
                 return False
 
         rcfile = os.path.join(self.config_dir, "sitecopyrc")
@@ -361,9 +359,9 @@ class Project(object):
         # It is needed if we upload to given location for the first time
         need_init = False
         for key in ('host', 'remotedir'):
-            if self.upload_conf.has_option('last_'+key):
-                last = self.upload_conf.get('last_'+key)
-                current = self.upload_conf.get(key)
+            if self.config.has_option('upload', 'last_'+key):
+                last = self.config.get('upload', 'last_'+key)
+                current = self.config.get('upload', key)
                 if current != last:
                     need_init = True
         if not os.path.exists(os.path.join(storepath, 'project')):
@@ -372,7 +370,7 @@ class Project(object):
         # Update sitecopyrc file
         f = file(rcfile, 'w')
         tpl = string.Template(sitecopy_rc)
-        f.write(tpl.substitute(dict(self.upload_conf.items()),
+        f.write(tpl.substitute(dict(self.config.items('upload')),
             name='project', local=self.directory))
         f.close()
 
@@ -385,7 +383,8 @@ class Project(object):
             stdout=subprocess.PIPE)
 
         for key in ('host', 'remotedir'):
-            self.upload_conf.set('last_'+key, self.upload_conf.get(key))
+            self.config.set('upload', 'last_'+key,
+                            self.config.get('upload', 'key'))
 
         return True
 
@@ -412,22 +411,19 @@ class Project(object):
     def properties_dialog(self, parent_window):
         '''Display project properties dialog.'''
         settings = {}
-        settings['upload'] = dict(self.upload_conf.items())
-        settings['preview'] = dict(self.config.items())
+        settings['upload'] = dict(self.config.items('upload'))
+        settings['preview'] = dict(self.config.items('preview'))
         dialog = ProjectPropertiesDialog(parent_window, settings)
         response = dialog.run()
         settings = dialog.get_settings()
         dialog.destroy()
 
         if response == gtk.RESPONSE_OK:
-            self.config.set('url_path', settings['preview']['url_path'])
-            self.upload_conf.set('host', settings['upload']['host'])
-            self.upload_conf.set('user', settings['upload']['user'])
-            self.upload_conf.set('passwd', settings['upload']['passwd'])
-            self.upload_conf.set('remotedir', settings['upload']['remotedir'])
+            for section in settings:
+                for key, value in settings[section].items():
+                    self.config.set(section, key, value)
             # Save properties
             self.config.write()
-            self.upload_conf.write()
 
 
 class ProjectPropertiesDialog(gtk.Dialog):

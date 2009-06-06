@@ -182,7 +182,7 @@ class Editor(gtk.VBox):
         self.buffer.set_modified(False)
 
     def set_font(self):
-        font = config.settings.get('font')
+        font = config.settings.get('editor', 'font')
         self.text_view.modify_font(pango.FontDescription(font))
 
 
