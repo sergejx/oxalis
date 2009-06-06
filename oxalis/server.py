@@ -86,7 +86,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 mime = mimetypes.guess_type(full_path)
 
                 self.send_response(200)
-                self.send_header('Content-Type', mime)
+                self.send_header('Content-Type', mime[0])
                 self.end_headers()
 
                 f = file(full_path, 'r')
