@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2006 Sergej Chodarev
+# Copyright (C) 2005-2009 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 import gtk
 import pango
-import gtksourceview
+import gtksourceview2
 import webkit
 
 import project
@@ -88,18 +88,18 @@ class Editor(gtk.VBox):
             self.browser.load_url(self.document.url)
 
 
-    def create_text_view(self, mime='text/html'):
+    def create_text_view(self, filename=None, mime=None):
         # Create text view
-        self.buffer = gtksourceview.SourceBuffer()
-        self.text_view = gtksourceview.SourceView(self.buffer)
+        self.buffer = gtksourceview2.Buffer()
+        self.text_view = gtksourceview2.View(self.buffer)
         self.text_view.set_wrap_mode(gtk.WRAP_WORD)
         self.text_view.set_auto_indent(True)
         self.text_view.set_smart_home_end(True)
         self.set_font()
-        lang_manager = gtksourceview.SourceLanguagesManager()
-        lang = lang_manager.get_language_from_mime_type(mime)
+        lang_manager = gtksourceview2.LanguageManager()
+        lang = lang_manager.guess_language(filename=filename, content_type=mime)
         self.buffer.set_language(lang)
-        self.buffer.set_highlight(True)
+        self.buffer.set_highlight_syntax(True)
 
         self.text_view.drag_dest_set(0,
             [('TEXT', 0, self.DND_TEXT),
@@ -157,8 +157,8 @@ class Editor(gtk.VBox):
         redo_action.set_sensitive(False)
         self.edit_actions.add_action_with_accel(redo_action, '<Ctrl><Shift>Z')
 
-        self.buffer.connect('can-undo', self.change_undo_cb, undo_action)
-        self.buffer.connect('can-redo', self.change_undo_cb, redo_action)
+        self.buffer.connect('notify::can-undo', self.on_change_undo, undo_action)
+        self.buffer.connect('notify::can-redo', self.on_change_undo, redo_action)
 
     def undo_cb(self, action):
         self.buffer.undo()
@@ -170,9 +170,9 @@ class Editor(gtk.VBox):
         self.buffer.copy_clipboard(gtk.clipboard_get())
     def paste_cb(self, action):
         self.buffer.paste_clipboard(gtk.clipboard_get(), None, True)
-    def change_undo_cb(self, buffer, value, action):
-        '''Change sensitivity of undo/redo action'''
-        action.set_sensitive(value)
+    def on_change_undo(self, buffer, prop, action):
+        """Change sensitivity of undo/redo action"""
+        action.set_sensitive(buffer.get_property(prop.name))
 
     def set_text(self, text):
         '''Set initial text of text buffer'''
@@ -221,7 +221,7 @@ class PageEditor(Editor):
 
         vbox = gtk.VBox()
         vbox.pack_start(table, False)
-        vbox.pack_start(self.create_text_view())
+        vbox.pack_start(self.create_text_view(self.document.name))
 
         return vbox
 
@@ -256,6 +256,9 @@ class TemplateEditor(Editor):
     def __init__(self, document):
         Editor.__init__(self, document)
 
+    def create_edit_page(self):
+        return self.create_text_view(mime="text/html")
+
 
 class StyleEditor(Editor):
     def __init__(self, document):
@@ -263,7 +266,7 @@ class StyleEditor(Editor):
         self.browser.load_url(self.document.url)
 
     def create_edit_page(self):
-        return self.create_text_view('text/css')
+        return self.create_text_view(self.document.name)
 
     def switch_page(self, notebook, page, page_num):
         if page_num == 1:
