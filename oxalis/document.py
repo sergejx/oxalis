@@ -42,18 +42,20 @@ class File(object):
                  (default -- project.files)
     """
 
-    def __init__(self, path, project, parent=None):
+    def __init__(self, path, project, parent=False):
         """
         Create object representing file at specified path inside the project.
 
         parent -- tree iter of parent directory.
+                  If parent is None, place file to the root.
+                  If parent is False, do not insert file to the tree.
         """
         self.project = project
         self.path = path
         self.tree_iter = None
         self.model = project.files
 
-        if parent is not None:
+        if parent is not False:
             ext = os.path.splitext(path)[1]
             if ext in ('.png', '.jpeg', '.jpg', '.gif'):
                 typ = 'image'
