@@ -118,7 +118,8 @@ class Editor(gtk.VBox):
 
         return text_scrolled
 
-    create_edit_page = create_text_view
+    def create_edit_page(self):
+        return self.create_text_view(filename=self.document.name)
 
     def drag_data_received_cb(self, widget, context, x, y, selection, info,
                               timestamp):

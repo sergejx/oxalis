@@ -18,6 +18,7 @@
 
 import os
 import re
+import codecs
 import shutil
 
 import markdown
@@ -153,13 +154,13 @@ class File(object):
 
     def read(self):
         """Read document contents from file"""
-        f = file(self.full_path, 'r')
+        f = codecs.open(self.full_path, 'r', 'utf-8')
         self._text = f.read()
         f.close()
 
     def write(self):
         """Write document contents to file"""
-        f = file(self.full_path, 'w')
+        f = codecs.open(self.full_path, 'w', 'utf-8')
         f.write(self.text)
         f.close()
 
@@ -177,7 +178,11 @@ class File(object):
 
     def create_editor(self):
         """Return new editor component for document."""
-        raise NoEditorException
+        try:
+            self.read()
+            return editor.Editor(self)
+        except ValueError:
+            raise NoEditorException
 
 
 class Directory(File):
@@ -225,6 +230,9 @@ class Directory(File):
         """Remove directory (overrides Document.remove())."""
         shutil.rmtree(self.full_path)
         self.model.remove(self.tree_iter)
+
+    def create_editor(self):
+        raise NoEditorException
 
 
 class Page(File):
