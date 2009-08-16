@@ -426,19 +426,19 @@ class Oxalis(object):
                 self.editor.save()
                 self.paned.remove(self.editor)
                 # Remove editor UI and actions
-                self.ui_manager.remove_ui(self.editor_merge_id)
-                self.ui_manager.remove_action_group(self.editor.edit_actions)
+                #self.ui_manager.remove_ui(self.editor_merge_id)
+                #self.ui_manager.remove_action_group(self.editor.edit_actions)
 
             # Load new one
             self.editor = new_editor
             self.paned.add2(self.editor)
             self.editor.show_all()
 
-            # Add editor UI and actions
-            ui = self.editor.ui
-            actions = self.editor.edit_actions
-            self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
-            self.ui_manager.insert_action_group(actions, 1)
+            # Add editor UI and actions (commented out because of issue gh-1)
+            #ui = self.editor.ui
+            #actions = self.editor.edit_actions
+            #self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
+            #self.ui_manager.insert_action_group(actions, 1)
         except document.NoEditorException:
             pass # Documend does not provide editor
 
