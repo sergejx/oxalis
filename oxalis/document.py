@@ -325,7 +325,7 @@ class Page(File):
         html = smartypants.smartyPants(html)
 
         html = self._process_template(html)
-        encoding = self._determine_encoding(html)
+        encoding = determine_encoding(html)
         return html.encode(encoding)
 
     def _process_template(self, content):
@@ -339,24 +339,56 @@ class Page(File):
         tags['Content'] = content
         return tpl.process_page(tags)
 
-    _re_xml_declaration = re.compile(
-        '<\?xml.*? encoding=(?P<quote>\'|")(?P<enc>.+?)(?P=quote).*?\?>')
-    _re_meta = re.compile(
-        '<meta \s*http-equiv="Content-Type" \
-         \s*content=(?P<quote>\'|").+?;\s*charset=(?P<enc>.+?)(?P=quote).*?>',
+
+def determine_encoding(html):
+    """Determines encoding, in which HTML document should be saved.
+
+    Let's test it with XML declaration
+    >>> determine_encoding(
+    ...     u'<?xml version="1.0" encoding="iso-8859-2"?>\\n<html></html>')
+    'iso-8859-2'
+
+    And what about apostrofs?
+    >>> determine_encoding(
+    ...     u"<?xml version='1.0' encoding='iso-8859-2'?>\\n<html></html>")
+    'iso-8859-2'
+
+    Classical "Content-Type" meta tag:
+    >>> determine_encoding(
+    ... u'<html><head>\\n<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-2">\\n</head></html>')
+    'iso-8859-2'
+
+    HTML5 charset declaration:
+    >>> determine_encoding(
+    ... u'<html><head>\\n<meta charset="iso-8859-2">\\n</head></html>')
+    'iso-8859-2'
+
+    Also without quotes:
+    >>> determine_encoding(
+    ... u'<html><head>\\n<meta charset=iso-8859-2>\\n</head></html>')
+    'iso-8859-2'
+
+    What if we don't specify encoding?
+    >>> determine_encoding(
+    ... u'<html><head></head><body></body></html>')
+    'utf-8'
+    """
+
+    re_xml_declaration = re.compile(
+        r'<\?xml.*? encoding=(?P<quote>\'|")(?P<enc>.+?)(?P=quote).*?\?>')
+    re_meta_charset = re.compile(
+        r'<meta.*?charset=[\'"]?(?P<enc>.+?)[\'"> ]',
         re.IGNORECASE)
 
-    def _determine_encoding(self, html):
-        """Determines encoding, in which HTML document should be saved"""
-        match = self._re_xml_declaration.search(html)
+    match = re_xml_declaration.search(html)
+    if match != None:
+        return str(match.group('enc'))
+    else:
+        match = re_meta_charset.search(html)
         if match != None:
-            return match.group('enc')
+            return str(match.group('enc'))
         else:
-            match = self._re_meta.search(html)
-            if match != None:
-                return match.group('enc')
-            else:
-                return 'UTF-8'
+            return 'utf-8'
 
 
 class Style(File):
