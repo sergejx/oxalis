@@ -417,7 +417,7 @@ class Oxalis(object):
         try:
             # Get new editor
             if doc is not None:
-                new_editor = doc.create_editor()
+                new_editor = editor.create_editor(doc)
             else:
                 new_editor = editor.DummyEditor()
 
@@ -439,7 +439,7 @@ class Oxalis(object):
             #actions = self.editor.edit_actions
             #self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
             #self.ui_manager.insert_action_group(actions, 1)
-        except document.NoEditorException:
+        except editor.NoEditorException:
             pass # Documend does not provide editor
 
     def update_editor_path(self, new_path):

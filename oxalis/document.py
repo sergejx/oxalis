@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2009 Sergej Chodarev
+# Copyright (C) 2005-2010 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,11 +25,7 @@ import markdown
 import smartypants
 
 import project
-import editor
 
-class NoEditorException(Exception):
-    """Exception raised if no editor can be created for document."""
-    pass
 
 class File(object):
     """
@@ -176,14 +172,6 @@ class File(object):
 
     text = property(get_text, set_text, None, "Text of the document")
 
-    def create_editor(self):
-        """Return new editor component for document."""
-        try:
-            self.read()
-            return editor.Editor(self)
-        except ValueError:
-            raise NoEditorException
-
 
 class Directory(File):
     """Directory in Oxalis project."""
@@ -230,9 +218,6 @@ class Directory(File):
         """Remove directory (overrides Document.remove())."""
         shutil.rmtree(self.full_path)
         self.model.remove(self.tree_iter)
-
-    def create_editor(self):
-        raise NoEditorException
 
 
 class Page(File):
@@ -304,9 +289,6 @@ class Page(File):
         """Remove file and its source (overrides Document.remove())."""
         os.remove(self.source_path)
         super(Page, self).remove()
-
-    def create_editor(self):
-        return editor.PageEditor(self)
 
     def generate(self):
         '''Generates HTML file'''
@@ -405,9 +387,6 @@ class Style(File):
         """Preview URL of document"""
         return self.project.url
 
-    def create_editor(self):
-        return editor.StyleEditor(self)
-
 
 class Template(File):
     '''Template for HTML pages'''
@@ -434,9 +413,6 @@ class Template(File):
         """Rename template."""
         # TODO: Change name of template in all pages which use it
         return super(Template, self).rename(new_name)
-
-    def create_editor(self):
-        return editor.TemplateEditor(self)
 
     def process_page(self, tags):
         self.tags = tags

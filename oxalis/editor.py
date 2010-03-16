@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2009 Sergej Chodarev
+# Copyright (C) 2005-2010 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,10 +21,15 @@ import pango
 import gtksourceview2
 import webkit
 
+import document
 import project
 import config
 import util
 
+
+class NoEditorException(Exception):
+    """Exception raised if no editor can be created for document."""
+    pass
 
 class Editor(gtk.VBox):
     ui = '''
@@ -338,4 +343,18 @@ class Browser(gtk.VBox):
         self.address_entry.set_text(uri)
         return False # Continue loading page
 
-# vim:tabstop=4:expandtab
+
+def create_editor(doc):
+    """Create appripriate editor for document."""
+    if isinstance(doc, document.Page):
+        return PageEditor(doc)
+    elif isinstance(doc, document.Style):
+        return StyleEditor(doc)
+    elif isinstance(doc, document.Template):
+        return TemplateEditor(doc)
+    else:
+        try: # if document can be readed as text
+            doc.read()
+            return Editor(doc)
+        except ValueError:
+            raise NoEditorException
