@@ -291,16 +291,22 @@ class Page(File):
         super(Page, self).remove()
 
     def generate(self):
-        '''Generates HTML file'''
-        tpl = self.project.get_document(self.header['Template'], True)
-        # Check if source file or template was modified after HTML file
-        # was generated last time
-        if not os.path.exists(self.source_path) or \
-           os.path.getmtime(self.full_path) > os.path.getmtime(self.source_path) or \
-           os.path.getmtime(tpl.full_path) > os.path.getmtime(self.source_path):
+        """Generates HTML file"""
+        tpl = self.project.get_document(self.header['Template'], template=True)
+        if self._need_to_regenerate(tpl):
             f = file(self.full_path, 'w')
             f.write(self.process_page())
             f.close()
+    
+    def _need_to_regenerate(self, tpl):
+        """Check if source file or template was modified after HTML file
+           was generated last time."""
+        if not os.path.exists(self.full_path):
+            return True
+        src_t = os.path.getmtime(self.source_path)
+        dst_t = os.path.getmtime(self.full_path)
+        tpl_t = os.path.getmtime(tpl.full_path)
+        return (src_t > dst_t) or (tpl_t > dst_t)
 
     def process_page(self):
         html = markdown.markdown(self.text)
