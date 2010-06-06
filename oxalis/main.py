@@ -221,7 +221,7 @@ class Oxalis(object):
             if name != '':
                 if not name.endswith('.html'):
                     name += '.html'
-                self.project.new_page(name, self.sidepane.get_selected()[1])
+                self.project.new_page(name, self.sidepane.get_target_dir())
 
     def new_style_cb(self, action):
         response, name = self.ask_name('Style')
@@ -230,14 +230,14 @@ class Oxalis(object):
             if name != '':
                 if not name.endswith('.css'):
                     name += '.css'
-                self.project.new_style(name, self.sidepane.get_selected()[1])
+                self.project.new_style(name, self.sidepane.get_target_dir())
 
     def new_dir_cb(self, action):
         response, name = self.ask_name('Directory')
 
         if response == gtk.RESPONSE_OK:
             if name != '':
-                self.project.new_dir(name, self.sidepane.get_selected()[1])
+                self.project.new_dir(name, self.sidepane.get_target_dir())
 
     def new_template_cb(self, action):
         response, name = self.ask_name('Template')
@@ -257,7 +257,7 @@ class Oxalis(object):
         chooser.destroy()
 
         if response == gtk.RESPONSE_OK:
-            self.project.add_file(filename, self.sidepane.get_selected()[1])
+            self.project.add_file(filename, self.sidepane.get_target_dir())
 
     def rename_selected_cb(self, action):
         '''Rename selected file'''

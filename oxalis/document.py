@@ -24,50 +24,39 @@ import shutil
 import markdown
 import smartypants
 
-import project
+def compare_files(x, y):
+    """Compare files for sorting."""
+    # Directories first
+    xdir = isinstance(x, Directory)
+    ydir = isinstance(y, Directory)
+    if xdir and not ydir:
+        return -1
+    elif not xdir and ydir:
+        return 1
+    else:
+        return cmp(x.name, y.name)
+
+def get_file_type(filename):
+    """Get file type from filename"""
+    root, ext = os.path.splitext(filename)
+    if ext == '.html':
+        return 'page'
+    elif ext == '.css':
+        return 'style'
+    elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
+        return 'image'
+    else:
+        return 'file'
 
 
 class File(object):
-    """
-    File inside Oxalis project.
+    """File inside Oxalis project."""
 
-    Member variables:
-      - path -- path to the document, relative to project directory
-      - project -- points to project
-      - tree_iter -- tree iter pointing to document in tree model
-      - model -- tree model in which document is stored
-                 (default -- project.files)
-    """
-
-    def __init__(self, path, project, parent=False):
-        """
-        Create object representing file at specified path inside the project.
-
-        parent -- tree iter of parent directory.
-                  If parent is None, place file to the root.
-                  If parent is False, do not insert file to the tree.
-        """
+    def __init__(self, path, project):
         self.project = project
-        self.path = path
-        self.tree_iter = None
-        self.model = project.files
+        self.path = path # relative to project directory
 
-        if parent is not False:
-            ext = os.path.splitext(path)[1]
-            if ext in ('.png', '.jpeg', '.jpg', '.gif'):
-                typ = 'image'
-            else:
-                typ = 'file'
-            self.tree_iter = self.model.append(parent, (self, self.name, path, typ))
-
-    @staticmethod
-    def add_to_project(path, project, parent, filename):
-        """Copy file to project"""
-        full_path = os.path.join(project.directory, path)
-        shutil.copyfile(filename, full_path)
-        return File(path, project, parent)
-
-    # Properties
+    ## Properties ##
 
     @property
     def full_path(self):
@@ -87,15 +76,17 @@ class File(object):
         If document has no parent, special Document object is used with path
         set to "".
         """
-        parent_itr = self.model.iter_parent(self.tree_iter)
-        if parent_itr is not None:
-            parent = self.model.get_value(parent_itr, project.OBJECT_COL)
-        else:
-            # Dummy document representing tree root
-            parent = File("", self.project)
-        return parent
+        if self.path == "": # Special case for root dir
+            return None
+        parent_path = os.path.dirname(self.path)
+        return self.project.files[parent_path]
 
-    # File operations
+    @property
+    def children(self):
+        """Document children in tree structure."""
+        return []
+
+    ## File operations ##
 
     def move(self, destination):
         """Move document to different directory.
@@ -104,7 +95,6 @@ class File(object):
         """
         dest_path = os.path.join(destination.path, self.name)
         self._move_files(dest_path)
-        self._move_tree_row(destination)
         return dest_path
 
     def _move_files(self, new_path):
@@ -113,38 +103,17 @@ class File(object):
         self.path = new_path
         os.rename(old_full_path, self.full_path)
 
-    def _move_tree_row(self, destination):
-        """
-        Move document tree row to new location.
-
-        destination -- new parent document
-        """
-        row_data = self.model.get(self.tree_iter,
-            *range(project.NUM_COLUMNS))
-        new_iter = self.model.append(destination.tree_iter, row_data)
-        self.model.remove(self.tree_iter)
-        self.tree_iter = new_iter
-
-    def update_path(self):
-        """Update document path based on parent path and document name."""
-        dir_path = self.parent.path
-        self.path = os.path.join(dir_path, self.name)
-        self.model.set(self.tree_iter, project.PATH_COL, self.path)
-
     def rename(self, new_name):
         """Rename document."""
         head, tail = os.path.split(self.path)
         new_path = os.path.join(head, new_name)
         self._move_files(new_path)
-
-        self.model.set(self.tree_iter, project.NAME_COL, new_name)
-        self.model.set(self.tree_iter, project.PATH_COL, new_path)
         return new_path
 
     def remove(self):
         """Remove document."""
         os.remove(self.full_path)
-        self.model.remove(self.tree_iter)
+        self.project.files_observer.on_remove(self.path)
 
     # File contents operations
 
@@ -176,59 +145,35 @@ class File(object):
 class Directory(File):
     """Directory in Oxalis project."""
 
-    def __init__(self, path, project, parent, create=False):
+    def __init__(self, path, project, create=False):
         super(Directory, self).__init__(path, project)
         if create:
             os.mkdir(self.full_path)
-        self.tree_iter = self.model.append(parent, (self, self.name, path, 'dir'))
 
-    def _move_tree_row(self, destination):
-        # Move data in tree
-        old_iter = self.tree_iter
-        row_data = self.model.get(self.tree_iter,
-            *range(project.NUM_COLUMNS))
-        self.tree_iter = self.model.append(destination.tree_iter, row_data)
-
-        # Move children
-        tree_path = self.model.get_path(old_iter)
-        for row in self.model[tree_path].iterchildren():
-            obj = row[project.OBJECT_COL]
-            obj._move_tree_row(self)
-
-        # Remove old row
-        self.model.remove(old_iter)
+    @property
+    def children(self):
+        """Document children in tree structure."""
+        return sorted(
+            [doc for doc in self.project.files.values() if doc.parent == self],
+            cmp=compare_files)
 
     def rename(self, new_name):
         super(Directory, self).rename(new_name)
         self.update_path()
 
-    def update_path(self):
-        """Update directory path based on parent path and directory name.
-
-        Also recursively updates children documents.
-        Overrides Document.update_path().
-        """
-        super(Directory, self).update_path()
-        tree_path = self.model.get_path(self.tree_iter)
-        for row in self.model[tree_path].iterchildren():
-            obj = row[project.OBJECT_COL]
-            obj.update_path()
-
     def remove(self):
         """Remove directory (overrides Document.remove())."""
         shutil.rmtree(self.full_path)
-        self.model.remove(self.tree_iter)
 
 
 class Page(File):
-    '''HTML page'''
+    """HTML page"""
 
     _header_re = re.compile('(\w+): ?(.*)')
 
-    def __init__(self, path, project, parent, create=False):
+    def __init__(self, path, project, create=False):
         """Initialize page.
 
-        * parent - gtk.TreeIter of parent directory
         * if create == True, create new page file
         """
         super(Page, self).__init__(path, project)
@@ -237,7 +182,6 @@ class Page(File):
             src.write('\n')
             file(self.full_path, 'w')
         self.read_header()
-        self.tree_iter = self.model.append(parent, (self, self.name, path, 'page'))
 
     @property
     def url(self):
@@ -297,7 +241,7 @@ class Page(File):
             f = file(self.full_path, 'w')
             f.write(self.process_page())
             f.close()
-    
+
     def _need_to_regenerate(self, tpl):
         """Check if source file or template was modified after HTML file
            was generated last time."""
@@ -380,13 +324,12 @@ def determine_encoding(html):
 
 
 class Style(File):
-    '''CSS style'''
+    """CSS style"""
 
-    def __init__(self, path, project, parent, create=False):
+    def __init__(self, path, project, create=False):
         super(Style, self).__init__(path, project)
         if create:
             file(self.full_path, 'w')
-        self.tree_iter = self.model.append(parent, (self, self.name, path, 'style'))
 
     @property
     def url(self):
@@ -394,17 +337,27 @@ class Style(File):
         return self.project.url
 
 
+class TemplatesRoot(Directory):
+    """Root directory for templates."""
+    def __init__(self, project):
+        super(Directory, self).__init__("", project)
+
+    @property
+    def children(self):
+        """All templates."""
+        return sorted(
+            [doc for doc in self.project.templates.values() if doc.path != ""],
+            cmp=compare_files)
+
 class Template(File):
-    '''Template for HTML pages'''
+    """Template for HTML pages"""
 
     tag_re = re.compile('\{(\w+)\}')
 
     def __init__(self, path, project, create=False):
         super(Template, self).__init__(path, project)
-        self.model = project.templates
         if create:
             file(self.full_path, 'w')
-        self.tree_iter = self.model.append((self, self.name, path, 'tpl'))
 
     @property
     def full_path(self):
@@ -415,10 +368,19 @@ class Template(File):
         """Preview URL of document"""
         return self.project.url + '?template=' + self.path
 
+    @property
+    def parent(self):
+        """Templates root directory."""
+        return self.project.templates[""]
+
     def rename(self, new_name):
         """Rename template."""
         # TODO: Change name of template in all pages which use it
         return super(Template, self).rename(new_name)
+
+    def remove(self):
+        os.remove(self.full_path)
+        self.project.templates_observer.on_remove(self.path)
 
     def process_page(self, tags):
         self.tags = tags

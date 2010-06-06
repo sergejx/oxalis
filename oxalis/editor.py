@@ -22,9 +22,9 @@ import gtksourceview2
 import webkit
 
 import document
-import project
 import config
 import util
+from sidepane import FilesTreeModel, NAME_COL
 
 
 class NoEditorException(Exception):
@@ -194,7 +194,7 @@ class Editor(gtk.VBox):
 
 class PageEditor(Editor):
     def __init__(self, document):
-        self.templates_store = document.project.templates
+        self.templates_store = FilesTreeModel(document.project.templates)
         Editor.__init__(self, document)
 
         if 'Title' in document.header:
@@ -207,7 +207,7 @@ class PageEditor(Editor):
         self.templates_store.foreach(self.search_template, template)
 
     def search_template(self, model, path, iter, template):
-        if model.get_value(iter, project.NAME_COL) == template:
+        if model.get_value(iter, NAME_COL) == template:
             self.template_combo_box.set_active_iter(iter)
             return True
 
@@ -216,7 +216,7 @@ class PageEditor(Editor):
         self.template_combo_box = gtk.ComboBox(self.templates_store)
         cell = gtk.CellRendererText()
         self.template_combo_box.pack_start(cell, True)
-        self.template_combo_box.add_attribute(cell, 'text', project.NAME_COL)
+        self.template_combo_box.add_attribute(cell, 'text', NAME_COL)
 
         table = util.make_table((
             ('Title:', self.page_name_entry),
@@ -241,7 +241,7 @@ class PageEditor(Editor):
             modified = True
 
         active = self.template_combo_box.get_active_iter()
-        template = self.templates_store.get_value(active, project.NAME_COL)
+        template = self.templates_store.get_value(active, NAME_COL)
         if ('Template' not in self.document.header or
            template != self.document.header['Template']):
             self.document.header['Template'] = template

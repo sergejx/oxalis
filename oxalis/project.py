@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2009 Sergej Chodarev
+# Copyright (C) 2005-2010 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,11 +20,12 @@ import os
 import subprocess
 import string
 import fcntl
+import shutil
 
 import gtk
 
 import util
-from document import *
+from document import File, Directory, Page, Style, Template, TemplatesRoot
 from config import Configuration
 
 default_template = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -59,10 +60,6 @@ CONFIG_DEFAULTS = {
     },
     'upload': {},
 }
-
-# Constants for column numbers
-NUM_COLUMNS = 4
-OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(NUM_COLUMNS)
 
 
 def create_project(path):
@@ -130,6 +127,12 @@ class Project(object):
         self.load_files_tree()
         self.load_templates_list()
 
+        self.files_observer = None # Object, that will be notified about changes
+        self.templates_observer = None
+        # This object should implement these methods:
+        #  - on_add(path)
+        #  - on_remove(path) - this must remove item from list
+
     def get_url_path(self):
         """Return path part of project preview URL."""
         path = self.config.get('preview', 'url_path').strip('/')
@@ -144,200 +147,135 @@ class Project(object):
         return 'http://127.0.0.1:8000/' + self.get_url_path()
 
     def load_files_tree(self):
-        '''Loads tree of project files
-
-        Tree is gtk.TreeStore with columns:
-         - document object
-         - display name
-         - path to the file, relative to project base directory
-         - type
-        Type can be: dir, page, style, image, file, tpl
-        Tree is stored in self.files
-        '''
-        self.files = gtk.TreeStore(object, str, str, str)
-        self.files.set_sort_func(NAME_COL, self.sort_files_store)
-        self.files.set_sort_column_id(NAME_COL, gtk.SORT_ASCENDING)
+        """Loads tree of project files"""
+        self.files = {}
         self.load_dir('')
 
-    def load_dir(self, dirpath, parent=None):
-        '''Loads directory to files tree store
+    def load_dir(self, dirpath):
+        """Loads directory to files tree store
 
         dirpath - directory to load, path relative to self.directory
-        parent - gtk.TreeIter of parent directory
-        '''
-        if dirpath != '':  # not root directory
-            obj = Directory(dirpath, self, parent)
-            parent = obj.tree_iter
+        """
+        self.files[dirpath] = Directory(dirpath, self)
 
         for filename in os.listdir(os.path.join(self.directory, dirpath)):
             if filename != '_oxalis':
                 path = os.path.join(dirpath, filename)
                 full_path = os.path.join(self.directory, path)
                 if os.path.isdir(full_path):
-                    self.load_dir(path, parent)
+                    self.load_dir(path)
                 else:
-                    self.load_file(filename, path, parent)
+                    self.load_file(filename, path)
 
-    def load_file(self, filename, path, parent):
-        '''Append file to files tree store
+    def load_file(self, filename, path):
+        """Append file
 
         filename - name of the file
         path - path relative to self.directory
-        parent - gtk.TreeIter of parent directory
-        '''
+        """
         name, ext = os.path.splitext(filename)
+        obj = None
         if ext == '.html':
-            Page(path, self, parent)
+            obj = Page(path, self)
         elif ext == '.text':
             pass # Ignore page sources
         elif ext == '.css':
-            Style(path, self, parent)
+            obj = Style(path, self)
         elif filename[0] != '.':
-            File(path, self, parent)
-
-    def sort_files_store(self, model, iter1, iter2):
-        '''Comparison function for sorting files tree store'''
-        name1, type1 = model.get(iter1, NAME_COL, TYPE_COL)
-        name2, type2 = model.get(iter2, NAME_COL, TYPE_COL)
-        if type1 == 'dir' and type2 != 'dir':
-            return -1
-        if type1 != 'dir' and type2 == 'dir':
-            return 1
-        return cmp(name1, name2)
+            obj = File(path, self)
+        if obj is not None:
+            self.files[path] = obj
 
     def load_templates_list(self):
-        '''Loads list of project templates
+        """Loads list of project templates
 
-        List is stored in self.templates and has same columns as self.files
-        '''
-        self.templates = gtk.ListStore(object, str, str, str)
-
+        List is stored in self.templates
+        """
         tpl_dir = os.path.join(self.directory, '_oxalis', 'templates')
+        self.templates = {"": TemplatesRoot(self)}
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
-            Template(name, self)
+            self.templates[name] = Template(name, self)
 
     def close(self):
         """Close project and save its state"""
         self.config.write()
 
-    def get_file_type(self, filename):
-        '''Get file type from filename'''
-        root, ext = os.path.splitext(filename)
-        if ext == '.html':
-            return 'page'
-        elif ext == '.css':
-            return 'style'
-        elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
-            return 'image'
-
     def get_document(self, path, template=False):
-        """Get document identified by path.
-
-        Function searches specified path in files or templates tree model.
-        """
-
-        def find_document(model, tree_path, itr, data):
-            path, obj = model.get(itr, PATH_COL, OBJECT_COL)
-            if path == data['path']:
-                data['document'] = obj
-                return True
-            else:
-                return False
-
+        """Get document identified by path."""
         if template:
-            model = self.templates
+            return self.templates[path]
         else:
-            model = self.files
-        data = {'path': path, 'document': None}
-        # data['document'] is used for returning found object
-        model.foreach(find_document, data)
-        return data['document']
+            return self.files[path]
 
-    def find_parent_dir(self, treeiter, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
-        '''Find parent directory of file associated with treeiter.
-
-        If treeiter points to directory, it will be returned.
-        position is for usage with Drag and Drop.
-        Returns tuple of 2 items: tree iter and path to directory
-        '''
-
-        if treeiter == None:
-            dir_path = ''
-        else:
-            type = self.files.get_value(treeiter, TYPE_COL)
-            if (position == gtk.TREE_VIEW_DROP_BEFORE or
-                position == gtk.TREE_VIEW_DROP_AFTER or
-                type != 'dir'):
-                treeiter = self.files.iter_parent(treeiter)
-            if treeiter != None:
-                dir_path = self.files.get_value(treeiter, PATH_COL)
-            else:
-                dir_path = ''
-        return treeiter, dir_path
-
-    def new_page(self, name, selected):
-        '''Create new page
+    # TODO DRY!
+    def new_page(self, name, parent):
+        """
+        Create new page.
 
         name - name of page, must ends with .html
-        '''
-        parent, dir_path = self.find_parent_dir(selected)
-        path = os.path.join(dir_path, name)
-        Page(path, self, parent, True)
+        """
+        path = os.path.join(parent.path, name)
+        self.files[path] = Page(path, self, True)
+        self.files_observer.on_add(path)
 
-    def new_style(self, name, selected):
-        '''Create new CSS style'''
-        parent, dir_path = self.find_parent_dir(selected)
-        path = os.path.join(dir_path, name)
-        Style(path, self, parent, True)
+    def new_style(self, name, parent):
+        """Create new CSS style."""
+        path = os.path.join(parent.path, name)
+        self.files[path] = Style(path, self, True)
+        self.files_observer.on_add(path)
 
-    def new_dir(self, name, selected):
-        '''Create new directory'''
-        parent, dir_path = self.find_parent_dir(selected)
-        path = os.path.join(dir_path, name)
-        Directory(path, self, parent, True)
+    def new_dir(self, name, parent):
+        """Create new directory."""
+        path = os.path.join(parent.path, name)
+        self.files[path] = Directory(path, self, True)
+        self.files_observer.on_add(path)
 
     def new_template(self, name):
-        '''Create new template'''
-        Template(name, self, True)
+        """Create new template."""
+        self.templates[name] = Template(name, self, True)
+        self.templates_observer.on_add(name)
 
-    def add_file(self, filename, selected, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
-        '''Add existing file to project'''
-        parent, dir_path = self.find_parent_dir(selected, position)
+    def add_file(self, filename, parent):
+        """Copy existing file to project"""
         name = os.path.basename(filename)
-        path = os.path.join(dir_path, name)
-        File.add_to_project(path, self, parent, filename)
+        path = os.path.join(parent.path, name)
+        full_path = os.path.join(self.directory, path)
+        shutil.copyfile(filename, full_path)
+        self.files[path] = File(path, self)
+        self.files_observer.on_add(path)
 
-    def move_file(self, file_path, tree_path, position):
-        '''Move file (used with drag&drop)
+#    def move_file(self, file_path, tree_path, position):
+#        '''Move file (used with drag&drop)
 
-        file_path - relative path to the file
-        tree_path - gtk.TreeStore path, where file was dropped
-        position - position, where file was dropped
-        Returns new file path if file was moved or None if not
-        Caller should remove old item from tree store if move was successful
-        '''
-        itr = self.files.get_iter(tree_path)
-        itr, dir_path = self.find_parent_dir(itr, position)
-        file_dir, file_name = os.path.split(file_path)
-        if file_dir == dir_path:
-            return None  # File was dropped to the same directory
-        else:
-            obj = self.get_document(file_path)
-            if itr is not None:
-                dest = self.files.get_value(itr, OBJECT_COL)
-            else:
-                dest = File("", self)
-            obj.move(dest)
+#        file_path - relative path to the file
+#        tree_path - gtk.TreeStore path, where file was dropped
+#        position - position, where file was dropped
+#        Returns new file path if file was moved or None if not
+#        Caller should remove old item from tree store if move was successful
+#        '''
+#        itr = self.files.get_iter(tree_path)
+#        itr, dir_path = self.find_parent_dir(itr, position)
+#        file_dir, file_name = os.path.split(file_path)
+#        if file_dir == dir_path:
+#            return None  # File was dropped to the same directory
+#        else:
+#            obj = self.get_document(file_path)
+#            if itr is not None:
+#                dest = self.files.get_value(itr, OBJECT_COL)
+#            else:
+#                dest = Directory("", self)
+#            obj.move(dest)
 
     def generate(self):
-        '''Generate project output files'''
-        self.files.foreach(self.generate_item)
+        """Generate project output files"""
+        for item in self.files.values():
+            try:
+                item.generate()
+            except AttributeError:
+                pass
 
-    def generate_item(self, model, path, iter):
-        obj, tp = model.get_value(iter, OBJECT_COL, TYPE_COL)
-        if tp == 'page':
-            obj.generate()
+    ### Upload ###
 
     def upload(self):
         '''Starts uploading of project files to server.
@@ -424,6 +362,8 @@ class Project(object):
             self.config.write()
 
 
+### Propertios Dialog ###
+
 class ProjectPropertiesDialog(gtk.Dialog):
     keys = ('host', 'user', 'passwd', 'remotedir')
     texts = {'host':'Host:',
@@ -490,4 +430,3 @@ class ProjectPropertiesDialog(gtk.Dialog):
         settings['preview']['url_path'] = self.path_entry.get_text()
         return settings
 
-# vim:tabstop=4:expandtab
