@@ -29,6 +29,7 @@ import project
 import document
 import sidepane
 import editor
+import project_properties
 import server
 import util
 
@@ -378,7 +379,7 @@ class Oxalis(object):
             return False
 
     def properties_cb(self, action):
-        self.project.properties_dialog(self.window)
+        project_properties.properties_dialog(self.project, self.window)
 
     def load_project(self, filename):
         self.project = project.Project(filename)
