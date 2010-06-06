@@ -32,7 +32,7 @@ import editor
 import project_properties
 import server
 import util
-
+import upload
 
 NAME = 'Oxalis'
 VERSION = '0.1'
@@ -326,9 +326,9 @@ class Oxalis(object):
             self.generate_cb(None)
 
         # Start uploading
-        result = self.project.upload()
+        process = upload.start_upload(self.project)
 
-        if result == False:
+        if not process:
             dlg = gtk.MessageDialog(self.window, 0, gtk.MESSAGE_ERROR,
                 gtk.BUTTONS_OK, 'Uploading is not configured')
             dlg.run()
@@ -358,17 +358,17 @@ class Oxalis(object):
         self.upload_dlg.vbox.pack_start(vbox)
         self.upload_dlg.show_all()
 
-        gobject.timeout_add(100, self.check_upload)
+        gobject.timeout_add(100, self.check_upload, process)
 
         self.upload_dlg.run()
         self.upload_dlg.destroy()
 
-    def check_upload(self):
+    def check_upload(self, process):
         '''Check upload status and move progressbar
 
         This function is called periodically by gobject timer
         '''
-        returncode, output = self.project.check_upload()
+        returncode, output = upload.check_upload(process)
         self.upload_output.get_buffer().insert_at_cursor(output)
         if returncode is None:
             self.progress_bar.pulse()

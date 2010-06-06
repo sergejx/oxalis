@@ -17,9 +17,6 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 import os
-import subprocess
-import string
-import fcntl
 import shutil
 
 from document import File, Directory, Page, Style, Template, TemplatesRoot
@@ -35,16 +32,6 @@ default_template = '''<?xml version="1.0" encoding="UTF-8"?>
     {Content}
   </body>
 </html>'''
-
-sitecopy_rc = '''site $name
-  server $host
-  username $user
-  password $passwd
-  local $local
-  remote $remotedir
-  exclude *.text
-  exclude _oxalis
-'''
 
 CONFIG_DEFAULTS = {
     'project': {},
@@ -271,74 +258,4 @@ class Project(object):
                 item.generate()
             except AttributeError:
                 pass
-
-    ### Upload ###
-
-    def upload(self):
-        '''Starts uploading of project files to server.
-
-        Returns True of uploading was started, or False if uploading was not
-        configured.
-        Process of uploading can be monitored using check_upload function.
-        '''
-        for key in ('host', 'remotedir', 'user', 'passwd'):
-            if not self.config.has_option('upload', key):
-                return False
-
-        rcfile = os.path.join(self.config_dir, "sitecopyrc")
-        storepath = os.path.join(self.config_dir, "sitecopy")
-
-        # Check if we need to initialize sitecopy
-        # It is needed if we upload to given location for the first time
-        need_init = False
-        for key in ('host', 'remotedir'):
-            if self.config.has_option('upload', 'last_'+key):
-                last = self.config.get('upload', 'last_'+key)
-                current = self.config.get('upload', key)
-                if current != last:
-                    need_init = True
-        if not os.path.exists(os.path.join(storepath, 'project')):
-            need_init = True
-
-        # Update sitecopyrc file
-        f = file(rcfile, 'w')
-        tpl = string.Template(sitecopy_rc)
-        f.write(tpl.substitute(dict(self.config.items('upload')),
-            name='project', local=self.directory))
-        f.close()
-
-        if need_init:
-            sitecopy = subprocess.Popen(('sitecopy',
-                '--rcfile='+rcfile, '--storepath='+storepath, '--init', 'project'))
-            code = sitecopy.wait()
-        self.sitecopy = subprocess.Popen(('sitecopy',
-            '--rcfile='+rcfile, '--storepath='+storepath, '--update', 'project'),
-            stdout=subprocess.PIPE)
-
-        for key in ('host', 'remotedir'):
-            self.config.set('upload', 'last_'+key,
-                            self.config.get('upload', 'key'))
-
-        return True
-
-    def check_upload(self):
-        '''Checks if upload is completed
-
-        Returns tuple:
-          - return code, or None if upload is not completed
-          - string containing output of the sitecopy
-        '''
-        returncode = self.sitecopy.poll()
-        output = ''
-
-        # Set up asynchronous reading of sitecopy output
-        fd = self.sitecopy.stdout.fileno()
-        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-        try:
-            output = self.sitecopy.stdout.read()
-        finally:
-            return returncode, output
-
 
