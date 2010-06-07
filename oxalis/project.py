@@ -101,6 +101,14 @@ def dir_is_project(directory):
 
 
 class Project(object):
+    """Oxalis project.
+
+    Two observers can be set: files_observer and templates_observer. Observers
+    must implement two methods:
+     - on_add(path)
+     - on_remove(path) - this method can continue function, that will be called
+       after document was removed from the list.
+    """
     def __init__(self, directory):
         self.directory = directory
         self.config_dir = os.path.join(self.directory, "_oxalis")
@@ -111,11 +119,8 @@ class Project(object):
         self.load_files_tree()
         self.load_templates_list()
 
-        self.files_observer = None # Object, that will be notified about changes
+        self.files_observer = None
         self.templates_observer = None
-        # This object should implement these methods:
-        #  - on_add(path)
-        #  - on_remove(path) - this must remove item from list
 
     def get_url_path(self):
         """Return path part of project preview URL."""

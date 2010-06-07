@@ -116,8 +116,7 @@ class FilesTreeModel(gtk.GenericTreeModel):
     def on_remove(self, path):
         obj = self.files[path]
         tree_path = self.on_get_path(obj)
-        del self.files[path]
-        self.row_deleted(tree_path)
+        return (lambda: self.row_deleted(tree_path))
 
 class SidePane(gtk.VPaned):
     """Side panel with list of files and templates"""

@@ -113,7 +113,10 @@ class File(object):
     def remove(self):
         """Remove document."""
         os.remove(self.full_path)
-        self.project.files_observer.on_remove(self.path)
+        after = self.project.files_observer.on_remove(self.path)
+        del self.project.files[self.path] # Remove itself from the list
+        if after:
+            after()
 
     # File contents operations
 
@@ -164,6 +167,10 @@ class Directory(File):
     def remove(self):
         """Remove directory (overrides Document.remove())."""
         shutil.rmtree(self.full_path)
+        after = self.project.files_observer.on_remove(self.path)
+        del self.project.files[self.path] # Remove itself from the list
+        if after:
+            after()
 
 
 class Page(File):
@@ -380,7 +387,10 @@ class Template(File):
 
     def remove(self):
         os.remove(self.full_path)
-        self.project.templates_observer.on_remove(self.path)
+        after = self.project.templates_observer.on_remove(self.path)
+        del self.project.templates[self.path] # Remove itself from the list
+        if after:
+            after()
 
     def process_page(self, tags):
         self.tags = tags
