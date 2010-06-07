@@ -162,7 +162,6 @@ class Directory(File):
 
     def rename(self, new_name):
         super(Directory, self).rename(new_name)
-        self.update_path()
 
     def remove(self):
         """Remove directory (overrides Document.remove())."""
