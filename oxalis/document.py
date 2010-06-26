@@ -19,7 +19,6 @@
 import os
 import re
 import codecs
-import shutil
 
 import markdown
 import smartypants
@@ -165,7 +164,10 @@ class Directory(File):
 
     def remove(self):
         """Remove directory (overrides Document.remove())."""
-        shutil.rmtree(self.full_path)
+        for child in self.children:
+            child.remove()
+        os.rmdir(self.full_path)
+
         after = self.project.files_observer.on_remove(self.path)
         del self.project.files[self.path] # Remove itself from the list
         if after:
