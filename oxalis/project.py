@@ -21,6 +21,7 @@ import shutil
 
 from document import File, Directory, Page, Style, Template, TemplatesRoot
 from config import Configuration
+from multicast import Multicaster
 
 default_template = '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -103,11 +104,11 @@ def dir_is_project(directory):
 class Project(object):
     """Oxalis project.
 
-    Two observers can be set: files_observer and templates_observer. Observers
-    must implement two methods:
-     - on_add(path)
-     - on_remove(path) - this method can continue function, that will be called
-       after document was removed from the list.
+    Project defines two multicasters for transmitting notifications:
+    file_listeners and template_listeners. Listeners should define methods:
+        - on_added(self, path)
+        - on_moved(self, path, tree_path, new_path)
+        - on_removed(self, path, tree_path)
     """
     def __init__(self, directory):
         self.directory = directory
@@ -119,8 +120,8 @@ class Project(object):
         self.load_files_tree()
         self.load_templates_list()
 
-        self.files_observer = None
-        self.templates_observer = None
+        self.file_listeners = Multicaster()
+        self.template_listeners = Multicaster()
 
     def get_url_path(self):
         """Return path part of project preview URL."""
@@ -206,24 +207,24 @@ class Project(object):
         """
         path = os.path.join(parent.path, name)
         self.files[path] = Page(path, self, True)
-        self.files_observer.on_add(path)
+        self.file_listeners.on_added(path)
 
     def new_style(self, name, parent):
         """Create new CSS style."""
         path = os.path.join(parent.path, name)
         self.files[path] = Style(path, self, True)
-        self.files_observer.on_add(path)
+        self.file_listeners.on_added(path)
 
     def new_dir(self, name, parent):
         """Create new directory."""
         path = os.path.join(parent.path, name)
         self.files[path] = Directory(path, self, True)
-        self.files_observer.on_add(path)
+        self.file_listeners.on_added(path)
 
     def new_template(self, name):
         """Create new template."""
         self.templates[name] = Template(name, self, True)
-        self.templates_observer.on_add(name)
+        self.template_listeners.on_added(name)
 
     def add_file(self, filename, parent):
         """Copy existing file to project"""
@@ -232,7 +233,7 @@ class Project(object):
         full_path = os.path.join(self.directory, path)
         shutil.copyfile(filename, full_path)
         self.files[path] = File(path, self)
-        self.files_observer.on_add(path)
+        self.file_listeners.on_added(path)
 
 #    def move_file(self, file_path, tree_path, position):
 #        '''Move file (used with drag&drop)

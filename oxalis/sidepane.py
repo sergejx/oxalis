@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2010 Sergej Chodarev
+# Copyright (C) 2005-2011 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
+import gobject
 import gtk
 
 import document
@@ -23,14 +24,22 @@ import document
 # Constants for column numbers
 OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(4)
 
-class FilesTreeModel(gtk.GenericTreeModel):
+class FilesTreeModel(gtk.GenericTreeModel,
+        gtk.TreeDragSource, gtk.TreeDragDest):
     """Tree Model for project files and templates."""
     columns = [object, str, str, str] # Document, path, name, type
 
-    def __init__(self, files):
-        """Create new model with specified files dictionary."""
+    def __init__(self, files, multicaster):
+        """
+        Create new model with specified files dictionary.
+
+        Multicaster for events must be provided too.
+        """
         gtk.GenericTreeModel.__init__(self)
         self.files = files
+        multicaster += self
+
+    # GenericTreeModel interface #
 
     def on_get_flags(self):
         return gtk.TREE_MODEL_ITERS_PERSIST
@@ -52,14 +61,7 @@ class FilesTreeModel(gtk.GenericTreeModel):
         return find_tree_path(self.files[""], tree_path)
 
     def on_get_path(self, rowref):
-        path = []
-        item = rowref
-        while item.path != "":
-            siblings = item.parent.children
-            i = siblings.index(item)
-            path.insert(0, i)
-            item = item.parent
-        return tuple(path)
+        return rowref.tree_path
 
     def on_get_value(self, rowref, column):
         if column == OBJECT_COL:
@@ -108,15 +110,43 @@ class FilesTreeModel(gtk.GenericTreeModel):
     def on_iter_parent(self, child):
         return child.parent
 
-    # Events from files list #
-    def on_add(self, path):
-        f = self.files[path]
-        self.row_inserted(self.on_get_path(f), self.create_tree_iter(f))
+    # Drag & Drop #
 
-    def on_remove(self, path):
-        obj = self.files[path]
-        tree_path = self.on_get_path(obj)
-        return (lambda: self.row_deleted(tree_path))
+    def do_drag_data_get(self, path, selection_data):
+        return False
+
+    def do_drag_data_delete(self, path):
+        return False
+
+    def do_row_drop_possible(self, dest_path, selection_data):
+        return True
+
+    def do_drag_data_received(self, dest, selection_data):
+        model, row = selection_data.tree_get_row_drag_data()
+        obj = self.on_get_iter(row)
+
+        dest_dir = self.on_get_iter(dest[0:len(dest)-1])
+        if not isinstance(dest_dir, document.Directory):
+            dest_dir = dest_dir.parent
+
+        obj.move(dest_dir)
+        return True
+
+    # Events from files list #
+
+    def on_added(self, path):
+        f = self.files[path]
+        self.row_inserted(f.tree_path, self.create_tree_iter(f))
+
+    def on_moved(self, path, tree_path, new_path):
+        f = self.files[new_path]
+        self.row_deleted(tree_path)
+        self.row_inserted(f.tree_path, self.create_tree_iter(f))
+
+    def on_removed(self, path, tree_path):
+        self.row_deleted(tree_path)
+
+gobject.type_register(FilesTreeModel)
 
 class SidePane(gtk.VPaned):
     """Side panel with list of files and templates"""
@@ -168,10 +198,14 @@ class SidePane(gtk.VPaned):
         self.pack2(templates_box, resize=False)
 
         # Fill views with data
-        self.files_view.set_model(FilesTreeModel(self.project.files))
-        self.project.files_observer = self.files_view.get_model()
-        self.templates_view.set_model(FilesTreeModel(self.project.templates))
-        self.project.templates_observer = self.templates_view.get_model()
+        files_model = FilesTreeModel(self.project.files,
+                                     self.project.file_listeners)
+        self.files_view.set_model(files_model)
+        self.files_view.set_reorderable(True)
+
+        templates_model = FilesTreeModel(self.project.templates,
+                                         self.project.template_listeners)
+        self.templates_view.set_model(templates_model)
 
     def get_selected(self):
         """Returns selected item in files_view

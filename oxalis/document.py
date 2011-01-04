@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2010 Sergej Chodarev
+# Copyright (C) 2005-2011 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -85,6 +85,18 @@ class File(object):
         """Document children in tree structure."""
         return []
 
+    @property
+    def tree_path(self):
+        """Tree path for specified document suitable for gtk.TreeModel."""
+        path = []
+        item = self
+        while item.path != "":
+            siblings = item.parent.children
+            i = siblings.index(item)
+            path.insert(0, i)
+            item = item.parent
+        return tuple(path)
+
     ## File operations ##
 
     def move(self, destination):
@@ -98,9 +110,14 @@ class File(object):
 
     def _move_files(self, new_path):
         """Move document files to new_path."""
+        old_path = self.path
         old_full_path = self.full_path
+        old_tree_path = self.tree_path
         self.path = new_path
+        del self.project.files[old_path]
+        self.project.files[new_path] = self
         os.rename(old_full_path, self.full_path)
+        self.project.file_listeners.on_moved(old_path, old_tree_path, new_path)
 
     def rename(self, new_name):
         """Rename document."""
@@ -111,11 +128,10 @@ class File(object):
 
     def remove(self):
         """Remove document."""
+        tree_path = self.tree_path
         os.remove(self.full_path)
-        after = self.project.files_observer.on_remove(self.path)
         del self.project.files[self.path] # Remove itself from the list
-        if after:
-            after()
+        self.project.file_listeners.on_removed(self.path, tree_path)
 
     # File contents operations
 
@@ -164,14 +180,13 @@ class Directory(File):
 
     def remove(self):
         """Remove directory (overrides Document.remove())."""
+        tree_path = self.tree_path
         for child in self.children:
             child.remove()
         os.rmdir(self.full_path)
 
-        after = self.project.files_observer.on_remove(self.path)
         del self.project.files[self.path] # Remove itself from the list
-        if after:
-            after()
+        self.project.file_listeners.on_remove(self.path, tree_path)
 
 
 class Page(File):
@@ -387,11 +402,10 @@ class Template(File):
         return super(Template, self).rename(new_name)
 
     def remove(self):
+        tree_path = self.tree_path
         os.remove(self.full_path)
-        after = self.project.templates_observer.on_remove(self.path)
         del self.project.templates[self.path] # Remove itself from the list
-        if after:
-            after()
+        self.project.template_listeners.on_removed(self.path, tree_path)
 
     def process_page(self, tags):
         self.tags = tags

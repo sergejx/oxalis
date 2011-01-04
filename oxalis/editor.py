@@ -194,7 +194,8 @@ class Editor(gtk.VBox):
 
 class PageEditor(Editor):
     def __init__(self, document):
-        self.templates_store = FilesTreeModel(document.project.templates)
+        self.templates_store = FilesTreeModel(document.project.templates,
+            document.project.template_listeners)
         Editor.__init__(self, document)
 
         if 'Title' in document.header:
