@@ -174,20 +174,6 @@ class SidePane(gtk.VPaned):
         self.files_view = self._create_tree_view('files')
         self.templates_view = self._create_tree_view('templates')
 
-#        # Set up Drag and Drop
-#        self.files_view.enable_model_drag_source(gtk.gdk.BUTTON1_MASK,
-#            [('file-path', gtk.TARGET_SAME_APP, self.DND_FILE_PATH)],
-#            gtk.gdk.ACTION_MOVE | gtk.gdk.ACTION_COPY)
-#        self.files_view.enable_model_drag_dest(
-#            [('file-path', gtk.TARGET_SAME_APP | gtk.TARGET_SAME_WIDGET,
-#              self.DND_FILE_PATH),
-#            ('text/uri-list', 0, self.DND_URI_LIST)],
-#            gtk.gdk.ACTION_MOVE)
-#        self.files_view.connect("drag-data-get",
-#            self._tree_drag_data_get_cb)
-#        self.files_view.connect("drag-data-received",
-#            self._tree_drag_data_received_cb)
-
         # Create scrolled windows and labels
         files_box = self._create_scrolled_box('<b>Files</b>', self.files_view)
         templates_box = self._create_scrolled_box('<b>Templates</b>',
@@ -315,41 +301,3 @@ class SidePane(gtk.VPaned):
                 self.files_view.get_selection().unselect_all()
             self.application.selection_actions.set_sensitive(True)
 
-#    def _tree_drag_data_get_cb(self,
-#            treeview, context, selection, info, timestamp):
-#        tree_selection = treeview.get_selection()
-#        model, iter = tree_selection.get_selected()
-#        file_path = model.get_value(iter, PATH_COL)
-#        selection.set('file-path', 8, file_path)
-
-#    def _tree_drag_data_received_cb(self,
-#            treeview, context, x, y, selection, info, timestamp):
-#        drop_info = treeview.get_dest_row_at_pos(x, y)
-#        if drop_info == None:  # if item was dropped after last tree item
-#            drop_info = (len(treeview.get_model())-1,), gtk.TREE_VIEW_DROP_AFTER
-#        tree_path, position = drop_info
-
-#        if info == self.DND_FILE_PATH: # From Oxalis itself
-#            file_path = selection.data
-#            new_path = self.project.move_file(file_path, tree_path, position)
-#            if new_path != None:
-#                context.finish(True, True, timestamp)
-#                # If moved file is opened in editor, update its path
-#                if self.application.editor.document.path == file_path:
-#                    self.application.update_editor_path(new_path)
-#            else:
-#                context.finish(False, False, timestamp)
-#        elif info == self.DND_URI_LIST: # From file manager
-#            # Extract paths
-#            uris = selection.get_uris()
-#            paths = []
-#            for uri in uris:
-#                if uri.startswith('file://'):
-#                    paths.append(urllib.url2pathname(uri[7:]))
-#            # Add files
-#            for path in paths:
-#                if os.path.isfile(path):
-#                    self.project.add_file(
-#                        path, self.project.files.get_iter(tree_path), position)
-
-# vim:tabstop=4:expandtab

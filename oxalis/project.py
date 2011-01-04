@@ -235,28 +235,6 @@ class Project(object):
         self.files[path] = File(path, self)
         self.file_listeners.on_added(path)
 
-#    def move_file(self, file_path, tree_path, position):
-#        '''Move file (used with drag&drop)
-
-#        file_path - relative path to the file
-#        tree_path - gtk.TreeStore path, where file was dropped
-#        position - position, where file was dropped
-#        Returns new file path if file was moved or None if not
-#        Caller should remove old item from tree store if move was successful
-#        '''
-#        itr = self.files.get_iter(tree_path)
-#        itr, dir_path = self.find_parent_dir(itr, position)
-#        file_dir, file_name = os.path.split(file_path)
-#        if file_dir == dir_path:
-#            return None  # File was dropped to the same directory
-#        else:
-#            obj = self.get_document(file_path)
-#            if itr is not None:
-#                dest = self.files.get_value(itr, OBJECT_COL)
-#            else:
-#                dest = Directory("", self)
-#            obj.move(dest)
-
     def generate(self):
         """Generate project output files"""
         for item in self.files.values():
