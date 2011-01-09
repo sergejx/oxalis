@@ -20,9 +20,6 @@ import os
 import re
 import codecs
 
-import markdown
-import smartypants
-
 def compare_files(x, y):
     """Compare files for sorting."""
     # Directories first
@@ -257,94 +254,6 @@ class Page(File):
         os.remove(self.source_path)
         super(Page, self).remove()
 
-    def generate(self):
-        """Generates HTML file"""
-        tpl = self.project.get_document(self.header['Template'], template=True)
-        if self._need_to_regenerate(tpl):
-            f = file(self.full_path, 'w')
-            f.write(self.process_page())
-            f.close()
-
-    def _need_to_regenerate(self, tpl):
-        """Check if source file or template was modified after HTML file
-           was generated last time."""
-        if not os.path.exists(self.full_path):
-            return True
-        src_t = os.path.getmtime(self.source_path)
-        dst_t = os.path.getmtime(self.full_path)
-        tpl_t = os.path.getmtime(tpl.full_path)
-        return (src_t > dst_t) or (tpl_t > dst_t)
-
-    def process_page(self):
-        html = markdown.markdown(self.text)
-        html = smartypants.smartyPants(html)
-
-        html = self._process_template(html)
-        encoding = determine_encoding(html)
-        return html.encode(encoding)
-
-    def _process_template(self, content):
-        if 'Template' in self.header:
-            tpl_name = self.header['Template']
-        else:
-            tpl_name = 'default'
-
-        tpl = self.project.get_document(tpl_name, True)
-        tags = self.header.copy()
-        tags['Content'] = content
-        return tpl.process_page(tags)
-
-
-def determine_encoding(html):
-    """Determines encoding, in which HTML document should be saved.
-
-    Let's test it with XML declaration
-    >>> determine_encoding(
-    ...     u'<?xml version="1.0" encoding="iso-8859-2"?>\\n<html></html>')
-    'iso-8859-2'
-
-    And what about apostrofs?
-    >>> determine_encoding(
-    ...     u"<?xml version='1.0' encoding='iso-8859-2'?>\\n<html></html>")
-    'iso-8859-2'
-
-    Classical "Content-Type" meta tag:
-    >>> determine_encoding(
-    ... u'<html><head>\\n<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-2">\\n</head></html>')
-    'iso-8859-2'
-
-    HTML5 charset declaration:
-    >>> determine_encoding(
-    ... u'<html><head>\\n<meta charset="iso-8859-2">\\n</head></html>')
-    'iso-8859-2'
-
-    Also without quotes:
-    >>> determine_encoding(
-    ... u'<html><head>\\n<meta charset=iso-8859-2>\\n</head></html>')
-    'iso-8859-2'
-
-    What if we don't specify encoding?
-    >>> determine_encoding(
-    ... u'<html><head></head><body></body></html>')
-    'utf-8'
-    """
-
-    re_xml_declaration = re.compile(
-        r'<\?xml.*? encoding=(?P<quote>\'|")(?P<enc>.+?)(?P=quote).*?\?>')
-    re_meta_charset = re.compile(
-        r'<meta.*?charset=[\'"]?(?P<enc>.+?)[\'"> ]',
-        re.IGNORECASE)
-
-    match = re_xml_declaration.search(html)
-    if match != None:
-        return str(match.group('enc'))
-    else:
-        match = re_meta_charset.search(html)
-        if match != None:
-            return str(match.group('enc'))
-        else:
-            return 'utf-8'
-
 
 class Style(File):
     """CSS style"""
@@ -375,8 +284,6 @@ class TemplatesRoot(Directory):
 class Template(File):
     """Template for HTML pages"""
 
-    tag_re = re.compile('\{(\w+)\}')
-
     def __init__(self, path, project, create=False):
         super(Template, self).__init__(path, project)
         if create:
@@ -406,16 +313,4 @@ class Template(File):
         os.remove(self.full_path)
         del self.project.templates[self.path] # Remove itself from the list
         self.project.template_listeners.on_removed(self.path, tree_path)
-
-    def process_page(self, tags):
-        self.tags = tags
-        repl = lambda match: self.replace(match, tags)
-        return self.tag_re.sub(repl, self.text)
-
-    def replace(self, match, tags):
-        tag = match.group(1)
-        if tag in tags:
-            return tags[tag]
-        else:
-            return ''
 

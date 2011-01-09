@@ -22,6 +22,7 @@ import shutil
 from document import File, Directory, Page, Style, Template, TemplatesRoot
 from config import Configuration
 from multicast import Multicaster
+from generator import generate
 
 # File types
 FILE, DIRECTORY, PAGE, STYLE, TEMPLATE = range(5)
@@ -232,8 +233,5 @@ class Project(object):
     def generate(self):
         """Generate project output files"""
         for item in self.files.values():
-            try:
-                item.generate()
-            except AttributeError:
-                pass
-
+            if isinstance(item, Page):
+                generate(item)

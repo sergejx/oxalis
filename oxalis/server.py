@@ -24,6 +24,8 @@ from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
 import mimetypes
 import shutil
 
+from generator import process_page, fill_template
+
 # Global variables
 project = None
 
@@ -59,7 +61,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.end_headers()
 
                 tpl = project.get_document(param[1], True)
-                html = tpl.process_page(page_for_templates)
+                html = fill_template(tpl, page_for_templates)
                 self.wfile.write(html)
             else:
                 self.send_error(404, 'Not Found')
@@ -79,7 +81,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.end_headers()
 
                 page = project.get_document(request_path)
-                html = page.process_page()
+                html = process_page(page)
                 self.wfile.write(html)
 
             elif os.path.exists(full_path):  # Other files
@@ -95,5 +97,3 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
 
             else:  # File not found
                 self.send_error(404, 'Not Found')
-
-# vim:tabstop=4:expandtab
