@@ -267,7 +267,7 @@ class Style(File):
 class TemplatesRoot(Directory):
     """Root directory for templates."""
     def __init__(self, project):
-        super(Directory, self).__init__("", project)
+        super(TemplatesRoot, self).__init__("", project)
 
     @property
     def children(self):
