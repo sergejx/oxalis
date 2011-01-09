@@ -23,6 +23,16 @@ from document import File, Directory, Page, Style, Template, TemplatesRoot
 from config import Configuration
 from multicast import Multicaster
 
+# File types
+FILE, DIRECTORY, PAGE, STYLE, TEMPLATE = range(5)
+CLASSES = {
+    FILE: File,
+    DIRECTORY: Directory,
+    PAGE: Page,
+    STYLE: Style,
+    TEMPLATE: Template,
+}
+
 default_template = '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -198,27 +208,11 @@ class Project(object):
         else:
             return self.files[path]
 
-    # TODO DRY!
-    def new_page(self, name, parent):
-        """
-        Create new page.
-
-        name - name of page, must ends with .html
-        """
+    def new_file(self, type, name, parent):
+        """Create new file."""
+        class_ = CLASSES[type]
         path = os.path.join(parent.path, name)
-        self.files[path] = Page(path, self, True)
-        self.file_listeners.on_added(path)
-
-    def new_style(self, name, parent):
-        """Create new CSS style."""
-        path = os.path.join(parent.path, name)
-        self.files[path] = Style(path, self, True)
-        self.file_listeners.on_added(path)
-
-    def new_dir(self, name, parent):
-        """Create new directory."""
-        path = os.path.join(parent.path, name)
-        self.files[path] = Directory(path, self, True)
+        self.files[path] = class_(path, self, True)
         self.file_listeners.on_added(path)
 
     def new_template(self, name):

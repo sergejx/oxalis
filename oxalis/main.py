@@ -109,9 +109,9 @@ class Oxalis(object):
         self.project_actions = gtk.ActionGroup('project_actions')
         self.project_actions.add_actions((
             ('NewFile', gtk.STOCK_NEW, 'New File', ''),
-            ('NewPage', None, 'Page', None, None, self.new_page_cb),
-            ('NewStyle', None, 'Style (CSS)', None, None, self.new_style_cb),
-            ('NewDirectory', None, 'Directory', None, None, self.new_dir_cb),
+            ('NewPage', None, 'Page', None, None, self.new_document_cb),
+            ('NewStyle', None, 'Style (CSS)', None, None, self.new_document_cb),
+            ('NewDirectory', None, 'Directory', None, None, self.new_document_cb),
             ('NewTemplate', None, 'Template', None, None, self.new_template_cb),
             ('AddFile', gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
             ('Generate', None, 'Generate', None, None, self.generate_cb),
@@ -215,30 +215,18 @@ class Oxalis(object):
         except AttributeError: # there is no editor
             pass
 
-    def new_page_cb(self, action):
-        response, name = self.ask_name('Page')
-
-        if response == gtk.RESPONSE_OK:
-            if name != '':
-                if not name.endswith('.html'):
-                    name += '.html'
-                self.project.new_page(name, self.sidepane.get_target_dir())
-
-    def new_style_cb(self, action):
-        response, name = self.ask_name('Style')
-
-        if response == gtk.RESPONSE_OK:
-            if name != '':
-                if not name.endswith('.css'):
-                    name += '.css'
-                self.project.new_style(name, self.sidepane.get_target_dir())
-
-    def new_dir_cb(self, action):
-        response, name = self.ask_name('Directory')
-
-        if response == gtk.RESPONSE_OK:
-            if name != '':
-                self.project.new_dir(name, self.sidepane.get_target_dir())
+    NEW_DOC_DATA = {
+        "NewPage": (project.PAGE, u"Page", ".html"),
+        "NewStyle": (project.STYLE, u"Style", ".css"),
+        "NewDirectory": (project.DIRECTORY, u"Directory", ""),
+    }
+    def new_document_cb(self, action):
+        type, label, ext = self.NEW_DOC_DATA[action.get_name()]
+        response, name = self.ask_name(label)
+        if response == gtk.RESPONSE_OK and name != '':
+            if not name.endswith(ext):
+                name += ext
+            self.project.new_file(type, name, self.sidepane.get_target_dir())
 
     def new_template_cb(self, action):
         response, name = self.ask_name('Template')
