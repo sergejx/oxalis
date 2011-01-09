@@ -48,9 +48,11 @@ def get_file_type(filename):
 class File(object):
     """File inside Oxalis project."""
 
-    def __init__(self, path, project):
+    def __init__(self, path, project, create=False):
         self.project = project
         self.path = path # relative to project directory
+        if create:
+            file(self.full_path, 'w')
 
     ## Properties ##
 
@@ -196,11 +198,10 @@ class Page(File):
 
         * if create == True, create new page file
         """
-        super(Page, self).__init__(path, project)
+        super(Page, self).__init__(path, project, create)
         if create:
             src = file(self.source_path, 'w')
             src.write('\n')
-            file(self.full_path, 'w')
         self.read_header()
 
     @property
@@ -257,12 +258,6 @@ class Page(File):
 
 class Style(File):
     """CSS style"""
-
-    def __init__(self, path, project, create=False):
-        super(Style, self).__init__(path, project)
-        if create:
-            file(self.full_path, 'w')
-
     @property
     def url(self):
         """Preview URL of document"""
@@ -283,11 +278,6 @@ class TemplatesRoot(Directory):
 
 class Template(File):
     """Template for HTML pages"""
-
-    def __init__(self, path, project, create=False):
-        super(Template, self).__init__(path, project)
-        if create:
-            file(self.full_path, 'w')
 
     @property
     def full_path(self):

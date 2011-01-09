@@ -27,7 +27,7 @@ TAG_RE = re.compile('\{(\w+)\}')
 
 def generate(page):
     """Generates HTML file from Markdown source"""
-    tpl = page.project.get_document(page.header['Template'], template=True)
+    tpl = find_template(page)
     if need_to_regenerate(page, tpl):
         f = file(page.full_path, 'w')
         f.write(process_page(page))
@@ -55,14 +55,16 @@ def process_page(page):
     return html.encode(encoding)
 
 
-def process_template(page, content):
-    """Find page template and fill page content into it."""
+def find_template(page):
     if 'Template' in page.header:
         tpl_name = page.header['Template']
     else:
         tpl_name = 'default'
+    return page.project.get_document(tpl_name, True)
 
-    tpl = page.project.get_document(tpl_name, True)
+def process_template(page, content):
+    """Find page template and fill page content into it."""
+    tpl = find_template(page)
     tags = page.header.copy()
     tags['Content'] = content
     return fill_template(tpl, tags)
