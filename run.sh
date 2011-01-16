@@ -1,1 +1,1 @@
-PYTHONPATH=. python -tt scripts/oxalis
+PYTHONPATH=. python -tt -3 scripts/oxalis
