@@ -59,8 +59,6 @@ CONFIG_DEFAULTS = {
 
 
 def create_project(path):
-    global default_template
-
     name = os.path.basename(path)
 
     oxalis_dir = os.path.join(path, '_oxalis')
