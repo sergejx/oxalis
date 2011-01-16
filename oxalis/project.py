@@ -1,6 +1,6 @@
 # Oxalis Web Editor
 #
-# Copyright (C) 2005-2010 Sergej Chodarev
+# Copyright (C) 2005-2011 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -126,11 +126,11 @@ class Project(object):
 
         self.config = Configuration(self.config_dir, 'config', CONFIG_DEFAULTS)
 
-        self.load_files_tree()
-        self.load_templates_list()
-
         self.file_listeners = Multicaster()
         self.template_listeners = Multicaster()
+
+        self.load_files_tree()
+        self.load_templates_list()
 
     def get_url_path(self):
         """Return path part of project preview URL."""
@@ -173,17 +173,14 @@ class Project(object):
         path - path relative to self.directory
         """
         name, ext = os.path.splitext(filename)
-        obj = None
         if ext == '.html':
-            obj = Page(path, self)
+            Page(path, self)
         elif ext == '.text':
             pass # Ignore page sources
         elif ext == '.css':
-            obj = Style(path, self)
+            Style(path, self)
         elif filename[0] != '.':
-            obj = File(path, self)
-        if obj is not None:
-            self.files[path] = obj
+            File(path, self)
 
     def load_templates_list(self):
         """Loads list of project templates
@@ -191,10 +188,11 @@ class Project(object):
         List is stored in self.templates
         """
         tpl_dir = os.path.join(self.directory, '_oxalis', 'templates')
-        self.templates = {"": TemplatesRoot(self)}
+        self.templates = {}
+        self.templates[""] = TemplatesRoot(self)
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
-            self.templates[name] = Template(name, self)
+            Template(name, self)
 
     def close(self):
         """Close project and save its state"""

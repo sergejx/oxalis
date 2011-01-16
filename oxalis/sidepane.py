@@ -29,14 +29,11 @@ class FilesTreeModel(gtk.GenericTreeModel,
     """Tree Model for project files and templates."""
     columns = [object, str, str, str] # Document, path, name, type
 
-    def __init__(self, files, multicaster):
-        """
-        Create new model with specified files dictionary.
-
-        Multicaster for events must be provided too.
-        """
+    def __init__(self, files):
+        """Create new model with specified files dictionary."""
         gtk.GenericTreeModel.__init__(self)
         self.files = files
+        multicaster = files[""].listeners # Get multicaster from root file
         multicaster += self
 
     # GenericTreeModel interface #
@@ -184,13 +181,11 @@ class SidePane(gtk.VPaned):
         self.pack2(templates_box, resize=False)
 
         # Fill views with data
-        files_model = FilesTreeModel(self.project.files,
-                                     self.project.file_listeners)
+        files_model = FilesTreeModel(self.project.files)
         self.files_view.set_model(files_model)
         self.files_view.set_reorderable(True)
 
-        templates_model = FilesTreeModel(self.project.templates,
-                                         self.project.template_listeners)
+        templates_model = FilesTreeModel(self.project.templates)
         self.templates_view.set_model(templates_model)
 
     def get_selected(self):

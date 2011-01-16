@@ -50,16 +50,30 @@ class File(object):
 
     def __init__(self, path, project, create=False):
         self.project = project
+        self.index = project.files
+        self.base_dir = project.directory
+        self.base_url = project.url
+        self.listeners = project.file_listeners
         self.path = path # relative to project directory
         if create:
             file(self.full_path, 'w')
 
     ## Properties ##
 
+    def get_path(self):
+        return self._path
+    def set_path(self, path):
+        """Set file path. Index is properly updated."""
+        if hasattr(self, '_path'):
+            del self.index[self._path]
+        self.index[path] = self
+        self._path = path
+    path = property(get_path, set_path)
+
     @property
     def full_path(self):
         """Full path to document file."""
-        return os.path.join(self.project.directory, self.path)
+        return os.path.join(self.base_dir, self.path)
 
     @property
     def name(self):
@@ -77,7 +91,7 @@ class File(object):
         if self.path == "": # Special case for root dir
             return None
         parent_path = os.path.dirname(self.path)
-        return self.project.files[parent_path]
+        return self.index[parent_path]
 
     @property
     def children(self):
@@ -113,10 +127,8 @@ class File(object):
         old_full_path = self.full_path
         old_tree_path = self.tree_path
         self.path = new_path
-        del self.project.files[old_path]
-        self.project.files[new_path] = self
         os.rename(old_full_path, self.full_path)
-        self.project.file_listeners.on_moved(old_path, old_tree_path, new_path)
+        self.listeners.on_moved(old_path, old_tree_path, new_path)
 
     def rename(self, new_name):
         """Rename document."""
@@ -129,8 +141,8 @@ class File(object):
         """Remove document."""
         tree_path = self.tree_path
         os.remove(self.full_path)
-        del self.project.files[self.path] # Remove itself from the list
-        self.project.file_listeners.on_removed(self.path, tree_path)
+        del self.index[self.path] # Remove itself from the list
+        self.listeners.on_removed(self.path, tree_path)
 
     # File contents operations
 
@@ -171,7 +183,7 @@ class Directory(File):
     def children(self):
         """Document children in tree structure."""
         return sorted(
-            [doc for doc in self.project.files.values() if doc.parent == self],
+            [doc for doc in self.index.values() if doc.parent == self],
             cmp=compare_files)
 
     def rename(self, new_name):
@@ -184,8 +196,8 @@ class Directory(File):
             child.remove()
         os.rmdir(self.full_path)
 
-        del self.project.files[self.path] # Remove itself from the list
-        self.project.file_listeners.on_remove(self.path, tree_path)
+        del self.index[self.path] # Remove itself from the list
+        self.listeners.on_remove(self.path, tree_path)
 
 
 class Page(File):
@@ -207,7 +219,7 @@ class Page(File):
     @property
     def url(self):
         """Preview URL of document"""
-        return self.project.url + self.path
+        return self.base_url + self.path
 
     @property
     def source_path(self):
@@ -261,46 +273,38 @@ class Style(File):
     @property
     def url(self):
         """Preview URL of document"""
-        return self.project.url
+        return self.base_url
 
 
 class TemplatesRoot(Directory):
     """Root directory for templates."""
     def __init__(self, project):
-        super(TemplatesRoot, self).__init__("", project)
-
-    @property
-    def children(self):
-        """All templates."""
-        return sorted(
-            [doc for doc in self.project.templates.values() if doc.path != ""],
-            cmp=compare_files)
+        self.project = project
+        self.index = project.templates
+        self.base_dir = project.templates_dir
+        self.base_url = project.url
+        self.listeners = project.template_listeners
+        self.path = ""
 
 class Template(File):
     """Template for HTML pages"""
 
-    @property
-    def full_path(self):
-        return os.path.join(self.project.templates_dir, self.path)
+    def __init__(self, path, project, create=False):
+        self.project = project
+        self.index = project.templates
+        self.base_dir = project.templates_dir
+        self.base_url = project.url
+        self.listeners = project.template_listeners
+        self.path = path
+        if create:
+            file(self.full_path, 'w')
 
     @property
     def url(self):
         """Preview URL of document"""
-        return self.project.url + '?template=' + self.path
-
-    @property
-    def parent(self):
-        """Templates root directory."""
-        return self.project.templates[""]
+        return self.base_url + '?template=' + self.path
 
     def rename(self, new_name):
         """Rename template."""
         # TODO: Change name of template in all pages which use it
         return super(Template, self).rename(new_name)
-
-    def remove(self):
-        tree_path = self.tree_path
-        os.remove(self.full_path)
-        del self.project.templates[self.path] # Remove itself from the list
-        self.project.template_listeners.on_removed(self.path, tree_path)
-
