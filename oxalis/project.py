@@ -111,14 +111,7 @@ def dir_is_project(directory):
 
 
 class Project(object):
-    """Oxalis project.
-
-    Project defines two multicasters for transmitting notifications:
-    file_listeners and template_listeners. Listeners should define methods:
-        - on_added(self, path)
-        - on_moved(self, path, tree_path, new_path)
-        - on_removed(self, path, tree_path)
-    """
+    """Oxalis project."""
     def __init__(self, directory):
         self.directory = directory
         self.config_dir = os.path.join(self.directory, "_oxalis")
@@ -126,8 +119,8 @@ class Project(object):
 
         self.config = Configuration(self.config_dir, 'config', CONFIG_DEFAULTS)
 
-        self.file_listeners = Multicaster()
-        self.template_listeners = Multicaster()
+        self.files = DocumentsIndex(self.directory)
+        self.templates = DocumentsIndex(self.templates_dir)
 
         self.load_files_tree()
         self.load_templates_list()
@@ -147,7 +140,6 @@ class Project(object):
 
     def load_files_tree(self):
         """Loads tree of project files"""
-        self.files = {}
         self.load_dir('')
 
     def load_dir(self, dirpath):
@@ -188,7 +180,6 @@ class Project(object):
         List is stored in self.templates
         """
         tpl_dir = os.path.join(self.directory, '_oxalis', 'templates')
-        self.templates = {}
         self.templates[""] = TemplatesRoot(self)
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
@@ -210,12 +201,12 @@ class Project(object):
         class_ = CLASSES[type]
         path = os.path.join(parent.path, name)
         self.files[path] = class_(path, self, True)
-        self.file_listeners.on_added(path)
+        self.files.listeners.on_added(path)
 
     def new_template(self, name):
         """Create new template."""
         self.templates[name] = Template(name, self, True)
-        self.template_listeners.on_added(name)
+        self.templates.listeners.on_added(name)
 
     def add_file(self, filename, parent):
         """Copy existing file to project"""
@@ -224,10 +215,24 @@ class Project(object):
         full_path = os.path.join(self.directory, path)
         shutil.copyfile(filename, full_path)
         self.files[path] = File(path, self)
-        self.file_listeners.on_added(path)
+        self.files.listeners.on_added(path)
 
     def generate(self):
         """Generate project output files"""
         for item in self.files.values():
             if isinstance(item, Page):
                 generate(item)
+
+class DocumentsIndex(dict):
+    """
+    Dictionary of all documents (files or templates) indexed by path.
+
+    Provides multicaster. Listeners should define methods:
+        - on_added(self, path)
+        - on_moved(self, path, tree_path, new_path)
+        - on_removed(self, path, tree_path)
+    """
+    def __init__(self, base_dir):
+        super(DocumentsIndex, self).__init__()
+        self.base_dir = base_dir
+        self.listeners = Multicaster()

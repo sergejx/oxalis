@@ -51,9 +51,7 @@ class File(object):
     def __init__(self, path, project, create=False):
         self.project = project
         self.index = project.files
-        self.base_dir = project.directory
         self.base_url = project.url
-        self.listeners = project.file_listeners
         self.path = path # relative to project directory
         if create:
             file(self.full_path, 'w')
@@ -73,7 +71,7 @@ class File(object):
     @property
     def full_path(self):
         """Full path to document file."""
-        return os.path.join(self.base_dir, self.path)
+        return os.path.join(self.index.base_dir, self.path)
 
     @property
     def name(self):
@@ -128,7 +126,7 @@ class File(object):
         old_tree_path = self.tree_path
         self.path = new_path
         os.rename(old_full_path, self.full_path)
-        self.listeners.on_moved(old_path, old_tree_path, new_path)
+        self.index.listeners.on_moved(old_path, old_tree_path, new_path)
 
     def rename(self, new_name):
         """Rename document."""
@@ -142,7 +140,7 @@ class File(object):
         tree_path = self.tree_path
         os.remove(self.full_path)
         del self.index[self.path] # Remove itself from the list
-        self.listeners.on_removed(self.path, tree_path)
+        self.index.listeners.on_removed(self.path, tree_path)
 
     # File contents operations
 
@@ -197,7 +195,7 @@ class Directory(File):
         os.rmdir(self.full_path)
 
         del self.index[self.path] # Remove itself from the list
-        self.listeners.on_remove(self.path, tree_path)
+        self.index.listeners.on_remove(self.path, tree_path)
 
 
 class Page(File):
@@ -281,9 +279,7 @@ class TemplatesRoot(Directory):
     def __init__(self, project):
         self.project = project
         self.index = project.templates
-        self.base_dir = project.templates_dir
         self.base_url = project.url
-        self.listeners = project.template_listeners
         self.path = ""
 
 class Template(File):
@@ -292,9 +288,7 @@ class Template(File):
     def __init__(self, path, project, create=False):
         self.project = project
         self.index = project.templates
-        self.base_dir = project.templates_dir
         self.base_url = project.url
-        self.listeners = project.template_listeners
         self.path = path
         if create:
             file(self.full_path, 'w')

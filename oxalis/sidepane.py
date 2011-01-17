@@ -33,7 +33,7 @@ class FilesTreeModel(gtk.GenericTreeModel,
         """Create new model with specified files dictionary."""
         gtk.GenericTreeModel.__init__(self)
         self.files = files
-        multicaster = files[""].listeners # Get multicaster from root file
+        multicaster = files.listeners # Get multicaster from root file
         multicaster += self
 
     # GenericTreeModel interface #
