@@ -170,7 +170,7 @@ class Project(object):
 
         dirpath - directory to load, path relative to self.directory
         """
-        self.files[dirpath] = Directory(dirpath, self)
+        self.files[dirpath] = Directory(dirpath, self, self.files)
 
         for filename in os.listdir(os.path.join(self.directory, dirpath)):
             if filename != '_oxalis':
@@ -189,7 +189,7 @@ class Project(object):
         """
         if not (filename.startswith(".") or filename.endswith(".text")):
             type_ = get_file_type(filename)
-            CLASSES[type_](path, self)
+            CLASSES[type_](path, self, self.files)
 
     def load_templates_list(self):
         """Loads list of project templates
@@ -197,10 +197,10 @@ class Project(object):
         List is stored in self.templates
         """
         tpl_dir = os.path.join(self.directory, '_oxalis', 'templates')
-        self.templates[""] = TemplatesRoot(self)
+        self.templates[""] = Directory("", self, self.templates)
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
-            Template(name, self)
+            Template(name, self, self.templates)
 
     def close(self):
         """Close project and save its state"""
@@ -259,9 +259,9 @@ class DocumentsIndex(dict):
 class File(object):
     """File inside Oxalis project."""
 
-    def __init__(self, path, project, create=False):
+    def __init__(self, path, project, index, create=False):
         self.project = project
-        self.index = project.files
+        self.index = index
         self.base_url = project.url
         self.path = path # relative to project directory
         if create:
@@ -383,8 +383,8 @@ class File(object):
 class Directory(File):
     """Directory in Oxalis project."""
 
-    def __init__(self, path, project, create=False):
-        super(Directory, self).__init__(path, project)
+    def __init__(self, path, project, index, create=False):
+        super(Directory, self).__init__(path, project, index)
         if create:
             os.mkdir(self.full_path)
 
@@ -414,12 +414,12 @@ class Page(File):
 
     _header_re = re.compile('(\w+): ?(.*)')
 
-    def __init__(self, path, project, create=False):
+    def __init__(self, path, project, index, create=False):
         """Initialize page.
 
         * if create == True, create new page file
         """
-        super(Page, self).__init__(path, project, create)
+        super(Page, self).__init__(path, project, index, create)
         if create:
             src = file(self.source_path, 'w')
             src.write('\n')
@@ -485,25 +485,8 @@ class Style(File):
         return self.base_url
 
 
-class TemplatesRoot(Directory):
-    """Root directory for templates."""
-    def __init__(self, project):
-        self.project = project
-        self.index = project.templates
-        self.base_url = project.url
-        self.path = ""
-
-
 class Template(File):
     """Template for HTML pages"""
-
-    def __init__(self, path, project, create=False):
-        self.project = project
-        self.index = project.templates
-        self.base_url = project.url
-        self.path = path
-        if create:
-            file(self.full_path, 'w')
 
     @property
     def url(self):
