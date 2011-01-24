@@ -19,7 +19,7 @@
 import gobject
 import gtk
 
-import document
+import project
 
 # Constants for column numbers
 OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(4)
@@ -27,7 +27,7 @@ OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(4)
 class FilesTreeModel(gtk.GenericTreeModel,
         gtk.TreeDragSource, gtk.TreeDragDest):
     """Tree Model for project files and templates."""
-    columns = [object, str, str, str] # Document, path, name, type
+    columns = [object, str, str, int] # Document, path, name, type
 
     def __init__(self, files):
         """Create new model with specified files dictionary."""
@@ -68,12 +68,12 @@ class FilesTreeModel(gtk.GenericTreeModel,
         elif column == PATH_COL:
             return rowref.path
         elif column == TYPE_COL: # TODO return icons itself
-            if isinstance(rowref, document.Directory):
-                return 'dir'
-            elif isinstance(rowref, document.Template):
-                return 'tpl'
+            if isinstance(rowref, project.Directory):
+                return project.DIRECTORY
+            elif isinstance(rowref, project.Template):
+                return project.TEMPLATE
             else:
-                return document.get_file_type(rowref.name)
+                return project.get_file_type(rowref.name)
 
     def on_iter_next(self, rowref):
         siblings = rowref.parent.children
@@ -123,7 +123,7 @@ class FilesTreeModel(gtk.GenericTreeModel,
         obj = self.on_get_iter(row)
 
         dest_dir = self.on_get_iter(dest[0:len(dest)-1])
-        if not isinstance(dest_dir, document.Directory):
+        if not isinstance(dest_dir, project.Directory):
             dest_dir = dest_dir.parent
 
         obj.move(dest_dir)
@@ -154,12 +154,12 @@ class SidePane(gtk.VPaned):
 
     # File type icons
     icons = {
-        'dir': ['gnome-fs-directory', 'folder'],
-        'page': ['gnome-mime-text-html', 'text-html'],
-        'style': ['gnome-mime-text-css', 'text-x-css', 'text-x-generic'],
-        'file': ['gnome-mime-application', 'text-x-preview'],
-        'image': ['gnome-mime-image', 'image-x-generic'],
-        'tpl': ['text-x-generic-template']
+        project.DIRECTORY: ['gnome-fs-directory', 'folder'],
+        project.PAGE: ['gnome-mime-text-html', 'text-html'],
+        project.STYLE: ['gnome-mime-text-css', 'text-x-css', 'text-x-generic'],
+        project.FILE: ['gnome-mime-application', 'text-x-preview'],
+        project.IMAGE: ['gnome-mime-image', 'image-x-generic'],
+        project.TEMPLATE: ['text-x-generic-template'],
     }
 
     def __init__(self, application, project):
@@ -202,7 +202,7 @@ class SidePane(gtk.VPaned):
     def get_selected_document(self):
         """Return selected document in side pane.
 
-        Returned object is subclass of document.Document.
+        Returned object is subclass of project.File.
         """
         model, itr = self.get_selected()
         return model.get_value(itr, OBJECT_COL)

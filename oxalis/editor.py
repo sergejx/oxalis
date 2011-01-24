@@ -21,7 +21,7 @@ import pango
 import gtksourceview2
 import webkit
 
-import document
+import project
 import config
 import util
 from sidepane import FilesTreeModel, NAME_COL
@@ -346,11 +346,11 @@ class Browser(gtk.VBox):
 
 def create_editor(doc):
     """Create appripriate editor for document."""
-    if isinstance(doc, document.Page):
+    if isinstance(doc, project.Page):
         return PageEditor(doc)
-    elif isinstance(doc, document.Style):
+    elif isinstance(doc, project.Style):
         return StyleEditor(doc)
-    elif isinstance(doc, document.Template):
+    elif isinstance(doc, project.Template):
         return TemplateEditor(doc)
     else:
         try: # if document can be readed as text

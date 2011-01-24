@@ -1,7 +1,7 @@
-# Oxalis Web Editor
+# Oxalis Web Site Editor
 #
 # Copyright (C) 2005-2011 Sergej Chodarev
-
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -16,23 +16,22 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
+"""
+This module is responsible for project and its contents -- files and
+directories.
+"""
+
 import os
+import re
+import codecs
 import shutil
 
-from document import File, Directory, Page, Style, Template, TemplatesRoot
 from config import Configuration
 from multicast import Multicaster
 from generator import generate
 
 # File types
-FILE, DIRECTORY, PAGE, STYLE, TEMPLATE = range(5)
-CLASSES = {
-    FILE: File,
-    DIRECTORY: Directory,
-    PAGE: Page,
-    STYLE: Style,
-    TEMPLATE: Template,
-}
+FILE, DIRECTORY, PAGE, STYLE, IMAGE, TEMPLATE = range(6)
 
 default_template = '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -109,6 +108,30 @@ def dir_is_project(directory):
     # Simply check if directory contains subdirectory _oxalis
     return os.path.isdir(os.path.join(directory, '_oxalis'))
 
+def compare_files(x, y):
+    """Compare files for sorting."""
+    # Directories first
+    xdir = isinstance(x, Directory)
+    ydir = isinstance(y, Directory)
+    if xdir and not ydir:
+        return -1
+    elif not xdir and ydir:
+        return 1
+    else:
+        return cmp(x.name, y.name)
+
+def get_file_type(filename):
+    """Get file type from filename"""
+    root, ext = os.path.splitext(filename)
+    if ext == '.html':
+        return PAGE
+    elif ext == '.css':
+        return STYLE
+    elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
+        return IMAGE
+    else:
+        return FILE
+
 
 class Project(object):
     """Oxalis project."""
@@ -164,15 +187,9 @@ class Project(object):
         filename - name of the file
         path - path relative to self.directory
         """
-        name, ext = os.path.splitext(filename)
-        if ext == '.html':
-            Page(path, self)
-        elif ext == '.text':
-            pass # Ignore page sources
-        elif ext == '.css':
-            Style(path, self)
-        elif filename[0] != '.':
-            File(path, self)
+        if not (filename.startswith(".") or filename.endswith(".text")):
+            type_ = get_file_type(filename)
+            CLASSES[type_](path, self)
 
     def load_templates_list(self):
         """Loads list of project templates
@@ -223,6 +240,7 @@ class Project(object):
             if isinstance(item, Page):
                 generate(item)
 
+
 class DocumentsIndex(dict):
     """
     Dictionary of all documents (files or templates) indexed by path.
@@ -236,3 +254,274 @@ class DocumentsIndex(dict):
         super(DocumentsIndex, self).__init__()
         self.base_dir = base_dir
         self.listeners = Multicaster()
+
+
+class File(object):
+    """File inside Oxalis project."""
+
+    def __init__(self, path, project, create=False):
+        self.project = project
+        self.index = project.files
+        self.base_url = project.url
+        self.path = path # relative to project directory
+        if create:
+            file(self.full_path, 'w')
+
+    ## Properties ##
+
+    def get_path(self):
+        return self._path
+    def set_path(self, path):
+        """Set file path. Index is properly updated."""
+        if hasattr(self, '_path'):
+            del self.index[self._path]
+        self.index[path] = self
+        self._path = path
+    path = property(get_path, set_path)
+
+    @property
+    def full_path(self):
+        """Full path to document file."""
+        return os.path.join(self.index.base_dir, self.path)
+
+    @property
+    def name(self):
+        """File name of document."""
+        return os.path.basename(self.path)
+
+    @property
+    def parent(self):
+        """
+        Parent document.
+
+        If document has no parent, special Document object is used with path
+        set to "".
+        """
+        if self.path == "": # Special case for root dir
+            return None
+        parent_path = os.path.dirname(self.path)
+        return self.index[parent_path]
+
+    @property
+    def children(self):
+        """Document children in tree structure."""
+        return []
+
+    @property
+    def tree_path(self):
+        """Tree path for specified document suitable for gtk.TreeModel."""
+        path = []
+        item = self
+        while item.path != "":
+            siblings = item.parent.children
+            i = siblings.index(item)
+            path.insert(0, i)
+            item = item.parent
+        return tuple(path)
+
+    ## File operations ##
+
+    def move(self, destination):
+        """Move document to different directory.
+
+        destination -- directory object
+        """
+        dest_path = os.path.join(destination.path, self.name)
+        self._move_files(dest_path)
+        return dest_path
+
+    def _move_files(self, new_path):
+        """Move document files to new_path."""
+        old_path = self.path
+        old_full_path = self.full_path
+        old_tree_path = self.tree_path
+        self.path = new_path
+        os.rename(old_full_path, self.full_path)
+        self.index.listeners.on_moved(old_path, old_tree_path, new_path)
+
+    def rename(self, new_name):
+        """Rename document."""
+        head, tail = os.path.split(self.path)
+        new_path = os.path.join(head, new_name)
+        self._move_files(new_path)
+        return new_path
+
+    def remove(self):
+        """Remove document."""
+        tree_path = self.tree_path
+        os.remove(self.full_path)
+        del self.index[self.path] # Remove itself from the list
+        self.index.listeners.on_removed(self.path, tree_path)
+
+    # File contents operations
+
+    def read(self):
+        """Read document contents from file"""
+        f = codecs.open(self.full_path, 'r', 'utf-8')
+        self._text = f.read()
+        f.close()
+
+    def write(self):
+        """Write document contents to file"""
+        f = codecs.open(self.full_path, 'w', 'utf-8')
+        f.write(self.text)
+        f.close()
+
+    def get_text(self):
+        try:
+            return self._text
+        except AttributeError: # Lazy initialization
+            self.read()
+            return self._text
+
+    def set_text(self, value):
+        self._text = value
+
+    text = property(get_text, set_text, None, "Text of the document")
+
+
+class Directory(File):
+    """Directory in Oxalis project."""
+
+    def __init__(self, path, project, create=False):
+        super(Directory, self).__init__(path, project)
+        if create:
+            os.mkdir(self.full_path)
+
+    @property
+    def children(self):
+        """Document children in tree structure."""
+        return sorted(
+            [doc for doc in self.index.values() if doc.parent == self],
+            cmp=compare_files)
+
+    def rename(self, new_name):
+        super(Directory, self).rename(new_name)
+
+    def remove(self):
+        """Remove directory (overrides Document.remove())."""
+        tree_path = self.tree_path
+        for child in self.children:
+            child.remove()
+        os.rmdir(self.full_path)
+
+        del self.index[self.path] # Remove itself from the list
+        self.index.listeners.on_remove(self.path, tree_path)
+
+
+class Page(File):
+    """HTML page"""
+
+    _header_re = re.compile('(\w+): ?(.*)')
+
+    def __init__(self, path, project, create=False):
+        """Initialize page.
+
+        * if create == True, create new page file
+        """
+        super(Page, self).__init__(path, project, create)
+        if create:
+            src = file(self.source_path, 'w')
+            src.write('\n')
+        self.read_header()
+
+    @property
+    def url(self):
+        """Preview URL of document"""
+        return self.base_url + self.path
+
+    @property
+    def source_path(self):
+        """Full path to source of document."""
+        root, ext = os.path.splitext(self.full_path)
+        return root + ".text"
+
+    def read_header(self):
+        '''Reads page header and stores it in self.header'''
+        self._page_file = file(self.source_path)
+        self.header = {}
+        for line in self._page_file:
+            if line == '\n':
+                break
+            else:
+                match = self._header_re.match(line)
+                if match != None:
+                    self.header[match.group(1)] = match.group(2)
+
+    def read(self):
+        '''Reads page text and stores it in self._text'''
+        self._text = ""
+        # read_header has left file opened in self.page_file
+        for line in self._page_file:
+            self._text += line
+
+        self._page_file.close() # We will not need it more
+
+    def write(self):
+        f = file(self.source_path, 'w')
+        for (key, value) in self.header.items():
+            f.write(key + ': ' + value + '\n')
+        f.write('\n')
+        f.write(self.text)
+        f.close()
+
+    def _move_files(self, new_path):
+        """Move file and its source (overrides Document._move_files())."""
+        old_source_path = self.source_path
+        super(Page, self)._move_files(new_path)
+        os.renames(old_source_path, self.source_path)
+
+    def remove(self):
+        """Remove file and its source (overrides Document.remove())."""
+        os.remove(self.source_path)
+        super(Page, self).remove()
+
+
+class Style(File):
+    """CSS style"""
+    @property
+    def url(self):
+        """Preview URL of document"""
+        return self.base_url
+
+
+class TemplatesRoot(Directory):
+    """Root directory for templates."""
+    def __init__(self, project):
+        self.project = project
+        self.index = project.templates
+        self.base_url = project.url
+        self.path = ""
+
+
+class Template(File):
+    """Template for HTML pages"""
+
+    def __init__(self, path, project, create=False):
+        self.project = project
+        self.index = project.templates
+        self.base_url = project.url
+        self.path = path
+        if create:
+            file(self.full_path, 'w')
+
+    @property
+    def url(self):
+        """Preview URL of document"""
+        return self.base_url + '?template=' + self.path
+
+    def rename(self, new_name):
+        """Rename template."""
+        # TODO: Change name of template in all pages which use it
+        return super(Template, self).rename(new_name)
+
+
+# Classes by file type
+CLASSES = {
+    FILE: File,
+    DIRECTORY: Directory,
+    PAGE: Page,
+    STYLE: Style,
+    IMAGE: File,
+    TEMPLATE: Template,
+}

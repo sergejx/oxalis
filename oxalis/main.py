@@ -26,7 +26,6 @@ import gobject
 
 import config
 import project
-import document
 import sidepane
 import editor
 import project_properties
@@ -269,7 +268,7 @@ class Oxalis(object):
         '''Delete selected file, directory or template'''
         obj = self.sidepane.get_selected_document()
 
-        if isinstance(obj, document.Directory):
+        if isinstance(obj, project.Directory):
             message = ('Delete directory "%(name)s" and its contents?' %
                        {'name': obj.name})
             message2 = 'If you delete the directory, all of its files and its subdirectories will be permanently lost.'
