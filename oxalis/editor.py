@@ -1,7 +1,7 @@
-# Oxalis Web Editor
+# Oxalis Web Site Editor
 #
-# Copyright (C) 2005-2010 Sergej Chodarev
-
+# Copyright (C) 2005-2011 Sergej Chodarev
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+"""Editor component with preview."""
 
 import gtk
 import pango
@@ -325,7 +327,10 @@ class Browser(gtk.VBox):
             self.webview.connect('navigation-requested',
                                  self.on_navigation_requested)
 
-        self.pack_start(self.webview)
+        scrolled = gtk.ScrolledWindow()
+        scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        scrolled.add(self.webview)
+        self.pack_start(scrolled)
 
     def load_url(self, url):
         self.webview.open(url)
