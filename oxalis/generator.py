@@ -47,7 +47,7 @@ def need_to_regenerate(page, tpl):
 
 def process_page(page):
     """Get HTML version of page."""
-    html = markdown.markdown(page.text)
+    html = markdown.markdown(page.read())
     html = smartypants.smartyPants(html)
 
     html = process_template(page, html)
@@ -72,7 +72,7 @@ def process_template(page, content):
 def fill_template(tpl, tags):
     """Fill tags into template."""
     repl = lambda match: replace(match, tags)
-    return TAG_RE.sub(repl, tpl.text)
+    return TAG_RE.sub(repl, tpl.read())
 
 def replace(match, tags):
     tag = match.group(1)

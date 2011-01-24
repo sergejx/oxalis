@@ -23,7 +23,7 @@ directories.
 
 import os
 import re
-import codecs
+from codecs import open
 import shutil
 
 from config import Configuration
@@ -356,28 +356,14 @@ class File(object):
     # File contents operations
 
     def read(self):
-        """Read document contents from file"""
-        f = codecs.open(self.full_path, 'r', 'utf-8')
-        self._text = f.read()
-        f.close()
+        """Read document contents from file."""
+        f = open(self.full_path, 'r', 'utf-8')
+        return f.read()
 
-    def write(self):
-        """Write document contents to file"""
-        f = codecs.open(self.full_path, 'w', 'utf-8')
-        f.write(self.text)
-        f.close()
-
-    def get_text(self):
-        try:
-            return self._text
-        except AttributeError: # Lazy initialization
-            self.read()
-            return self._text
-
-    def set_text(self, value):
-        self._text = value
-
-    text = property(get_text, set_text, None, "Text of the document")
+    def write(self, text):
+        """Write document contents to file."""
+        f = open(self.full_path, 'w', 'utf-8')
+        f.write(text)
 
 
 class Directory(File):
@@ -423,7 +409,7 @@ class Page(File):
         if create:
             src = file(self.source_path, 'w')
             src.write('\n')
-        self.read_header()
+        self._read_header(open(self.source_path, 'r', 'utf-8'))
 
     @property
     def url(self):
@@ -436,11 +422,10 @@ class Page(File):
         root, ext = os.path.splitext(self.full_path)
         return root + ".text"
 
-    def read_header(self):
-        '''Reads page header and stores it in self.header'''
-        self._page_file = file(self.source_path)
+    def _read_header(self, file_obj):
+        """Reads page header and stores it in self.header."""
         self.header = {}
-        for line in self._page_file:
+        for line in file_obj:
             if line == '\n':
                 break
             else:
@@ -448,22 +433,23 @@ class Page(File):
                 if match != None:
                     self.header[match.group(1)] = match.group(2)
 
-    def read(self):
-        '''Reads page text and stores it in self._text'''
-        self._text = ""
-        # read_header has left file opened in self.page_file
-        for line in self._page_file:
-            self._text += line
-
-        self._page_file.close() # We will not need it more
-
-    def write(self):
-        f = file(self.source_path, 'w')
+    def _write_header(self, file_obj):
         for (key, value) in self.header.items():
-            f.write(key + ': ' + value + '\n')
-        f.write('\n')
-        f.write(self.text)
-        f.close()
+            file_obj.write(key + ': ' + value + '\n')
+        file_obj.write('\n')
+
+    def read(self):
+        f = open(self.source_path, 'r', 'utf-8')
+        self._read_header(f)
+        text = ""
+        for line in f:
+            text += line
+        return text
+
+    def write(self, text):
+        f = open(self.source_path, 'w', 'utf-8')
+        self._write_header(f)
+        f.write(text)
 
     def _move_files(self, new_path):
         """Move file and its source (overrides Document._move_files())."""

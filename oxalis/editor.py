@@ -81,7 +81,7 @@ class Editor(gtk.VBox):
         notebook.connect('switch-page', self.switch_page)
         self.pack_start(notebook)
 
-        self.set_text(document.text)
+        self.set_text(document.read())
 
     def set_editor_label(self):
         '''Display document path in editor label'''
@@ -142,8 +142,7 @@ class Editor(gtk.VBox):
         if self.buffer.get_modified():
             text = self.buffer.get_text(
                 self.buffer.get_start_iter(), self.buffer.get_end_iter())
-            self.document.text = text
-            self.document.write()
+            self.document.write(text)
             self.buffer.set_modified(False)
 
     def create_actions(self):
@@ -234,29 +233,25 @@ class PageEditor(Editor):
         return vbox
 
     def save(self):
-        modified = False
+        headers_modified = False
 
         title = self.page_name_entry.get_text()
         if ('Title' not in self.document.header or
            title != self.document.header['Title']):
             self.document.header['Title'] = title
-            modified = True
+            headers_modified = True
 
         active = self.template_combo_box.get_active_iter()
         template = self.templates_store.get_value(active, NAME_COL)
         if ('Template' not in self.document.header or
            template != self.document.header['Template']):
             self.document.header['Template'] = template
-            modified = True
+            headers_modified = True
 
-        if self.buffer.get_modified():
+        if self.buffer.get_modified() or headers_modified:
             text = self.buffer.get_text(
                 self.buffer.get_start_iter(), self.buffer.get_end_iter())
-            self.document.text = text
-            modified = True
-
-        if modified:
-            self.document.write()
+            self.document.write(text)
             self.buffer.set_modified(False)
 
 
