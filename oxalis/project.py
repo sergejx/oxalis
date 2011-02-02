@@ -450,6 +450,7 @@ class Page(File):
         f = open(self.source_path, 'w', 'utf-8')
         self._write_header(f)
         f.write(text)
+        generate(self) # Automatically generate HTML on write
 
     def _move_files(self, new_path):
         """Move file and its source (overrides Document._move_files())."""
