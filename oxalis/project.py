@@ -409,7 +409,11 @@ class Page(File):
         if create:
             src = file(self.source_path, 'w')
             src.write('\n')
-        self._read_header(open(self.source_path, 'r', 'utf-8'))
+        self.header = {}
+        try:
+            self._read_header(open(self.source_path, 'r', 'utf-8'))
+        except IOError:
+            pass # Source file may not exist yet.
 
     @property
     def url(self):
@@ -424,7 +428,6 @@ class Page(File):
 
     def _read_header(self, file_obj):
         """Reads page header and stores it in self.header."""
-        self.header = {}
         for line in file_obj:
             if line == '\n':
                 break
@@ -439,8 +442,11 @@ class Page(File):
         file_obj.write('\n')
 
     def read(self):
-        f = open(self.source_path, 'r', 'utf-8')
-        self._read_header(f)
+        try:
+            f = open(self.source_path, 'r', 'utf-8')
+            self._read_header(f)
+        except IOError: # If source file is not available, just use HTML.
+            f = open(self.full_path, 'r', 'utf-8')
         text = ""
         for line in f:
             text += line
