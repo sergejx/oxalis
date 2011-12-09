@@ -73,10 +73,11 @@ def create_project(path):
     os.chmod(os.path.join(oxalis_dir, 'config'), 0600)
 
     f = file(os.path.join(path, 'index.text'), 'w')
-    f.write('Title: ' + name)
-    f.write('\n\n')
+    f.write("Title: " + name + "\n")
+    f.write("Template: default\n")
+    f.write("\n")
     f.write(name)
-    f.write('\n================')
+    f.write("\n================\n")
     f.close()
 
     # Create empty HTML representation of index page
@@ -408,7 +409,7 @@ class Page(File):
         super(Page, self).__init__(path, project, index, create)
         if create:
             src = file(self.source_path, 'w')
-            src.write('\n')
+            src.write("Template: default\n\n")
         self.header = {}
         try:
             self._read_header(open(self.source_path, 'r', 'utf-8'))

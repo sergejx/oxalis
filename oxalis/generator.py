@@ -1,6 +1,5 @@
-"""
-HTML page generator
-"""
+# Oxalis Web Site Editor
+#
 # Copyright (C) 2005-2011 Sergej Chodarev
 #
 # This program is free software; you can redistribute it and/or modify
@@ -16,6 +15,13 @@ HTML page generator
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+
+"""
+HTML page generator
+~~~~~~~~~~~~~~~~~~~
+
+The module allows to generate HTML page from a text file containing Markdown formatted text and header with metadata.
+"""
 
 import os
 import re
@@ -42,7 +48,7 @@ def need_to_regenerate(page, tpl):
         return True
     src_t = os.path.getmtime(page.source_path)
     dst_t = os.path.getmtime(page.full_path)
-    tpl_t = os.path.getmtime(tpl.full_path)
+    tpl_t = os.path.getmtime(tpl.full_path) if tpl else 0 # template is optional
     return (src_t > dst_t) or (tpl_t > dst_t)
 
 def process_page(page):
@@ -56,15 +62,16 @@ def process_page(page):
 
 
 def find_template(page):
-    if 'Template' in page.header:
-        tpl_name = page.header['Template']
+    if 'Template' in page.header and page.header['Template'] != '':
+        return page.project.get_document(page.header['Template'], True)
     else:
-        tpl_name = 'default'
-    return page.project.get_document(tpl_name, True)
+        return None
 
 def process_template(page, content):
     """Find page template and fill page content into it."""
     tpl = find_template(page)
+    if not tpl:
+        return content
     tags = page.header.copy()
     tags['Content'] = content
     return fill_template(tpl, tags)
