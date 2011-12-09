@@ -217,12 +217,12 @@ class Project(object):
         """Create new file."""
         class_ = CLASSES[type]
         path = os.path.join(parent.path, name)
-        self.files[path] = class_(path, self, True)
+        self.files[path] = class_(path, self, self.files, True)
         self.files.listeners.on_added(path)
 
     def new_template(self, name):
         """Create new template."""
-        self.templates[name] = Template(name, self, True)
+        self.templates[name] = Template(name, self, self.templates, True)
         self.templates.listeners.on_added(name)
 
     def add_file(self, filename, parent):
