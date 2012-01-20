@@ -1,6 +1,6 @@
 # Oxalis Web Site Editor
 #
-# Copyright (C) 2005-2011 Sergej Chodarev
+# Copyright (C) 2005-2012 Sergej Chodarev
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,12 +26,13 @@ import webkit
 import project
 import config
 import util
-from sidepane import FilesTreeModel, NAME_COL
-
 
 class NoEditorException(Exception):
     """Exception raised if no editor can be created for document."""
     pass
+
+
+#   === Base Editor Class ===
 
 class Editor(gtk.VBox):
     ui = '''
@@ -193,35 +194,21 @@ class Editor(gtk.VBox):
         self.text_view.modify_font(pango.FontDescription(font))
 
 
+#   === Page Editor ===
+
 class PageEditor(Editor):
     def __init__(self, document):
-        self.templates_store = FilesTreeModel(document.project.templates)
         Editor.__init__(self, document)
-
         if 'Title' in document.header:
             self.page_name_entry.set_text(document.header['Title'])
-        if 'Template' in document.header:
-            template = document.header['Template']
-        else:
-            template = 'default'
-
-        self.templates_store.foreach(self.search_template, template)
-
-    def search_template(self, model, path, iter, template):
-        if model.get_value(iter, NAME_COL) == template:
-            self.template_combo_box.set_active_iter(iter)
-            return True
 
     def create_edit_page(self):
         self.page_name_entry = gtk.Entry()
-        self.template_combo_box = gtk.ComboBox(self.templates_store)
-        cell = gtk.CellRendererText()
-        self.template_combo_box.pack_start(cell, True)
-        self.template_combo_box.add_attribute(cell, 'text', NAME_COL)
+        self.template_selector = TemplateSelector(self.document)
 
         table = util.make_table((
             ('Title:', self.page_name_entry),
-            ('Template:', self.template_combo_box)
+            ('Template:', self.template_selector)
         ))
         table.set_col_spacings(6)
         table.set_border_width(2)
@@ -241,8 +228,7 @@ class PageEditor(Editor):
             self.document.header['Title'] = title
             headers_modified = True
 
-        active = self.template_combo_box.get_active_iter()
-        template = self.templates_store.get_value(active, NAME_COL)
+        template = self.template_selector.get_selected()
         if ('Template' not in self.document.header or
            template != self.document.header['Template']):
             self.document.header['Template'] = template
@@ -254,6 +240,39 @@ class PageEditor(Editor):
             self.document.write(text)
             self.buffer.set_modified(False)
 
+class TemplateSelector(gtk.ComboBox):
+    """Combo box for selecting page template."""
+    # TODO: Move to ComboBoxText when porting to GTK 3
+
+    def __init__(self, document):
+        """
+        Create template selector for a page and properly set selected template.
+        """
+        self.document = document
+        templates_store = gtk.ListStore(str)
+        super(TemplateSelector, self).__init__(templates_store)
+
+        cell = gtk.CellRendererText()
+        self.pack_start(cell, True)
+        self.add_attribute(cell, 'text', 0)
+
+        self.fill_store()
+
+    def fill_store(self):
+        # Project tempalates list contain also templates root item with empty
+        # name. This item is used there as a marker for no template.
+        for name, template in self.document.project.templates.items():
+            i = self.get_model().append((name,))
+            if name == self.document.header.get('Template', ''):
+                self.set_active_iter(i)
+
+    def get_selected(self):
+        """Get the name of currently selected template."""
+        active = self.get_active_iter()
+        return self.get_model().get_value(active, 0)
+
+
+#   === Other Editors ===
 
 class TemplateEditor(Editor):
     def __init__(self, document):
@@ -292,6 +311,8 @@ class DummyEditor(gtk.Label):
     def save(self): pass
     def set_font(self): pass
 
+
+#   === Browser ===
 
 class Browser(gtk.VBox):
     """
