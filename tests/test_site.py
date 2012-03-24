@@ -1,12 +1,12 @@
 import os
 
-import oxalis.project
+import oxalis.site
 
-TESTDIR = os.path.join(os.path.dirname(__file__), "test-project")
+TESTDIR = os.path.join(os.path.dirname(__file__), "test-site")
 
 def test_load():
-    """Was project tree loaded properly?"""
-    proj = oxalis.project.Project(TESTDIR)
+    """Was site tree loaded properly?"""
+    proj = oxalis.site.Site(TESTDIR)
     assert proj.files[""].name == "" # root
     assert proj.files["index.html"].name == "index.html"
     assert proj.files["test.css"].name == "test.css"
@@ -15,7 +15,7 @@ def test_load():
 
 def test_tree():
     """Does tree traversal works properly?"""
-    proj = oxalis.project.Project(TESTDIR)
+    proj = oxalis.site.Site(TESTDIR)
     assert len(proj.files[""].children) == 3
     assert len(proj.files["subdir"].children) == 2
     assert proj.files[""].children[0] == proj.files["subdir"]
@@ -26,6 +26,6 @@ def test_tree():
 
 def test_templates():
     """Was templates list loaded properly?"""
-    proj = oxalis.project.Project(TESTDIR)
+    proj = oxalis.site.Site(TESTDIR)
     assert len(proj.templates[""].children) == 2
     assert proj.templates["default"].name == "default"

@@ -31,49 +31,51 @@ SITECOPYRC_TPL = """site $name
     exclude _oxalis
 """
 
-def start_upload(project):
-    """Start uploading project files to server.
+SITENAME = "project"
+
+def start_upload(site):
+    """Start uploading site files to server.
 
     Returns uploading process or False if uploading was not configured.
     Process of uploading can be monitored using check_upload function.
     """
     for key in ('host', 'remotedir', 'user', 'passwd'):
-        if not project.config.has_option('upload', key):
+        if not site.config.has_option('upload', key):
             return False
 
-    rcfile = os.path.join(project.config_dir, "sitecopyrc")
-    storepath = os.path.join(project.config_dir, "sitecopy")
+    rcfile = os.path.join(site.config_dir, "sitecopyrc")
+    storepath = os.path.join(site.config_dir, "sitecopy")
 
     # Check if we need to initialize sitecopy
     # It is needed if we upload to given location for the first time
     need_init = False
     for key in ('host', 'remotedir'):
-        if project.config.has_option('upload', 'last_'+key):
-            last = project.config.get('upload', 'last_'+key)
-            current = project.config.get('upload', key)
+        if site.config.has_option('upload', 'last_'+key):
+            last = site.config.get('upload', 'last_'+key)
+            current = site.config.get('upload', key)
             if current != last:
                 need_init = True
-    if not os.path.exists(os.path.join(storepath, 'project')):
+    if not os.path.exists(os.path.join(storepath, SITENAME)):
         need_init = True
 
     # Update sitecopyrc file
     f = file(rcfile, 'w')
     tpl = string.Template(SITECOPYRC_TPL)
-    f.write(tpl.substitute(dict(project.config.items('upload')),
-        name='project', local=project.directory))
+    f.write(tpl.substitute(dict(site.config.items('upload')),
+        name=SITENAME, local=site.directory))
     f.close()
 
     if need_init:
         sitecopy = subprocess.Popen(('sitecopy',
-            '--rcfile='+rcfile, '--storepath='+storepath, '--init', 'project'))
+            '--rcfile='+rcfile, '--storepath='+storepath, '--init', SITENAME))
         code = sitecopy.wait()
     process = subprocess.Popen(('sitecopy',
-        '--rcfile='+rcfile, '--storepath='+storepath, '--update', 'project'),
+        '--rcfile='+rcfile, '--storepath='+storepath, '--update', SITENAME),
         stdout=subprocess.PIPE)
 
     for key in ('host', 'remotedir'):
-        project.config.set('upload', 'last_'+key,
-                           project.config.get('upload', key))
+        site.config.set('upload', 'last_'+key,
+                           site.config.get('upload', key))
 
     return process
 

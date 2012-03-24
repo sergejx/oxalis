@@ -20,12 +20,12 @@ import util
 
 import gtk
 
-def properties_dialog(project, parent_window):
-    """Display project properties dialog."""
+def properties_dialog(site, parent_window):
+    """Display site properties dialog."""
     settings = {}
-    settings['upload'] = dict(project.config.items('upload'))
-    settings['preview'] = dict(project.config.items('preview'))
-    dialog = ProjectPropertiesDialog(parent_window, settings)
+    settings['upload'] = dict(site.config.items('upload'))
+    settings['preview'] = dict(site.config.items('preview'))
+    dialog = SitePropertiesDialog(parent_window, settings)
     response = dialog.run()
     settings = dialog.get_settings()
     dialog.destroy()
@@ -33,12 +33,12 @@ def properties_dialog(project, parent_window):
     if response == gtk.RESPONSE_OK:
         for section in settings:
             for key, value in settings[section].items():
-                project.config.set(section, key, value)
+                site.config.set(section, key, value)
         # Save properties
-        project.config.write()
+        site.config.write()
 
-class ProjectPropertiesDialog(gtk.Dialog):
-    """Dialog for editing project properties."""
+class SitePropertiesDialog(gtk.Dialog):
+    """Dialog for editing site properties."""
 
     keys = ('host', 'user', 'passwd', 'remotedir')
     texts = {
@@ -49,7 +49,7 @@ class ProjectPropertiesDialog(gtk.Dialog):
     }
 
     def __init__(self, window = None, settings = {}):
-        gtk.Dialog.__init__(self, 'Project Properties', window,
+        gtk.Dialog.__init__(self, 'Site Properties', window,
             flags=gtk.DIALOG_NO_SEPARATOR,
             buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                 gtk.STOCK_OK, gtk.RESPONSE_OK))

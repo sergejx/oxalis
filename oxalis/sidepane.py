@@ -1,7 +1,7 @@
-# Oxalis Web Editor
+# Oxalis Web Site Editor
 #
 # Copyright (C) 2005-2011 Sergej Chodarev
-
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -19,14 +19,14 @@
 import gobject
 import gtk
 
-import project
+import site
 
 # Constants for column numbers
 OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(4)
 
 class FilesTreeModel(gtk.GenericTreeModel,
         gtk.TreeDragSource, gtk.TreeDragDest):
-    """Tree Model for project files and templates."""
+    """Tree Model for site files and templates."""
     columns = [object, str, str, int] # Document, path, name, type
 
     def __init__(self, files):
@@ -68,12 +68,12 @@ class FilesTreeModel(gtk.GenericTreeModel,
         elif column == PATH_COL:
             return rowref.path
         elif column == TYPE_COL: # TODO return icons itself
-            if isinstance(rowref, project.Directory):
-                return project.DIRECTORY
-            elif isinstance(rowref, project.Template):
-                return project.TEMPLATE
+            if isinstance(rowref, site.Directory):
+                return site.DIRECTORY
+            elif isinstance(rowref, site.Template):
+                return site.TEMPLATE
             else:
-                return project.get_file_type(rowref.name)
+                return site.get_file_type(rowref.name)
 
     def on_iter_next(self, rowref):
         siblings = rowref.parent.children
@@ -123,7 +123,7 @@ class FilesTreeModel(gtk.GenericTreeModel,
         obj = self.on_get_iter(row)
 
         dest_dir = self.on_get_iter(dest[0:len(dest)-1])
-        if not isinstance(dest_dir, project.Directory):
+        if not isinstance(dest_dir, site.Directory):
             dest_dir = dest_dir.parent
 
         obj.move(dest_dir)
@@ -154,18 +154,18 @@ class SidePane(gtk.VPaned):
 
     # File type icons
     icons = {
-        project.DIRECTORY: ['gnome-fs-directory', 'folder'],
-        project.PAGE: ['gnome-mime-text-html', 'text-html'],
-        project.STYLE: ['gnome-mime-text-css', 'text-x-css', 'text-x-generic'],
-        project.FILE: ['gnome-mime-application', 'text-x-preview'],
-        project.IMAGE: ['gnome-mime-image', 'image-x-generic'],
-        project.TEMPLATE: ['text-x-generic-template'],
+        site.DIRECTORY: ['gnome-fs-directory', 'folder'],
+        site.PAGE: ['gnome-mime-text-html', 'text-html'],
+        site.STYLE: ['gnome-mime-text-css', 'text-x-css', 'text-x-generic'],
+        site.FILE: ['gnome-mime-application', 'text-x-preview'],
+        site.IMAGE: ['gnome-mime-image', 'image-x-generic'],
+        site.TEMPLATE: ['text-x-generic-template'],
     }
 
-    def __init__(self, application, project):
+    def __init__(self, application, site):
         gtk.VPaned.__init__(self)
         self.application = application
-        self.project = project
+        self.site = site
 
         # Create tree views
         self.files_view = self._create_tree_view('files')
@@ -181,11 +181,11 @@ class SidePane(gtk.VPaned):
         self.pack2(templates_box, resize=False)
 
         # Fill views with data
-        files_model = FilesTreeModel(self.project.files)
+        files_model = FilesTreeModel(self.site.files)
         self.files_view.set_model(files_model)
         self.files_view.set_reorderable(True)
 
-        templates_model = FilesTreeModel(self.project.templates)
+        templates_model = FilesTreeModel(self.site.templates)
         self.templates_view.set_model(templates_model)
 
     def get_selected(self):
@@ -202,7 +202,7 @@ class SidePane(gtk.VPaned):
     def get_selected_document(self):
         """Return selected document in side pane.
 
-        Returned object is subclass of project.File.
+        Returned object is subclass of site.File.
         """
         model, itr = self.get_selected()
         return model.get_value(itr, OBJECT_COL)
@@ -217,7 +217,7 @@ class SidePane(gtk.VPaned):
         """
         model, treeiter = self.get_selected()
         if treeiter == None:
-            return self.project.files[""]
+            return self.site.files[""]
         else:
             type = model.get_value(treeiter, TYPE_COL)
             if (position == gtk.TREE_VIEW_DROP_BEFORE or

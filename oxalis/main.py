@@ -25,10 +25,10 @@ import gtk
 import gobject
 
 import config
-import project
+import site
 import sidepane
 import editor
-import project_properties
+import site_properties
 import server
 import util
 import upload
@@ -48,7 +48,7 @@ AUTHORS = ('Sergej Chodarev',
 ui = '''
 <ui>
   <menubar name="MenuBar">
-    <menu action="ProjectMenu">
+    <menu action="SiteMenu">
       <menu action="NewFile">
         <menuitem action="NewPage" />
         <menuitem action="NewStyle" />
@@ -97,7 +97,7 @@ class Oxalis(object):
 
         app_actions = gtk.ActionGroup('app_actions')
         app_actions.add_actions((
-            ('ProjectMenu', None, 'Project'),
+            ('SiteMenu', None, 'Site'),
             ('Quit', gtk.STOCK_QUIT, None, None, None, self.quit_cb),
             ('EditMenu', None, 'Edit'),
             ('Preferences', gtk.STOCK_PREFERENCES, None, None, None,
@@ -105,8 +105,8 @@ class Oxalis(object):
             ('HelpMenu', None, 'Help'),
             ('About', gtk.STOCK_ABOUT, None, None, None, self.about_cb)
         ))
-        self.project_actions = gtk.ActionGroup('project_actions')
-        self.project_actions.add_actions((
+        self.site_actions = gtk.ActionGroup('site_actions')
+        self.site_actions.add_actions((
             ('NewFile', gtk.STOCK_NEW, 'New File', ''),
             ('NewPage', None, 'Page', None, None, self.new_document_cb),
             ('NewStyle', None, 'Style (CSS)', None, None, self.new_document_cb),
@@ -118,7 +118,7 @@ class Oxalis(object):
             ('Properties', gtk.STOCK_PROPERTIES, None, None, None,
                 self.properties_cb)
         ))
-        self.project_actions.set_sensitive(False)
+        self.site_actions.set_sensitive(False)
         self.selection_actions = gtk.ActionGroup('selection_actions')
         self.selection_actions.add_actions((
             ('RenameSelected', None, 'Rename selected', None, None,
@@ -129,7 +129,7 @@ class Oxalis(object):
         self.selection_actions.set_sensitive(False)
 
         self.ui_manager.insert_action_group(app_actions, 0)
-        self.ui_manager.insert_action_group(self.project_actions, 0)
+        self.ui_manager.insert_action_group(self.site_actions, 0)
         self.ui_manager.insert_action_group(self.selection_actions, 0)
         menubar = self.ui_manager.get_widget('/MenuBar')
 
@@ -148,15 +148,15 @@ class Oxalis(object):
         config.settings.add_notify('editor', 'font', self.font_changed)
 
     def create_start_panel(self):
-        new = gtk.Button('New project')
+        new = gtk.Button('New site')
         icon = gtk.image_new_from_stock(gtk.STOCK_NEW, gtk.ICON_SIZE_BUTTON)
         new.set_image(icon)
-        new.connect('clicked', self.new_project_cb)
+        new.connect('clicked', self.new_site_cb)
 
-        open = gtk.Button('Open project')
+        open = gtk.Button('Open site')
         icon = gtk.image_new_from_stock(gtk.STOCK_OPEN, gtk.ICON_SIZE_BUTTON)
         open.set_image(icon)
-        open.connect('clicked', self.open_project_cb)
+        open.connect('clicked', self.open_site_cb)
 
         box = gtk.VBox()
         box.pack_start(new)
@@ -165,9 +165,9 @@ class Oxalis(object):
         self.start_panel.add(box)
         self.vbox.pack_start(self.start_panel)
 
-    def new_project_cb(self, *args):
+    def new_site_cb(self, *args):
         chooser = gtk.FileChooserDialog(
-            'New Project', action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
+            'New Site', action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
             buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
             'Create', gtk.RESPONSE_OK))
         chooser.set_default_response(gtk.RESPONSE_OK)
@@ -176,12 +176,12 @@ class Oxalis(object):
         chooser.destroy()
 
         if response == gtk.RESPONSE_OK:
-            project.create_project(dirname)
-            self.load_project(dirname)
+            site.create_site(dirname)
+            self.load_site(dirname)
 
-    def open_project_cb(self, *args):
+    def open_site_cb(self, *args):
         chooser = gtk.FileChooserDialog(
-            'Open Project', action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+            'Open Site', action=gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
             buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
             gtk.STOCK_OPEN, gtk.RESPONSE_OK))
         chooser.set_default_response(gtk.RESPONSE_OK)
@@ -190,11 +190,11 @@ class Oxalis(object):
         chooser.destroy()
 
         if response == gtk.RESPONSE_OK:
-            if project.dir_is_project(dirname):
-                self.load_project(dirname)
+            if site.dir_is_site(dirname):
+                self.load_site(dirname)
             else:
                 # Display error message
-                message = 'Selected directory is not valid Oxalis project'
+                message = 'Selected directory is not valid Oxalis site'
                 dlg = gtk.MessageDialog(parent=self.window,
                     type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK,
                     message_format=message)
@@ -202,7 +202,7 @@ class Oxalis(object):
                 dlg.destroy()
 
     def create_paned(self):
-        self.sidepane = sidepane.SidePane(self, self.project)
+        self.sidepane = sidepane.SidePane(self, self.site)
         self.paned = gtk.HPaned()
         self.paned.add1(self.sidepane)
         self.paned.set_position(
@@ -215,9 +215,9 @@ class Oxalis(object):
             pass
 
     NEW_DOC_DATA = {
-        "NewPage": (project.PAGE, u"Page", ".html"),
-        "NewStyle": (project.STYLE, u"Style", ".css"),
-        "NewDirectory": (project.DIRECTORY, u"Directory", ""),
+        "NewPage": (site.PAGE, u"Page", ".html"),
+        "NewStyle": (site.STYLE, u"Style", ".css"),
+        "NewDirectory": (site.DIRECTORY, u"Directory", ""),
     }
     def new_document_cb(self, action):
         type, label, ext = self.NEW_DOC_DATA[action.get_name()]
@@ -225,14 +225,14 @@ class Oxalis(object):
         if response == gtk.RESPONSE_OK and name != '':
             if not name.endswith(ext):
                 name += ext
-            self.project.new_file(type, name, self.sidepane.get_target_dir())
+            self.site.new_file(type, name, self.sidepane.get_target_dir())
 
     def new_template_cb(self, action):
         response, name = self.ask_name('Template')
 
         if response == gtk.RESPONSE_OK:
             if name != '':
-                self.project.new_template(name)
+                self.site.new_template(name)
 
     def add_file_cb(self, action):
         chooser = gtk.FileChooserDialog('Add File', parent=self.window,
@@ -245,7 +245,7 @@ class Oxalis(object):
         chooser.destroy()
 
         if response == gtk.RESPONSE_OK:
-            self.project.add_file(filename, self.sidepane.get_target_dir())
+            self.site.add_file(filename, self.sidepane.get_target_dir())
 
     def rename_selected_cb(self, action):
         '''Rename selected file'''
@@ -268,7 +268,7 @@ class Oxalis(object):
         '''Delete selected file, directory or template'''
         obj = self.sidepane.get_selected_document()
 
-        if isinstance(obj, project.Directory):
+        if isinstance(obj, site.Directory):
             message = ('Delete directory "%(name)s" and its contents?' %
                        {'name': obj.name})
             message2 = 'If you delete the directory, all of its files and its subdirectories will be permanently lost.'
@@ -298,12 +298,12 @@ class Oxalis(object):
 
     def generate_cb(self, action):
         self.editor.save()
-        self.project.generate()
+        self.site.generate()
 
     def upload_cb(self, action):
         dlg = gtk.MessageDialog(self.window, 0, gtk.MESSAGE_QUESTION, 0,
-            'Should project be generated before uploading?')
-        dlg.format_secondary_text('''If you made some changes to project and didn't generate it after that, you should generate it now.''')
+            'Should the site be generated before uploading?')
+        dlg.format_secondary_text('''If you made some changes to the site and didn't generate it after that, you should generate it now.''')
         dlg.add_button("Don't generate", gtk.RESPONSE_NO)
         dlg.add_button('Generate', gtk.RESPONSE_YES)
         response = dlg.run()
@@ -313,7 +313,7 @@ class Oxalis(object):
             self.generate_cb(None)
 
         # Start uploading
-        process = upload.start_upload(self.project)
+        process = upload.start_upload(self.site)
 
         if not process:
             dlg = gtk.MessageDialog(self.window, 0, gtk.MESSAGE_ERROR,
@@ -366,31 +366,31 @@ class Oxalis(object):
             return False
 
     def properties_cb(self, action):
-        project_properties.properties_dialog(self.project, self.window)
+        site_properties.properties_dialog(self.site, self.window)
 
-    def load_project(self, filename):
-        self.project = project.Project(filename)
+    def load_site(self, filename):
+        self.site = site.Site(filename)
 
         self.create_paned()
 
-        last_file = self.project.config.get('state', 'last_document')
-        last_file_type = self.project.config.get('state', 'last_document_type')
+        last_file = self.site.config.get('state', 'last_document')
+        last_file_type = self.site.config.get('state', 'last_document_type')
 
         self.vbox.remove(self.start_panel)
         self.vbox.pack_start(self.paned)
         self.paned.show_all()
 
-        self.project_actions.set_sensitive(True)
+        self.site_actions.set_sensitive(True)
         self.selection_actions.set_sensitive(False)  # Nothing is selected
 
-        doc = self.project.get_document(last_file,
+        doc = self.site.get_document(last_file,
                                         last_file_type == 'template')
         self.load_file(doc)
 
         self.start_server()
 
     def start_server(self):
-        server.project = self.project
+        server.site = self.site
         server_thread = Thread(target=server.run)
         server_thread.setDaemon(True)
         server_thread.start()
@@ -461,15 +461,15 @@ class Oxalis(object):
     def quit_cb(self, *args):
         if 'editor' in self.__dict__:
             self.editor.save()
-            self.project.config.set('state', 'last_document',
+            self.site.config.set('state', 'last_document',
                     self.editor.document.path)
             if isinstance(self.editor, editor.TemplateEditor):
                 file_type = 'template'
             else:
                 file_type = 'file'
-            self.project.config.set('state', 'last_document_type', file_type)
-        if 'project' in self.__dict__:
-            self.project.close()
+            self.site.config.set('state', 'last_document_type', file_type)
+        if 'site' in self.__dict__:
+            self.site.close()
 
         width, height = self.window.get_size()
         config.settings.set('state', 'width', width)

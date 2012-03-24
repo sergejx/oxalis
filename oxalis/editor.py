@@ -23,7 +23,7 @@ import pango
 import gtksourceview2
 import webkit
 
-import project
+import site
 import config
 import util
 
@@ -61,7 +61,7 @@ class Editor(gtk.VBox):
         '''Constructor for Editor
 
         * document is object which represents document opened in editor,
-        these objects are defined in project.py
+        these objects are defined in site.py
         * browser_has_toolbar - enables or disables toolbar
         with location entry in preview tab
         '''
@@ -134,7 +134,7 @@ class Editor(gtk.VBox):
         if info == self.DND_FILE_PATH: # If file from side panel was dropped
             i = self.text_view.get_iter_at_location(x, y)
             # Construct absolute path to file
-            path = '/' + self.document.project.get_url_path() + selection.data
+            path = '/' + self.document.site.get_url_path() + selection.data
             self.buffer.insert(i, path)
             context.finish(True, False, timestamp)
 
@@ -259,9 +259,9 @@ class TemplateSelector(gtk.ComboBox):
         self.fill_store()
 
     def fill_store(self):
-        # Project tempalates list contain also templates root item with empty
-        # name. This item is used there as a marker for no template.
-        for name, template in self.document.project.templates.items():
+        # Site tempalates list also contains root item with empty name.
+        # This item is used there as a marker for no template.
+        for name, template in self.document.site.templates.items():
             i = self.get_model().append((name,))
             if name == self.document.header.get('Template', ''):
                 self.set_active_iter(i)
@@ -367,11 +367,11 @@ class Browser(gtk.VBox):
 
 def create_editor(doc):
     """Create appripriate editor for document."""
-    if isinstance(doc, project.Page):
+    if isinstance(doc, site.Page):
         return PageEditor(doc)
-    elif isinstance(doc, project.Style):
+    elif isinstance(doc, site.Style):
         return StyleEditor(doc)
-    elif isinstance(doc, project.Template):
+    elif isinstance(doc, site.Template):
         return TemplateEditor(doc)
     else:
         try: # if document can be readed as text

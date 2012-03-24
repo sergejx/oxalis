@@ -63,7 +63,7 @@ def process_page(page):
 
 def find_template(page):
     if 'Template' in page.header and page.header['Template'] != '':
-        return page.project.get_document(page.header['Template'], True)
+        return page.site.get_document(page.header['Template'], True)
     else:
         return None
 

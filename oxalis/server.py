@@ -27,7 +27,7 @@ import shutil
 from generator import process_page, fill_template
 
 # Global variables
-project = None
+site = None
 
 page_for_templates = {
     'Title': 'Lorem Ipsum',
@@ -60,16 +60,16 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-Type', 'text/html')
                 self.end_headers()
 
-                tpl = project.get_document(param[1], True)
+                tpl = site.get_document(param[1], True)
                 html = fill_template(tpl, page_for_templates)
                 self.wfile.write(html)
             else:
                 self.send_error(404, 'Not Found')
         else:
-            base_path = project.get_url_path()
+            base_path = site.get_url_path()
             request_path = self.path[1:]
             request_path = request_path[len(base_path):]
-            full_path = os.path.join(project.directory, request_path)
+            full_path = os.path.join(site.directory, request_path)
             if os.path.isdir(full_path):
                 request_path = os.path.join(request_path, 'index.html')
                 full_path = os.path.join(full_path, 'index.html')
@@ -80,7 +80,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-Type', 'text/html')
                 self.end_headers()
 
-                page = project.get_document(request_path)
+                page = site.get_document(request_path)
                 html = process_page(page)
                 self.wfile.write(html)
 

@@ -2,7 +2,7 @@ import os
 import stat
 import shutil
 
-import oxalis.project
+import oxalis.site
 
 TESTDIR = os.path.join(os.path.dirname(__file__), "working")
 CONFDIR = os.path.join(TESTDIR, "_oxalis")
@@ -13,17 +13,17 @@ def perm(path):
 
 def setup():
     os.mkdir(TESTDIR)
-    oxalis.project.create_project(TESTDIR)
+    oxalis.site.create_site(TESTDIR)
 
 def teardown():
     shutil.rmtree(TESTDIR)
 
-def test_project_dir():
-    """Was project dir created?"""
+def test_site_dir():
+    """Was site dir created?"""
     assert os.path.isdir(TESTDIR)
 
 def test_config():
-    """Was project configuration created with right permissions?"""
+    """Was site configuration created with right permissions?"""
     assert os.path.isdir(CONFDIR)
     conffile = os.path.join(CONFDIR, "config")
     assert os.path.exists(conffile)

@@ -17,7 +17,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 """
-This module is responsible for project and its contents -- files and
+This module is responsible for a site and its contents -- files and
 directories.
 """
 
@@ -57,13 +57,13 @@ CONFIG_DEFAULTS = {
 }
 
 
-def create_project(path):
+def create_site(path):
     name = os.path.basename(path)
 
     oxalis_dir = os.path.join(path, '_oxalis')
     os.mkdir(oxalis_dir)
 
-    # Write project configuration
+    # Write site configuration
     config = Configuration(oxalis_dir, 'config', CONFIG_DEFAULTS)
     config.set('project', 'format', '0.1')
     config.write()
@@ -100,11 +100,11 @@ def create_project(path):
     os.mkdir(os.path.join(oxalis_dir, 'sitecopy'))
     os.chmod(os.path.join(oxalis_dir, 'sitecopy'), 0700)
 
-def dir_is_project(directory):
-    '''Checks if directory contains Oxalis project
+def dir_is_site(directory):
+    '''Checks if directory contains Oxalis site
 
     directory - full path to directory
-    Returns True if directory contains Oxalis project or False if not
+    Returns True if directory contains Oxalis site or False if not
     '''
     # Simply check if directory contains subdirectory _oxalis
     return os.path.isdir(os.path.join(directory, '_oxalis'))
@@ -134,8 +134,8 @@ def get_file_type(filename):
         return FILE
 
 
-class Project(object):
-    """Oxalis project."""
+class Site(object):
+    """Oxalis site."""
     def __init__(self, directory):
         self.directory = directory
         self.config_dir = os.path.join(self.directory, "_oxalis")
@@ -150,7 +150,7 @@ class Project(object):
         self.load_templates_list()
 
     def get_url_path(self):
-        """Return path part of project preview URL."""
+        """Return path part of site preview URL."""
         path = self.config.get('preview', 'url_path').strip('/')
         if len(path) == 0:
             return path
@@ -159,11 +159,11 @@ class Project(object):
 
     @property
     def url(self):
-        """Preview URL of project."""
+        """Preview URL of the site."""
         return 'http://127.0.0.1:8000/' + self.get_url_path()
 
     def load_files_tree(self):
-        """Loads tree of project files"""
+        """Loads tree of site files"""
         self.load_dir('')
 
     def load_dir(self, dirpath):
@@ -193,7 +193,7 @@ class Project(object):
             CLASSES[type_](path, self, self.files)
 
     def load_templates_list(self):
-        """Loads list of project templates
+        """Loads list of site templates
 
         List is stored in self.templates
         """
@@ -204,7 +204,7 @@ class Project(object):
             Template(name, self, self.templates)
 
     def close(self):
-        """Close project and save its state"""
+        """Close site and save its state"""
         self.config.write()
 
     def get_document(self, path, template=False):
@@ -227,7 +227,7 @@ class Project(object):
         self.templates.listeners.on_added(name)
 
     def add_file(self, filename, parent):
-        """Copy existing file to project"""
+        """Copy existing file to the site"""
         name = os.path.basename(filename)
         path = os.path.join(parent.path, name)
         full_path = os.path.join(self.directory, path)
@@ -236,7 +236,7 @@ class Project(object):
         self.files.listeners.on_added(path)
 
     def generate(self):
-        """Generate project output files"""
+        """Generate site output files"""
         for item in self.files.values():
             if isinstance(item, Page):
                 generate(item)
@@ -258,13 +258,13 @@ class DocumentsIndex(dict):
 
 
 class File(object):
-    """File inside Oxalis project."""
+    """File inside Oxalis site."""
 
-    def __init__(self, path, project, index, create=False):
-        self.project = project
+    def __init__(self, path, site, index, create=False):
+        self.site = site
         self.index = index
-        self.base_url = project.url
-        self.path = path # relative to project directory
+        self.base_url = site.url
+        self.path = path # relative to site directory
         if create:
             file(self.full_path, 'w')
 
@@ -368,10 +368,10 @@ class File(object):
 
 
 class Directory(File):
-    """Directory in Oxalis project."""
+    """Directory in Oxalis site."""
 
-    def __init__(self, path, project, index, create=False):
-        super(Directory, self).__init__(path, project, index)
+    def __init__(self, path, site, index, create=False):
+        super(Directory, self).__init__(path, site, index)
         if create:
             os.mkdir(self.full_path)
 
@@ -401,12 +401,12 @@ class Page(File):
 
     _header_re = re.compile('(\w+): ?(.*)')
 
-    def __init__(self, path, project, index, create=False):
+    def __init__(self, path, site, index, create=False):
         """Initialize page.
 
         * if create == True, create new page file
         """
-        super(Page, self).__init__(path, project, index, create)
+        super(Page, self).__init__(path, site, index, create)
         if create:
             src = file(self.source_path, 'w')
             src.write("Template: default\n\n")
