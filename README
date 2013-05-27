@@ -1,4 +1,6 @@
-Oxalis is web site editor. It is created for editing static web sites.
+Oxalis is a web site editor for Gnome. Its goal is to make process of web site
+creation simple and pleasant. Currently it supports mainly static web sites and
+provides automatic Markdown to HTML conversion and basic templates.
 
 
 Requirements
@@ -27,10 +29,4 @@ After installation you can select Oxalis in Applications -> Development menu or
 run it with command
 
     oxalis
-
-
-**Note for Ubuntu users**: You will need to install python-dev package, before
-installing Oxalis
-
-    apt-get install python-dev
 
