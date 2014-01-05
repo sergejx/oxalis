@@ -277,24 +277,18 @@ class DocumentsIndex(object):
                 self._documents[document.target_path] = self.DocumentRecord(
                     document, True)
 
-    def get(self, path):
-        """Get document corresponding to the path."""
-        return self._documents[path].document
-
-    def contains(self, path):
-        return path in self._documents
-
     def remove(self, path):
         document = self._documents[path].document
         del self._documents[path]
         if document.convertible:
             del self._documents[document.target_path]
 
-    def __getitem__(self, key):
-        return self.get(key)
+    def __getitem__(self, path):
+        """Get document corresponding to the path."""
+        return self._documents[path].document
 
-    def __contains__(self, key):
-        return self.contains(key)
+    def __contains__(self, path):
+        return path in self._documents
 
     def documents(self, include_generated=False):
         """Get all documents in the index."""
