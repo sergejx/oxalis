@@ -172,7 +172,7 @@ class Site(object):
 
         dirpath - directory to load, path relative to self.directory
         """
-        self.files[dirpath] = Directory(dirpath, self, self.files)
+        self.files.put(Directory(dirpath, self, self.files))
 
         for filename in os.listdir(os.path.join(self.directory, dirpath)):
             if filename != '_oxalis':
@@ -191,7 +191,7 @@ class Site(object):
         """
         if not filename.startswith("."):
             type_ = get_file_type(filename)
-            CLASSES[type_](path, self, self.files)
+            self.files.put(CLASSES[type_](path, self, self.files))
 
     def load_templates_list(self):
         """Loads list of site templates
@@ -199,10 +199,10 @@ class Site(object):
         List is stored in self.templates
         """
         tpl_dir = os.path.join(self.directory, '_oxalis', 'templates')
-        self.templates[""] = Directory("", self, self.templates)
+        self.templates.put(Directory("", self, self.templates))
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
-            Template(name, self, self.templates)
+            self.templates.put(Template(name, self, self.templates))
 
     def close(self):
         """Close site and save its state"""
@@ -219,12 +219,12 @@ class Site(object):
         """Create new file."""
         class_ = CLASSES[type]
         path = os.path.join(parent.path, name)
-        self.files[path] = class_(path, self, self.files, True)
+        self.files.put(class_(path, self, self.files, True))
         self.files.listeners.on_added(path)
 
     def new_template(self, name):
         """Create new template."""
-        self.templates[name] = Template(name, self, self.templates, True)
+        self.templates.put(Template(name, self, self.templates, True))
         self.templates.listeners.on_added(name)
 
     def add_file(self, filename, parent):
@@ -233,7 +233,7 @@ class Site(object):
         path = os.path.join(parent.path, name)
         full_path = os.path.join(self.directory, path)
         shutil.copyfile(filename, full_path)
-        File(path, self, self.files)
+        self.files.put(File(path, self, self.files))
         self.files.listeners.on_added(path)
 
     def generate(self):
@@ -263,19 +263,19 @@ class DocumentsIndex(object):
         self.base_dir = base_dir
         self.listeners = Multicaster()
 
-    def put(self, path, document, generated=False):
+    def put(self, document):
         """
         Add document into the index.
 
-        Parameter `generated` should be set to `True` if the file on the path
-        is generated automatically from the document. Both source and target
-        paths reference to the same document object.
-
-        If document on the path was already registered it would be replaced only
-        if `generated` is set to `True`.
+        If document is convertible, both source and target paths would be
+        registered.
         """
-        if path not in self._documents or generated:
-            self._documents[path] = self.DocumentRecord(document, generated)
+        path = document.path
+        if path not in self._documents:
+            self._documents[path] = self.DocumentRecord(document, False)
+            if document.convertible:
+                self._documents[document.target_path] = self.DocumentRecord(
+                    document, True)
 
     def get(self, path):
         """Get document corresponding to the path."""
@@ -285,10 +285,10 @@ class DocumentsIndex(object):
         return path in self._documents
 
     def remove(self, path):
+        document = self._documents[path].document
         del self._documents[path]
-
-    def __setitem__(self, key, document):
-        self.put(key, document)
+        if document.convertible:
+            del self._documents[document.target_path]
 
     def __getitem__(self, key):
         return self.get(key)
@@ -314,9 +314,7 @@ class File(object):
         self.site = site
         self.index = index
         self.base_url = site.url
-        self.path = None
-
-        self._set_path(path)
+        self.path = path
         if create:
             file(self.full_path, 'w')
 
@@ -366,17 +364,6 @@ class File(object):
             item = item.parent
         return tuple(path)
 
-    def _set_path(self, path):
-        """Set file path. Index is properly updated."""
-        if self.index.contains(self.path):
-            self.index.remove(self.path)
-            if self.convertible:
-                self.index.remove(self.target_path)
-        self.path = path
-        self.index.put(self.path, self)
-        if self.convertible:
-            self.index.put(self.target_path, self, generated=True)
-
     ## File operations ##
 
     def move(self, destination):
@@ -394,7 +381,9 @@ class File(object):
         old_full_path = self.full_path
         old_target_full_path = self.target_full_path
         old_tree_path = self.tree_path
-        self._set_path(new_path)
+        self.index.remove(old_path)
+        self.path = new_path
+        self.index.put(self)
 
         os.rename(old_full_path, self.full_path)
         if self.convertible and os.path.exists(old_target_full_path):
@@ -415,7 +404,6 @@ class File(object):
         self.index.remove(self.path) # Remove itself from the list
         if self.convertible:
             os.remove(self.target_full_path)
-            self.index.remove(self.target_path)
         self.index.listeners.on_removed(self.path, tree_path)
 
     # File contents operations
