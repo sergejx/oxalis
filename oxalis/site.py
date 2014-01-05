@@ -51,7 +51,7 @@ CONFIG_DEFAULTS = {
         'url_path': "/",
     },
     'state': {
-        'last_document': "index.html",
+        'last_document': "index.text",
         'last_document_type': 'file',
     },
     'upload': {},
