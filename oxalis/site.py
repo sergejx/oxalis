@@ -449,7 +449,7 @@ class Directory(File):
 
 
 class Page(File):
-    """HTML page"""
+    """Markdown page with metadata in headers."""
 
     convertible = True
 
@@ -462,11 +462,11 @@ class Page(File):
         """
         super(Page, self).__init__(path, site, index, create)
         if create:
-            src = file(self.source_path, 'w')
+            src = file(self.full_path, 'w')
             src.write("Template: default\n\n")
         self.header = {}
         try:
-            self._read_header(open(self.source_path, 'r', 'utf-8'))
+            self._read_header(open(self.full_path, 'r', 'utf-8'))
         except IOError:
             pass # Source file may not exist yet.
 
@@ -482,11 +482,6 @@ class Page(File):
         return self.base_url + root + ".html"
 
     @property
-    def source_path(self):
-        """Full path to source of document."""
-        return self.full_path
-
-    @property
     def target_full_path(self):
         """Full path to target of document."""
         return os.path.join(self.index.base_dir, self.target_path)
@@ -498,7 +493,7 @@ class Page(File):
                 break
             else:
                 match = self._header_re.match(line)
-                if match != None:
+                if match is not None:
                     self.header[match.group(1)] = match.group(2)
 
     def _write_header(self, file_obj):
@@ -507,18 +502,15 @@ class Page(File):
         file_obj.write('\n')
 
     def read(self):
-        try:
-            f = open(self.source_path, 'r', 'utf-8')
-            self._read_header(f)
-        except IOError: # If source file is not available, just use HTML.
-            f = open(self.full_path, 'r', 'utf-8')
+        f = open(self.full_path, 'r', 'utf-8')
+        self._read_header(f)
         text = ""
         for line in f:
             text += line
         return text
 
     def write(self, text):
-        f = open(self.source_path, 'w', 'utf-8')
+        f = open(self.full_path, 'w', 'utf-8')
         self._write_header(f)
         f.write(text)
         generate(self) # Automatically generate HTML on write
