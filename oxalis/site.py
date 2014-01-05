@@ -233,7 +233,7 @@ class Site(object):
         path = os.path.join(parent.path, name)
         full_path = os.path.join(self.directory, path)
         shutil.copyfile(filename, full_path)
-        self.files[path] = File(path, self)
+        File(path, self, self.files)
         self.files.listeners.on_added(path)
 
     def generate(self):
