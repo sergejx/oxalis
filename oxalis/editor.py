@@ -215,8 +215,8 @@ class PageEditor(Editor):
 
         vbox = gtk.VBox()
         vbox.pack_start(table, False)
-        vbox.pack_start(self.create_text_view(self.document.name))
-
+        vbox.pack_start(self.create_text_view(self.document.name,
+                                              mime="text/html"))
         return vbox
 
     def save(self):
