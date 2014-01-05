@@ -1,6 +1,6 @@
 # Oxalis Web Site Editor
 #
-# Copyright (C) 2005-2011 Sergej Chodarev
+# Copyright (C) 2005-2014 Sergej Chodarev
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -296,9 +296,6 @@ class DocumentsIndex(object):
     def __contains__(self, key):
         return self.contains(key)
 
-    def __delitem__(self, key):
-        del self._documents[key]
-
     def documents(self, include_generated=False):
         """Get all documents in the index."""
         return [document for (document, generated) in self._documents.values()
@@ -396,7 +393,6 @@ class File(object):
         old_path = self.path
         old_full_path = self.full_path
         old_target_full_path = self.target_full_path
-        print old_target_full_path
         old_tree_path = self.tree_path
         self._set_path(new_path)
 
@@ -416,7 +412,7 @@ class File(object):
         """Remove document."""
         tree_path = self.tree_path
         os.remove(self.full_path)
-        del self.index[self.path] # Remove itself from the list
+        self.index.remove(self.path) # Remove itself from the list
         if self.convertible:
             os.remove(self.target_full_path)
             self.index.remove(self.target_path)
@@ -460,7 +456,7 @@ class Directory(File):
             child.remove()
         os.rmdir(self.full_path)
 
-        del self.index[self.path] # Remove itself from the list
+        self.index.remove(self.path) # Remove itself from the list
         self.index.listeners.on_remove(self.path, tree_path)
 
 
