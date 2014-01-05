@@ -261,7 +261,8 @@ class TemplateSelector(gtk.ComboBox):
     def fill_store(self):
         # Site tempalates list also contains root item with empty name.
         # This item is used there as a marker for no template.
-        for name, template in self.document.site.templates.items():
+        for template in self.document.site.templates.documents():
+            name = template.name
             i = self.get_model().append((name,))
             if name == self.document.header.get('Template', ''):
                 self.set_active_iter(i)

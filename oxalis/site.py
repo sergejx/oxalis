@@ -24,6 +24,7 @@ directories.
 import os
 import re
 from codecs import open
+from collections import namedtuple
 import shutil
 
 from config import Configuration
@@ -124,7 +125,7 @@ def compare_files(x, y):
 def get_file_type(filename):
     """Get file type from filename"""
     root, ext = os.path.splitext(filename)
-    if ext == '.html':
+    if ext == '.text':
         return PAGE
     elif ext == '.css':
         return STYLE
@@ -188,7 +189,7 @@ class Site(object):
         filename - name of the file
         path - path relative to self.directory
         """
-        if not (filename.startswith(".") or filename.endswith(".text")):
+        if not (filename.startswith(".") or filename.endswith(".html")): #FIXME
             type_ = get_file_type(filename)
             CLASSES[type_](path, self, self.files)
 
@@ -237,12 +238,12 @@ class Site(object):
 
     def generate(self):
         """Generate site output files"""
-        for item in self.files.values():
+        for item in self.files.documents():
             if isinstance(item, Page):
                 generate(item)
 
 
-class DocumentsIndex(dict):
+class DocumentsIndex(object):
     """
     Dictionary of all documents (files or templates) indexed by path.
 
@@ -251,34 +252,74 @@ class DocumentsIndex(dict):
         - on_moved(self, path, tree_path, new_path)
         - on_removed(self, path, tree_path)
     """
+    DocumentRecord = namedtuple('DocumentRecord', ['document', 'generated'])
+    """
+    Data type for records stored in the index: document object and flag
+    marking if the path is generated automatically from the document.
+    """
+
     def __init__(self, base_dir):
-        super(DocumentsIndex, self).__init__()
+        self._documents = dict()
         self.base_dir = base_dir
         self.listeners = Multicaster()
+
+    def put(self, path, document, generated=False):
+        """
+        Add document into the index.
+
+        Parameter `generated` should be set to `True` if the file on the path
+        is generated automatically from the document. Both source and target
+        paths reference to the same document object.
+        """
+        self._documents[path] = self.DocumentRecord(document, generated)
+
+    def get(self, path):
+        """Get document corresponding to the path."""
+        return self._documents[path].document
+
+    def contains(self, path):
+        return path in self._documents
+
+    def remove(self, path):
+        del self._documents[path]
+
+    def __setitem__(self, key, document):
+        self.put(key, document)
+
+    def __getitem__(self, key):
+        return self.get(key)
+
+    def __contains__(self, key):
+        return self.contains(key)
+
+    def __delitem__(self, key):
+        del self._documents[key]
+
+    def documents(self, include_generated=False):
+        """Get all documents in the index."""
+        return [document for (document, generated) in self._documents.values()
+                if generated == include_generated]
 
 
 class File(object):
     """File inside Oxalis site."""
 
+    convertible = False
+    """Is the document used as a source to generate another file?"""
+    target_path = None
+    target_full_path = None
+
     def __init__(self, path, site, index, create=False):
         self.site = site
         self.index = index
         self.base_url = site.url
-        self.path = path # relative to site directory
+        self.path = None
+
+        self._set_path(path)
         if create:
             file(self.full_path, 'w')
 
     ## Properties ##
-
-    def get_path(self):
-        return self._path
-    def set_path(self, path):
-        """Set file path. Index is properly updated."""
-        if hasattr(self, '_path'):
-            del self.index[self._path]
-        self.index[path] = self
-        self._path = path
-    path = property(get_path, set_path)
 
     @property
     def full_path(self):
@@ -320,6 +361,17 @@ class File(object):
             item = item.parent
         return tuple(path)
 
+    def _set_path(self, path):
+        """Set file path. Index is properly updated."""
+        if self.index.contains(self.path):
+            self.index.remove(self.path)
+            if self.convertible:
+                self.index.remove(self.target_path)
+        self.path = path
+        self.index.put(self.path, self)
+        if self.convertible:
+            self.index.put(self.target_path, self, generated=True)
+
     ## File operations ##
 
     def move(self, destination):
@@ -335,9 +387,14 @@ class File(object):
         """Move document files to new_path."""
         old_path = self.path
         old_full_path = self.full_path
+        old_target_full_path = self.target_full_path
+        print old_target_full_path
         old_tree_path = self.tree_path
-        self.path = new_path
+        self._set_path(new_path)
+
         os.rename(old_full_path, self.full_path)
+        if self.convertible and os.path.exists(old_target_full_path):
+            os.rename(old_target_full_path, self.target_full_path)
         self.index.listeners.on_moved(old_path, old_tree_path, new_path)
 
     def rename(self, new_name):
@@ -352,6 +409,9 @@ class File(object):
         tree_path = self.tree_path
         os.remove(self.full_path)
         del self.index[self.path] # Remove itself from the list
+        if self.convertible:
+            os.remove(self.target_full_path)
+            self.index.remove(self.target_path)
         self.index.listeners.on_removed(self.path, tree_path)
 
     # File contents operations
@@ -379,7 +439,7 @@ class Directory(File):
     def children(self):
         """Document children in tree structure."""
         return sorted(
-            [doc for doc in self.index.values() if doc.parent == self],
+            [doc for doc in self.index.documents() if doc.parent == self],
             cmp=compare_files)
 
     def rename(self, new_name):
@@ -399,6 +459,8 @@ class Directory(File):
 class Page(File):
     """HTML page"""
 
+    convertible = True
+
     _header_re = re.compile('(\w+): ?(.*)')
 
     def __init__(self, path, site, index, create=False):
@@ -417,15 +479,25 @@ class Page(File):
             pass # Source file may not exist yet.
 
     @property
+    def target_path(self):
+        root, __ = os.path.splitext(self.path)
+        return root + ".html"
+
+    @property
     def url(self):
         """Preview URL of document"""
-        return self.base_url + self.path
+        root, ext = os.path.splitext(self.path)
+        return self.base_url + root + ".html"
 
     @property
     def source_path(self):
         """Full path to source of document."""
-        root, ext = os.path.splitext(self.full_path)
-        return root + ".text"
+        return self.full_path
+
+    @property
+    def target_full_path(self):
+        """Full path to target of document."""
+        return os.path.join(self.index.base_dir, self.target_path)
 
     def _read_header(self, file_obj):
         """Reads page header and stores it in self.header."""
@@ -458,17 +530,6 @@ class Page(File):
         self._write_header(f)
         f.write(text)
         generate(self) # Automatically generate HTML on write
-
-    def _move_files(self, new_path):
-        """Move file and its source (overrides Document._move_files())."""
-        old_source_path = self.source_path
-        super(Page, self)._move_files(new_path)
-        os.renames(old_source_path, self.source_path)
-
-    def remove(self):
-        """Remove file and its source (overrides Document.remove())."""
-        os.remove(self.source_path)
-        super(Page, self).remove()
 
 
 class Style(File):
