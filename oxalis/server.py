@@ -25,6 +25,7 @@ import mimetypes
 import shutil
 
 from generator import process_page, fill_template
+from site import Page
 
 # Global variables
 site = None
@@ -81,7 +82,11 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.end_headers()
 
                 page = site.get_document(request_path)
-                html = process_page(page)
+                # FIXME: This logic should not be here
+                if isinstance(page, Page):
+                    html = process_page(page)
+                else:
+                    html = page.read()
                 self.wfile.write(html)
 
             elif os.path.exists(full_path):  # Other files

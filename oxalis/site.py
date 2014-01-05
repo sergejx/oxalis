@@ -189,7 +189,7 @@ class Site(object):
         filename - name of the file
         path - path relative to self.directory
         """
-        if not (filename.startswith(".") or filename.endswith(".html")): #FIXME
+        if not filename.startswith("."):
             type_ = get_file_type(filename)
             CLASSES[type_](path, self, self.files)
 
@@ -270,8 +270,12 @@ class DocumentsIndex(object):
         Parameter `generated` should be set to `True` if the file on the path
         is generated automatically from the document. Both source and target
         paths reference to the same document object.
+
+        If document on the path was already registered it would be replaced only
+        if `generated` is set to `True`.
         """
-        self._documents[path] = self.DocumentRecord(document, generated)
+        if path not in self._documents or generated:
+            self._documents[path] = self.DocumentRecord(document, generated)
 
     def get(self, path):
         """Get document corresponding to the path."""
