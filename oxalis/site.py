@@ -332,6 +332,10 @@ class File(object):
         return os.path.basename(self.path)
 
     @property
+    def url(self):
+        return self.base_url + self.path
+
+    @property
     def parent(self):
         """
         Parent document.
