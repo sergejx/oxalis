@@ -20,7 +20,8 @@
 HTML page generator
 ~~~~~~~~~~~~~~~~~~~
 
-The module allows to generate HTML page from a text file containing Markdown formatted text and header with metadata.
+The module allows to generate HTML page from a text file containing Markdown
+formatted text and header with metadata.
 """
 
 import os
@@ -31,25 +32,28 @@ import smartypants
 
 TAG_RE = re.compile('\{(\w+)\}')
 
+
 def generate(page):
     """Generates HTML file from Markdown source"""
     tpl = find_template(page)
     if need_to_regenerate(page, tpl):
-        f = file(page.full_path, 'w')
+        f = file(page.target_full_path, 'w')
         f.write(process_page(page))
         f.close()
+
 
 def need_to_regenerate(page, tpl):
     """
     Check if source file or template was modified after HTML file was
     generated last time.
     """
-    if not os.path.exists(page.full_path):
+    if not os.path.exists(page.target_full_path):
         return True
-    src_t = os.path.getmtime(page.source_path)
-    dst_t = os.path.getmtime(page.full_path)
+    src_t = os.path.getmtime(page.full_path)
+    dst_t = os.path.getmtime(page.target_full_path)
     tpl_t = os.path.getmtime(tpl.full_path) if tpl else 0 # template is optional
     return (src_t > dst_t) or (tpl_t > dst_t)
+
 
 def process_page(page):
     """Get HTML version of page."""
