@@ -396,7 +396,7 @@ class File(object):
         tree_path = self.tree_path
         os.remove(self.full_path)
         self.index.remove(self.path) # Remove itself from the list
-        if self.convertible:
+        if self.convertible and os.path.exists(self.target_full_path):
             os.remove(self.target_full_path)
         self.index.listeners.on_removed(self.path, tree_path)
 
