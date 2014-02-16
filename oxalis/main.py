@@ -49,9 +49,11 @@ ui = '''
 <ui>
   <menubar name="MenuBar">
     <menu action="SiteMenu">
-      <menu action="NewFile">
+      <menu action="New">
         <menuitem action="NewPage" />
+        <menuitem action="NewHtml" />
         <menuitem action="NewStyle" />
+        <menuitem action="NewFile" />
         <menuitem action="NewDirectory" />
         <menuitem action="NewTemplate" />
       </menu>
@@ -107,9 +109,12 @@ class Oxalis(object):
         ))
         self.site_actions = gtk.ActionGroup('site_actions')
         self.site_actions.add_actions((
-            ('NewFile', gtk.STOCK_NEW, 'New File', ''),
-            ('NewPage', None, 'Page', None, None, self.new_document_cb),
-            ('NewStyle', None, 'Style (CSS)', None, None, self.new_document_cb),
+            ('New', gtk.STOCK_NEW, "New", ''),
+            ('NewPage', None, "Markdown Page", None, None,
+                self.new_document_cb),
+            ('NewHtml', None, "HTML Page", None, None, self.new_document_cb),
+            ('NewStyle', None, "CSS Style", None, None, self.new_document_cb),
+            ('NewFile', None, "File", None, None, self.new_document_cb),
             ('NewDirectory', None, 'Directory', None, None, self.new_document_cb),
             ('NewTemplate', None, 'Template', None, None, self.new_template_cb),
             ('AddFile', gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
@@ -215,10 +220,13 @@ class Oxalis(object):
             pass
 
     NEW_DOC_DATA = {
-        "NewPage": (site.PAGE, u"Page", ".html"),
+        'NewPage': (site.PAGE, u"Markdown Page", ".text"),
+        'NewHtml': (site.FILE, u"HTML Page", ".html"),
         "NewStyle": (site.STYLE, u"Style", ".css"),
+        'NewFile': (site.FILE, u"File", ""),
         "NewDirectory": (site.DIRECTORY, u"Directory", ""),
     }
+
     def new_document_cb(self, action):
         type, label, ext = self.NEW_DOC_DATA[action.get_name()]
         response, name = self.ask_name(label)
