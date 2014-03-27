@@ -45,6 +45,13 @@ default_template = '''<?xml version="1.0" encoding="UTF-8"?>
   </body>
 </html>'''
 
+DEFAULT_INDEX = """Title: {name}
+Template: default
+
+{name}
+====================
+"""
+
 CONFIG_DEFAULTS = {
     'project': {},
     'preview': {
@@ -73,17 +80,12 @@ def create_site(path):
     # (it contains FTP password)
     os.chmod(os.path.join(oxalis_dir, 'config'), 0600)
 
-    f = file(os.path.join(path, 'index.text'), 'w')
-    f.write("Title: " + name + "\n")
-    f.write("Template: default\n")
-    f.write("\n")
-    f.write(name)
-    f.write("\n================\n")
-    f.close()
-
-    # Create empty HTML representation of index page
-    f = file(os.path.join(path, 'index.html'), 'w')
-    f.close()
+    index_text_path = os.path.join(path, 'index.text')
+    index_html_path = os.path.join(path, 'index.html')
+    # Create default index file only if index is not already present
+    if not (os.path.exists(index_text_path) or os.path.exists(index_html_path)):
+        with file(index_text_path, 'w') as f:
+            f.write(DEFAULT_INDEX.format(name=name))
 
     templates_dir = os.path.join(oxalis_dir, 'templates')
     os.mkdir(templates_dir)
