@@ -27,7 +27,6 @@ import gobject
 import config
 import site
 import sidepane
-import editor
 import site_properties
 import server
 import util
@@ -150,8 +149,6 @@ class Oxalis(object):
         self.window.resize(width, height)
 
 
-        config.settings.add_notify('editor', 'font', self.font_changed)
-
     def create_start_panel(self):
         new = gtk.Button('New site')
         icon = gtk.image_new_from_stock(gtk.STOCK_NEW, gtk.ICON_SIZE_BUTTON)
@@ -206,18 +203,8 @@ class Oxalis(object):
                 dlg.run()
                 dlg.destroy()
 
-    def create_paned(self):
-        self.sidepane = sidepane.SidePane(self, self.site)
-        self.paned = gtk.HPaned()
-        self.paned.add1(self.sidepane)
-        self.paned.set_position(
-                config.settings.getint('state', 'sidepanel-width'))
-
-    def font_changed(self):
-        try:
-            self.editor.set_font()
-        except AttributeError: # there is no editor
-            pass
+    def create_filebrowser(self):
+        self.filebrowser = sidepane.SidePane(self, self.site)
 
     NEW_DOC_DATA = {
         'NewPage': (site.PAGE, u"Markdown Page", ".text"),
@@ -266,11 +253,7 @@ class Oxalis(object):
             name += '.html'
 
         if name != '':
-            new_path = obj.rename(name)
-
-        # If renamed file is opened in editor, update its path
-        if self.editor.document == obj:
-            self.update_editor_path(new_path)
+            obj.rename(name)
 
     def delete_selected_cb(self, action):
         '''Delete selected file, directory or template'''
@@ -296,16 +279,12 @@ class Oxalis(object):
         msg_dlg.destroy()
 
         if response == gtk.RESPONSE_OK:
-            # If removed file is opened in editor, replace it with DummyEditor
-            if self.editor.document == obj:
-                self.load_file(None)
             obj.remove()
 
     def ask_name(self, title):
         return util.input_dialog(self.window, 'New '+title, 'Name:', 'Create')
 
     def generate_cb(self, action):
-        self.editor.save()
         self.site.generate()
 
     def upload_cb(self, action):
@@ -379,21 +358,14 @@ class Oxalis(object):
     def load_site(self, filename):
         self.site = site.Site(filename)
 
-        self.create_paned()
-
-        last_file = self.site.config.get('state', 'last_document')
-        last_file_type = self.site.config.get('state', 'last_document_type')
+        self.create_filebrowser()
 
         self.vbox.remove(self.start_panel)
-        self.vbox.pack_start(self.paned)
-        self.paned.show_all()
+        self.vbox.pack_start(self.filebrowser)
+        self.filebrowser.show_all()
 
         self.site_actions.set_sensitive(True)
         self.selection_actions.set_sensitive(False)  # Nothing is selected
-
-        doc = self.site.get_document(last_file,
-                                        last_file_type == 'template')
-        self.load_file(doc)
 
         self.start_server()
 
@@ -405,43 +377,9 @@ class Oxalis(object):
 
     def load_file(self, doc):
         """Load editor for file.
-
         doc -- document object for loaded file
-
-        If there is already opened editor, it will be unloaded.
         """
-        try:
-            # Get new editor
-            if doc is not None:
-                new_editor = editor.create_editor(doc)
-            else:
-                new_editor = editor.DummyEditor()
-
-            # Unload old editor
-            if 'editor' in self.__dict__:
-                self.editor.save()
-                self.paned.remove(self.editor)
-                # Remove editor UI and actions
-                #self.ui_manager.remove_ui(self.editor_merge_id)
-                #self.ui_manager.remove_action_group(self.editor.edit_actions)
-
-            # Load new one
-            self.editor = new_editor
-            self.paned.add2(self.editor)
-            self.editor.show_all()
-
-            # Add editor UI and actions (commented out because of issue gh-1)
-            #ui = self.editor.ui
-            #actions = self.editor.edit_actions
-            #self.editor_merge_id = self.ui_manager.add_ui_from_string(ui)
-            #self.ui_manager.insert_action_group(actions, 1)
-        except editor.NoEditorException:
-            pass # Documend does not provide editor
-
-    def update_editor_path(self, new_path):
-        '''Update path of document which is opened in active editor'''
-        self.editor.document.path = new_path
-        self.editor.set_editor_label()
+        subprocess.Popen(("xdg-open", doc.full_path))
 
     def run(self):
         self.make_window()
@@ -467,24 +405,12 @@ class Oxalis(object):
         about.destroy()
 
     def quit_cb(self, *args):
-        if 'editor' in self.__dict__:
-            self.editor.save()
-            self.site.config.set('state', 'last_document',
-                    self.editor.document.path)
-            if isinstance(self.editor, editor.TemplateEditor):
-                file_type = 'template'
-            else:
-                file_type = 'file'
-            self.site.config.set('state', 'last_document_type', file_type)
         if 'site' in self.__dict__:
             self.site.close()
 
         width, height = self.window.get_size()
         config.settings.set('state', 'width', width)
         config.settings.set('state', 'height', height)
-        if 'paned' in self.__dict__:
-            config.settings.set('state', 'sidepanel-width',
-                                self.paned.get_position())
         config.settings.write()
         gtk.main_quit()
 
@@ -494,17 +420,7 @@ class PreferencesDialog(gtk.Dialog):
         buttons = (gtk.STOCK_CLOSE, gtk.RESPONSE_CLOSE)
         gtk.Dialog.__init__(self, 'Oxalis Preferences', parent,
                             buttons=buttons)
-        label = gtk.Label('Editor font:')
-        font_button = gtk.FontButton(config.settings.get('editor', 'font'))
-        font_button.connect('font-set', self.font_set)
-        box = gtk.HBox()
-        box.pack_start(label, False, False, 6)
-        box.pack_start(font_button, True, True, 6)
-        self.vbox.pack_start(box, True, True, 6)
         self.show_all()
-
-    def font_set(self, font_button):
-        config.settings.set('editor', 'font', font_button.get_font_name())
 
 
 def open_url(dialog, link):

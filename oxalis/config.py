@@ -23,13 +23,9 @@ XDG_CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME") \
                   or os.path.expanduser("~/.config")
 
 SETTINGS_DEFAULTS = {
-    'editor': {
-        'font': 'Monospace 10',
-    },
     'state': {
         'width': 800,
         'height': 600,
-        'sidepanel-width': 160,
     },
 }
 
