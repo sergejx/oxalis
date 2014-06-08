@@ -28,7 +28,7 @@ import os
 import re
 
 import markdown
-import smartypants
+from . import smartypants
 
 TAG_RE = re.compile('\{(\w+)\}')
 
@@ -37,7 +37,7 @@ def generate(page):
     """Generates HTML file from Markdown source"""
     tpl = find_template(page)
     if need_to_regenerate(page, tpl):
-        f = file(page.target_full_path, 'w')
+        f = open(page.target_full_path, 'w')
         f.write(process_page(page))
         f.close()
 

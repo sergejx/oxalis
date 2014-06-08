@@ -21,13 +21,13 @@ import subprocess
 
 from gi.repository import Gtk, GLib, Gdk
 
-import config
-import site
-import sidepane
-import site_properties
-import server
-import util
-import upload
+from . import config
+from . import site
+from . import sidepane
+from . import site_properties
+from . import server
+from . import util
+from . import upload
 
 NAME = 'Oxalis'
 VERSION = '0.1'
@@ -85,7 +85,7 @@ class Oxalis(object):
         try:
             Gtk.Window.set_default_icon_from_file('/usr/share/pixmaps/oxalis.png')
         except GLib.GError:
-            print "Warning: Can't load window icon"
+            print("Warning: Can't load window icon")
 
         # Create menu bar
         self.ui_manager = Gtk.UIManager()
@@ -204,11 +204,11 @@ class Oxalis(object):
         self.filebrowser = sidepane.SidePane(self, self.site)
 
     NEW_DOC_DATA = {
-        'NewPage': (site.PAGE, u"Markdown Page", ".text"),
-        'NewHtml': (site.FILE, u"HTML Page", ".html"),
-        "NewStyle": (site.STYLE, u"Style", ".css"),
-        'NewFile': (site.FILE, u"File", ""),
-        "NewDirectory": (site.DIRECTORY, u"Directory", ""),
+        'NewPage': (site.PAGE, "Markdown Page", ".text"),
+        'NewHtml': (site.FILE, "HTML Page", ".html"),
+        "NewStyle": (site.STYLE, "Style", ".css"),
+        'NewFile': (site.FILE, "File", ""),
+        "NewDirectory": (site.DIRECTORY, "Directory", ""),
     }
 
     def new_document_cb(self, action):

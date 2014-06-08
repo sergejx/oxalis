@@ -40,5 +40,5 @@ class Multicaster(object):
                     getattr(listener, name)(*args, **kwargs)
                 except Exception as e:
                     # we don't care about exceptions
-                    print e
+                    print(e)
         return multicasting_method

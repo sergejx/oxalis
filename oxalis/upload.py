@@ -59,7 +59,7 @@ def start_upload(site):
         need_init = True
 
     # Update sitecopyrc file
-    f = file(rcfile, 'w')
+    f = open(rcfile, 'w')
     tpl = string.Template(SITECOPYRC_TPL)
     f.write(tpl.substitute(dict(site.config.items('upload')),
         name=SITENAME, local=site.directory))

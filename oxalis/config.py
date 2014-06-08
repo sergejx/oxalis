@@ -16,7 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-from ConfigParser import RawConfigParser
+from configparser import RawConfigParser
 import os
 
 XDG_CONFIG_HOME = os.environ.get("XDG_CONFIG_HOME") \
@@ -56,10 +56,10 @@ class Configuration(RawConfigParser):
             self.read(self.filename)
 
         # Fill defaults
-        for section, values in defaults.items():
+        for section, values in list(defaults.items()):
             if not self.has_section(section):
                 self.add_section(section)
-            for key, value in values.items():
+            for key, value in list(values.items()):
                 if not self.has_option(section, key):
                     self.set(section, key, value)
 
@@ -82,7 +82,7 @@ class Configuration(RawConfigParser):
         """Write configuraion to file."""
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
-        RawConfigParser.write(self, file(self.filename, "w"))
+        RawConfigParser.write(self, open(self.filename, "w"))
 
 # Read application configuration
 settings = Configuration("$CONFIG", "settings", SETTINGS_DEFAULTS)

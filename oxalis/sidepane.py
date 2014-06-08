@@ -18,10 +18,10 @@
 
 from gi.repository import Gtk
 
-import site
+from . import site
 
 # Constants for column numbers
-OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(4)
+OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = list(range(4))
 
 class SidePane(Gtk.VPaned):
     """Side panel with list of files and templates"""

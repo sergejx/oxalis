@@ -23,16 +23,17 @@ directories.
 
 import os
 import re
+from functools import cmp_to_key
 from codecs import open
 from collections import namedtuple
 import shutil
 
-from config import Configuration
-from multicast import Multicaster
-from generator import generate
+from .config import Configuration
+from .multicast import Multicaster
+from .generator import generate
 
 # File types
-FILE, DIRECTORY, PAGE, STYLE, IMAGE, TEMPLATE = range(6)
+FILE, DIRECTORY, PAGE, STYLE, IMAGE, TEMPLATE = list(range(6))
 
 default_template = '''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -78,30 +79,30 @@ def create_site(path):
 
     # Make configuration file readable only by owner
     # (it contains FTP password)
-    os.chmod(os.path.join(oxalis_dir, 'config'), 0600)
+    os.chmod(os.path.join(oxalis_dir, 'config'), 0o600)
 
     index_text_path = os.path.join(path, 'index.text')
     index_html_path = os.path.join(path, 'index.html')
     # Create default index file only if index is not already present
     if not (os.path.exists(index_text_path) or os.path.exists(index_html_path)):
-        with file(index_text_path, 'w') as f:
+        with open(index_text_path, 'w') as f:
             f.write(DEFAULT_INDEX.format(name=name))
 
     templates_dir = os.path.join(oxalis_dir, 'templates')
     os.mkdir(templates_dir)
 
-    f = file(os.path.join(templates_dir, 'default'), 'w')
+    f = open(os.path.join(templates_dir, 'default'), 'w')
     f.write(default_template)
     f.close()
 
     # Create sitecopy configuration file
-    f = file(os.path.join(oxalis_dir, 'sitecopyrc'), 'w')
+    f = open(os.path.join(oxalis_dir, 'sitecopyrc'), 'w')
     f.close()
-    os.chmod(os.path.join(oxalis_dir, 'sitecopyrc'), 0600)
+    os.chmod(os.path.join(oxalis_dir, 'sitecopyrc'), 0o600)
 
     # Sitecopy storepath
     os.mkdir(os.path.join(oxalis_dir, 'sitecopy'))
-    os.chmod(os.path.join(oxalis_dir, 'sitecopy'), 0700)
+    os.chmod(os.path.join(oxalis_dir, 'sitecopy'), 0o700)
 
 def dir_is_site(directory):
     '''Checks if directory contains Oxalis site
@@ -122,7 +123,12 @@ def compare_files(x, y):
     elif not xdir and ydir:
         return 1
     else:
-        return cmp(x.name, y.name)
+        if x.name < y.name:
+            return -1
+        elif x.name == y.name:
+            return 0
+        else:
+            return 1
 
 def get_file_type(filename):
     """Get file type from filename"""
@@ -294,7 +300,7 @@ class DocumentsIndex(object):
 
     def documents(self, include_generated=False):
         """Get all documents in the index."""
-        return [document for (document, generated) in self._documents.values()
+        return [document for (document, generated) in list(self._documents.values())
                 if generated == include_generated]
 
 
@@ -312,7 +318,7 @@ class File(object):
         self.base_url = site.url
         self.path = path
         if create:
-            file(self.full_path, 'w')
+            open(self.full_path, 'w')
 
     ## Properties ##
 
@@ -428,7 +434,7 @@ class Directory(File):
         """Document children in tree structure."""
         return sorted(
             [doc for doc in self.index.documents() if doc.parent == self],
-            cmp=compare_files)
+            key=cmp_to_key(compare_files))
 
     def rename(self, new_name):
         super(Directory, self).rename(new_name)
@@ -458,7 +464,7 @@ class Page(File):
         """
         super(Page, self).__init__(path, site, index, create)
         if create:
-            src = file(self.full_path, 'w')
+            src = open(self.full_path, 'w')
             src.write("Template: default\n\n")
         self.header = {}
         try:
@@ -493,7 +499,7 @@ class Page(File):
                     self.header[match.group(1)] = match.group(2)
 
     def _write_header(self, file_obj):
-        for (key, value) in self.header.items():
+        for (key, value) in list(self.header.items()):
             file_obj.write(key + ': ' + value + '\n')
         file_obj.write('\n')
 

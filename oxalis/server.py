@@ -20,12 +20,12 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 import os
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, BaseHTTPRequestHandler
 import mimetypes
 import shutil
 
-from generator import process_page, fill_template
-from site import Page
+from .generator import process_page, fill_template
+from .site import Page
 
 # Global variables
 site = None
@@ -96,7 +96,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Content-Type', mime[0])
                 self.end_headers()
 
-                f = file(full_path, 'r')
+                f = open(full_path, 'r')
                 shutil.copyfileobj(f, self.wfile)
                 f.close()
 

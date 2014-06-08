@@ -16,7 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-import util
+from . import util
 
 from gi.repository import Gtk
 
@@ -32,7 +32,7 @@ def properties_dialog(site, parent_window):
 
     if response == Gtk.ResponseType.OK:
         for section in settings:
-            for key, value in settings[section].items():
+            for key, value in list(settings[section].items()):
                 site.config.set(section, key, value)
         # Save properties
         site.config.write()
