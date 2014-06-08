@@ -16,134 +16,12 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-import gobject
 import gtk
 
 import site
 
 # Constants for column numbers
 OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(4)
-
-class FilesTreeModel(gtk.GenericTreeModel,
-        gtk.TreeDragSource, gtk.TreeDragDest):
-    """Tree Model for site files and templates."""
-    columns = [object, str, str, int] # Document, path, name, type
-
-    def __init__(self, files):
-        """Create new model with specified files dictionary."""
-        gtk.GenericTreeModel.__init__(self)
-        self.files = files
-        multicaster = files.listeners # Get multicaster from root file
-        multicaster += self
-
-    # GenericTreeModel interface #
-
-    def on_get_flags(self):
-        return gtk.TREE_MODEL_ITERS_PERSIST
-
-    def on_get_n_columns(self):
-        return len(self.columns)
-
-    def on_get_column_type(self, index):
-        return self.columns[index]
-
-    def on_get_iter(self, tree_path):
-        # File objects are used to create tree iters
-        def find_tree_path(parent, tree_path):
-            if tree_path:
-                i = tree_path[0]
-                return find_tree_path(parent.children[i], tree_path[1:])
-            else:
-                return parent
-        return find_tree_path(self.files[""], tree_path)
-
-    def on_get_path(self, rowref):
-        return rowref.tree_path
-
-    def on_get_value(self, rowref, column):
-        if column == OBJECT_COL:
-            return rowref
-        elif column == NAME_COL:
-            return rowref.name
-        elif column == PATH_COL:
-            return rowref.path
-        elif column == TYPE_COL: # TODO return icons itself
-            if isinstance(rowref, site.Directory):
-                return site.DIRECTORY
-            elif isinstance(rowref, site.Template):
-                return site.TEMPLATE
-            else:
-                return site.get_file_type(rowref.name)
-
-    def on_iter_next(self, rowref):
-        siblings = rowref.parent.children
-        i = siblings.index(rowref)
-        try:
-            return siblings[i+1]
-        except IndexError:
-            return None
-
-    def on_iter_children(self, parent):
-        if parent is None:
-            parent = self.files[""]
-        return parent.children[0]
-
-    def on_iter_has_child(self, rowref):
-        if rowref.children:
-            return True
-        else:
-            return False
-
-    def on_iter_n_children(self, rowref):
-        if rowref is None:
-            rowref = self.files[""]
-        return len(rowref.children)
-
-    def on_iter_nth_child(self, parent, n):
-        if parent is None:
-            parent = self.files[""]
-        return parent.children[n]
-
-    def on_iter_parent(self, child):
-        return child.parent
-
-    # Drag & Drop #
-
-    def do_drag_data_get(self, path, selection_data):
-        return False
-
-    def do_drag_data_delete(self, path):
-        return False
-
-    def do_row_drop_possible(self, dest_path, selection_data):
-        return True
-
-    def do_drag_data_received(self, dest, selection_data):
-        model, row = selection_data.tree_get_row_drag_data()
-        obj = self.on_get_iter(row)
-
-        dest_dir = self.on_get_iter(dest[0:len(dest)-1])
-        if not isinstance(dest_dir, site.Directory):
-            dest_dir = dest_dir.parent
-
-        obj.move(dest_dir)
-        return True
-
-    # Events from files list #
-
-    def on_added(self, path):
-        f = self.files[path]
-        self.row_inserted(f.tree_path, self.create_tree_iter(f))
-
-    def on_moved(self, path, tree_path, new_path):
-        f = self.files[new_path]
-        self.row_deleted(tree_path)
-        self.row_inserted(f.tree_path, self.create_tree_iter(f))
-
-    def on_removed(self, path, tree_path):
-        self.row_deleted(tree_path)
-
-gobject.type_register(FilesTreeModel)
 
 class SidePane(gtk.VPaned):
     """Side panel with list of files and templates"""
@@ -181,11 +59,11 @@ class SidePane(gtk.VPaned):
         self.pack2(templates_box, resize=False)
 
         # Fill views with data
-        files_model = FilesTreeModel(self.site.files)
+        files_model = self._fill_model(self.site.files)
         self.files_view.set_model(files_model)
         self.files_view.set_reorderable(True)
 
-        templates_model = FilesTreeModel(self.site.templates)
+        templates_model = self._fill_model(self.site.templates)
         self.templates_view.set_model(templates_model)
 
     def get_selected(self):
@@ -227,6 +105,26 @@ class SidePane(gtk.VPaned):
             return model.get_value(treeiter, OBJECT_COL)
 
     ### Helpers ###
+    
+    def _fill_model(self, files):
+        model = gtk.TreeStore(object, str, str, int) # Document, path, name, type
+        self._fill_directory(model, None, files[""])
+        return model
+        
+    def _fill_directory(self, model, parent, directory):
+        for child in directory.children:
+            treeiter = model.append(parent,
+                [child, child.path, child.name, self._document_type(child)])
+            if isinstance(child, site.Directory):
+                self._fill_directory(model, treeiter, child)
+    
+    def _document_type(self, document):
+        if isinstance(document, site.Directory):
+            return site.DIRECTORY
+        elif isinstance(document, site.Template):
+            return site.TEMPLATE
+        else:
+            return site.get_file_type(document.name)
 
     def _create_tree_view(self, name):
         """Helper function for creating tree views for files and templates."""
