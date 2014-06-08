@@ -16,14 +16,14 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-import gtk
+from gi.repository import Gtk
 
 import site
 
 # Constants for column numbers
 OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = range(4)
 
-class SidePane(gtk.VPaned):
+class SidePane(Gtk.VPaned):
     """Side panel with list of files and templates"""
 
     # Drag and Drop constants
@@ -41,7 +41,7 @@ class SidePane(gtk.VPaned):
     }
 
     def __init__(self, application, site):
-        gtk.VPaned.__init__(self)
+        Gtk.VPaned.__init__(self)
         self.application = application
         self.site = site
 
@@ -85,7 +85,7 @@ class SidePane(gtk.VPaned):
         model, itr = self.get_selected()
         return model.get_value(itr, OBJECT_COL)
 
-    def get_target_dir(self, position=gtk.TREE_VIEW_DROP_INTO_OR_AFTER):
+    def get_target_dir(self, position=Gtk.TreeViewDropPosition.INTO_OR_AFTER):
         """
         Find parent directory of selected file.
 
@@ -98,8 +98,8 @@ class SidePane(gtk.VPaned):
             return self.site.files[""]
         else:
             type = model.get_value(treeiter, TYPE_COL)
-            if (position == gtk.TREE_VIEW_DROP_BEFORE or
-                position == gtk.TREE_VIEW_DROP_AFTER or
+            if (position == Gtk.TREE_VIEW_DROP_BEFORE or
+                position == Gtk.TREE_VIEW_DROP_AFTER or
                 type != 'dir'):
                 treeiter = model.iter_parent(treeiter)
             return model.get_value(treeiter, OBJECT_COL)
@@ -107,7 +107,7 @@ class SidePane(gtk.VPaned):
     ### Helpers ###
     
     def _fill_model(self, files):
-        model = gtk.TreeStore(object, str, str, int) # Document, path, name, type
+        model = Gtk.TreeStore(object, str, str, int) # Document, path, name, type
         self._fill_directory(model, None, files[""])
         return model
         
@@ -128,14 +128,14 @@ class SidePane(gtk.VPaned):
 
     def _create_tree_view(self, name):
         """Helper function for creating tree views for files and templates."""
-        view = gtk.TreeView()
+        view = Gtk.TreeView()
         view.set_headers_visible(False)
-        column = gtk.TreeViewColumn()
+        column = Gtk.TreeViewColumn()
         view.append_column(column)
-        icon_cell = gtk.CellRendererPixbuf()
+        icon_cell = Gtk.CellRendererPixbuf()
         column.pack_start(icon_cell, False)
         column.set_cell_data_func(icon_cell, self._set_file_icon_cb)
-        cell = gtk.CellRendererText()
+        cell = Gtk.CellRendererText()
         column.pack_start(cell, True)
         column.add_attribute(cell, 'text', NAME_COL)
         view.set_search_column(NAME_COL)
@@ -148,23 +148,23 @@ class SidePane(gtk.VPaned):
         """Helper function for creating vbox with label and treeview in
            scrolled window.
         """
-        box = gtk.VBox()
-        label = gtk.Label()
+        box = Gtk.VBox()
+        label = Gtk.Label()
         label.set_markup(label_text)
         label.set_alignment(0, 0.5)
         label.set_padding(6, 6)
-        box.pack_start(label, False)
-        scrolled = gtk.ScrolledWindow()
-        scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        box.pack_start(label, False, False, 0)
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         scrolled.add(view)
-        box.pack_start(scrolled)
+        box.pack_start(scrolled, True, True, 0)
         return box
 
     ### Callbacks ###
 
-    def _set_file_icon_cb(self, column, cell, model, iter):
+    def _set_file_icon_cb(self, column, cell, model, iter, __):
         type = model.get_value(iter, TYPE_COL)
-        icon_theme = gtk.icon_theme_get_default()
+        icon_theme = Gtk.IconTheme.get_default()
         for icon_name in self.icons[type]:
             if icon_theme.has_icon(icon_name):
                 icon = icon_theme.load_icon(icon_name, 24, 0)

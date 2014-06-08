@@ -17,51 +17,51 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-import gtk
+from gi.repository import Gtk
 
 def make_table(rows):
-    '''Create gtk.Table for controls and their labels
+    '''Create Gtk.Table for controls and their labels
 
     rows - sequence of rows. Each of rows is tuple with 2 items:
         label text and control widget
     '''
     height = len(rows)
-    table = gtk.Table(height, 2)
+    table = Gtk.Table(height, 2)
     i = 0
     for row in rows:
-        label = gtk.Label(row[0])
+        label = Gtk.Label(row[0])
         label.set_alignment(0, 0.5)
-        table.attach(label, 0, 1, i, i+1, gtk.FILL, 0)
-        table.attach(row[1], 1, 2, i, i+1, gtk.EXPAND|gtk.FILL, 0)
+        table.attach(label, 0, 1, i, i+1, Gtk.AttachOptions.FILL, 0)
+        table.attach(row[1], 1, 2, i, i+1, Gtk.AttachOptions.EXPAND|Gtk.AttachOptions.FILL, 0)
         i += 1
     return table
 
 def make_dialog_layout(groups):
-    '''Create gtk.VBox for dialog windows with groups of controls properly
+    '''Create Gtk.VBox for dialog windows with groups of controls properly
     indented.
 
     groups - sequence of groups of contollers. Each item of sequence contain
         2 items: group label text and group controllers
     '''
 
-    vbox = gtk.VBox()
+    vbox = Gtk.VBox()
     vbox.set_border_width(6)
     vbox.set_spacing(18)
 
     for group in groups:
-        group_box = gtk.VBox()
+        group_box = Gtk.VBox()
         group_box.set_spacing(6)
-        label = gtk.Label()
+        label = Gtk.Label()
         label.set_markup('<b>%s</b>' % group[0])
         label.set_alignment(0, 0.5)
-        group_box.pack_start(label)
+        group_box.pack_start(label, True, True, 0)
 
-        alignment = gtk.Alignment(0.5, 0.5, 1, 1)
+        alignment = Gtk.Alignment.new(0.5, 0.5, 1, 1)
         alignment.add(group[1])
         alignment.set_padding(0, 0, 12, 0)
-        group_box.pack_start(alignment)
+        group_box.pack_start(alignment, True, True, 0)
 
-        vbox.pack_start(group_box)
+        vbox.pack_start(group_box, True, True, 0)
     return vbox
 
 def input_dialog(parent, title, label, ok_label, value=''):
@@ -75,16 +75,15 @@ def input_dialog(parent, title, label, ok_label, value=''):
 
     Returns tuple: response code, value of text entry
     '''
-    buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, ok_label, gtk.RESPONSE_OK)
-    dialog = gtk.Dialog(parent=parent, title=title, buttons=buttons)
-    dialog.set_default_response(gtk.RESPONSE_OK)
-    dialog.set_has_separator(False)
+    buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, ok_label, Gtk.ResponseType.OK)
+    dialog = Gtk.Dialog(parent=parent, title=title, buttons=buttons)
+    dialog.set_default_response(Gtk.ResponseType.OK)
 
-    label = gtk.Label(label)
-    entry = gtk.Entry()
+    label = Gtk.Label(label)
+    entry = Gtk.Entry()
     entry.set_text(value)
     entry.set_activates_default(True)
-    hbox = gtk.HBox()
+    hbox = Gtk.HBox()
     hbox.pack_start(label, False, False, 6)
     hbox.pack_start(entry, True, True, 6)
     dialog.vbox.pack_start(hbox, True, True, 6)
