@@ -59,11 +59,11 @@ class SidePane(Gtk.VPaned):
         self.pack2(templates_box, resize=False)
 
         # Fill views with data
-        files_model = self._fill_model(self.site.files)
+        files_model = self.site.files_model
         self.files_view.set_model(files_model)
         self.files_view.set_reorderable(True)
 
-        templates_model = self._fill_model(self.site.templates)
+        templates_model = self.site.templates_model
         self.templates_view.set_model(templates_model)
 
     def get_selected(self):
@@ -106,26 +106,6 @@ class SidePane(Gtk.VPaned):
 
     ### Helpers ###
     
-    def _fill_model(self, files):
-        model = Gtk.TreeStore(object, str, str, int) # Document, path, name, type
-        self._fill_directory(model, None, files[""])
-        return model
-        
-    def _fill_directory(self, model, parent, directory):
-        for child in directory.children:
-            treeiter = model.append(parent,
-                [child, child.path, child.name, self._document_type(child)])
-            if isinstance(child, site.Directory):
-                self._fill_directory(model, treeiter, child)
-    
-    def _document_type(self, document):
-        if isinstance(document, site.Directory):
-            return site.DIRECTORY
-        elif isinstance(document, site.Template):
-            return site.TEMPLATE
-        else:
-            return site.get_file_type(document.name)
-
     def _create_tree_view(self, name):
         """Helper function for creating tree views for files and templates."""
         view = Gtk.TreeView()
