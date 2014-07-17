@@ -157,24 +157,15 @@ class Site(object):
         self.files = DocumentsIndex(self.directory)
         self.templates = DocumentsIndex(self.templates_dir)
 
+        self.files_model = self._tree_model()
+        self.templates_model = self._tree_model()
+
         self.load_files_tree()
         self.load_templates_list()
 
-        self.files_model = self._fill_model(self.files)
-        self.templates_model = self._fill_model(self.templates)
+    def _tree_model(self):
+        return Gtk.TreeStore(object, str, str, int) # Document, path, name, type
 
-    def _fill_model(self, files):
-        model = Gtk.TreeStore(object, str, str, int) # Document, path, name, type
-        self._fill_directory(model, None, files[""])
-        return model
-        
-    def _fill_directory(self, model, parent, directory):
-        for child in directory.children:
-            treeiter = model.append(parent,
-                [child, child.path, child.name, self._document_type(child)])
-            if isinstance(child, Directory):
-                self._fill_directory(model, treeiter, child)
-    
     def _document_type(self, document):
         if isinstance(document, Directory):
             return DIRECTORY
@@ -205,7 +196,9 @@ class Site(object):
 
         dirpath - directory to load, path relative to self.directory
         """
-        self.files.put(Directory(dirpath, self, self.files))
+        document = Directory(dirpath, self, self.files)
+        self.files.put(document)
+        self._add_to_model(document)
 
         for filename in os.listdir(os.path.join(self.directory, dirpath)):
             if filename != '_oxalis':
@@ -224,7 +217,9 @@ class Site(object):
         """
         if not filename.startswith("."):
             type_ = get_file_type(filename)
-            self.files.put(CLASSES[type_](path, self, self.files))
+            document = CLASSES[type_](path, self, self.files)
+            self.files.put(document)
+            self._add_to_model(document)
 
     def load_templates_list(self):
         """Loads list of site templates
@@ -235,7 +230,18 @@ class Site(object):
         self.templates.put(Directory("", self, self.templates))
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
-            self.templates.put(Template(name, self, self.templates))
+            template = Template(name, self, self.templates)
+            self.templates.put(template)
+            self.templates_model.append(None,
+                [template, template.path, template.name, TEMPLATE])
+
+    def _add_to_model(self, document):
+        if document.path == "":
+            return  # Do not store root dir into model
+        doc_type = self._document_type(document)
+        tree_iter = self.files_model.append(document.parent.tree_iter,
+                [document, document.path, document.name, doc_type])
+        document.tree_iter = tree_iter
 
     def close(self):
         """Close site and save its state"""
@@ -342,6 +348,7 @@ class File(object):
         self.index = index
         self.base_url = site.url
         self.path = path
+        self.tree_iter = None
         if create:
             open(self.full_path, 'w')
 
