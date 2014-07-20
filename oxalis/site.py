@@ -169,8 +169,6 @@ class Site(object):
     def _document_type(self, document):
         if isinstance(document, Directory):
             return DIRECTORY
-        elif isinstance(document, Template):
-            return TEMPLATE
         else:
             return get_file_type(document.name)
 
@@ -230,7 +228,7 @@ class Site(object):
         self.templates.put(Directory("", self, self.templates))
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
-            template = Template(name, self, self.templates)
+            template = File(name, self, self.templates)
             self.templates.put(template)
             self.templates_model.append(None,
                 [template, template.path, template.name, TEMPLATE])
@@ -263,7 +261,7 @@ class Site(object):
 
     def new_template(self, name):
         """Create new template."""
-        self.templates.put(Template(name, self, self.templates, True))
+        self.templates.put(File(name, self, self.templates, True))
         self.templates.listeners.on_added(name)
 
     def add_file(self, filename, parent):
@@ -539,15 +537,6 @@ class Page(File):
         generate(self) # Automatically generate HTML on write
 
 
-class Template(File):
-    """Template for HTML pages"""
-
-    def rename(self, new_name):
-        """Rename template."""
-        # TODO: Change name of template in all pages which use it
-        return super(Template, self).rename(new_name)
-
-
 # Classes by file type
 CLASSES = {
     FILE: File,
@@ -555,5 +544,5 @@ CLASSES = {
     PAGE: Page,
     STYLE: File,
     IMAGE: File,
-    TEMPLATE: Template,
+    TEMPLATE: File,
 }
