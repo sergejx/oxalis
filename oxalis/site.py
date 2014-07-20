@@ -160,8 +160,8 @@ class Site(object):
         self.files_model = self._tree_model()
         self.templates_model = self._tree_model()
 
-        self.load_files_tree()
-        self.load_templates_list()
+        self._load_files_tree()
+        self._load_templates_list()
 
     def _tree_model(self):
         return Gtk.TreeStore(object, str, str, int) # Document, path, name, type
@@ -187,11 +187,11 @@ class Site(object):
         """Preview URL of the site."""
         return 'http://127.0.0.1:8000/' + self.get_url_path()
 
-    def load_files_tree(self):
+    def _load_files_tree(self):
         """Loads tree of site files"""
-        self.load_dir('')
+        self._load_dir('')
 
-    def load_dir(self, dirpath):
+    def _load_dir(self, dirpath):
         """Loads directory to files tree store
 
         dirpath - directory to load, path relative to self.directory
@@ -205,11 +205,11 @@ class Site(object):
                 path = os.path.join(dirpath, filename)
                 full_path = os.path.join(self.directory, path)
                 if os.path.isdir(full_path):
-                    self.load_dir(path)
+                    self._load_dir(path)
                 else:
-                    self.load_file(filename, path)
+                    self._load_file(filename, path)
 
-    def load_file(self, filename, path):
+    def _load_file(self, filename, path):
         """Append file
 
         filename - name of the file
@@ -221,7 +221,7 @@ class Site(object):
             self.files.put(document)
             self._add_to_model(document)
 
-    def load_templates_list(self):
+    def _load_templates_list(self):
         """Loads list of site templates
 
         List is stored in self.templates
