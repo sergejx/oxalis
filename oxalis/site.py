@@ -346,7 +346,6 @@ class File(object):
     def __init__(self, path, site, index, create=False):
         self.site = site
         self.index = index
-        self.base_url = site.url
         self.path = path
         self.tree_iter = None
         if create:
@@ -363,10 +362,6 @@ class File(object):
     def name(self):
         """File name of document."""
         return os.path.basename(self.path)
-
-    @property
-    def url(self):
-        return self.base_url + self.path
 
     @property
     def parent(self):
@@ -510,12 +505,6 @@ class Page(File):
         return root + ".html"
 
     @property
-    def url(self):
-        """Preview URL of document"""
-        root, ext = os.path.splitext(self.path)
-        return self.base_url + root + ".html"
-
-    @property
     def target_full_path(self):
         """Full path to target of document."""
         return os.path.join(self.index.base_dir, self.target_path)
@@ -552,19 +541,11 @@ class Page(File):
 
 class Style(File):
     """CSS style"""
-    @property
-    def url(self):
-        """Preview URL of document"""
-        return self.base_url
+    pass
 
 
 class Template(File):
     """Template for HTML pages"""
-
-    @property
-    def url(self):
-        """Preview URL of document"""
-        return self.base_url + '?template=' + self.path
 
     def rename(self, new_name):
         """Rename template."""
