@@ -539,11 +539,6 @@ class Page(File):
         generate(self) # Automatically generate HTML on write
 
 
-class Style(File):
-    """CSS style"""
-    pass
-
-
 class Template(File):
     """Template for HTML pages"""
 
@@ -558,7 +553,7 @@ CLASSES = {
     FILE: File,
     DIRECTORY: Directory,
     PAGE: Page,
-    STYLE: Style,
+    STYLE: File,
     IMAGE: File,
     TEMPLATE: Template,
 }
