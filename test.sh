@@ -1,2 +1,2 @@
 #!/bin/sh
-PYTHONPATH=. nosetests --with-doctest
+PYTHONPATH=. nosetests-3.3 --with-doctest

@@ -27,16 +27,16 @@ def test_config():
     assert os.path.isdir(CONFDIR)
     conffile = os.path.join(CONFDIR, "config")
     assert os.path.exists(conffile)
-    assert perm(conffile) == 0600
+    assert perm(conffile) == 0o600
 
 def test_sitecopy_config():
     """Was Sitecopy configuration created with right permissions?"""
     scdir = os.path.join(CONFDIR, "sitecopy")
     assert os.path.isdir(scdir)
-    assert perm(scdir) == 0700
+    assert perm(scdir) == 0o700
     scconf = os.path.join(CONFDIR, "sitecopyrc")
     assert os.path.exists(scconf)
-    assert perm(scconf) == 0600
+    assert perm(scconf) == 0o600
 
 def test_index_templates():
     """Was index file and templates created?"""
