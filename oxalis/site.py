@@ -31,7 +31,6 @@ import shutil
 from gi.repository import Gtk
 
 from .config import Configuration
-from .multicast import Multicaster
 from .generator import generate
 
 # File types
@@ -257,12 +256,10 @@ class Site(object):
         class_ = CLASSES[type]
         path = os.path.join(parent.path, name)
         self.files.put(class_(path, self, self.files, True))
-        self.files.listeners.on_added(path)
 
     def new_template(self, name):
         """Create new template."""
         self.templates.put(File(name, self, self.templates, True))
-        self.templates.listeners.on_added(name)
 
     def add_file(self, filename, parent):
         """Copy existing file to the site"""
@@ -271,7 +268,6 @@ class Site(object):
         full_path = os.path.join(self.directory, path)
         shutil.copyfile(filename, full_path)
         self.files.put(File(path, self, self.files))
-        self.files.listeners.on_added(path)
 
     def generate(self):
         """Generate site output files"""
@@ -283,11 +279,6 @@ class Site(object):
 class DocumentsIndex(object):
     """
     Dictionary of all documents (files or templates) indexed by path.
-
-    Provides multicaster. Listeners should define methods:
-        - on_added(self, path)
-        - on_moved(self, path, tree_path, new_path)
-        - on_removed(self, path, tree_path)
     """
     DocumentRecord = namedtuple('DocumentRecord', ['document', 'generated'])
     """
@@ -298,7 +289,6 @@ class DocumentsIndex(object):
     def __init__(self, base_dir):
         self._documents = dict()
         self.base_dir = base_dir
-        self.listeners = Multicaster()
 
     def put(self, document):
         """
@@ -379,18 +369,6 @@ class File(object):
         """Document children in tree structure."""
         return []
 
-    @property
-    def tree_path(self):
-        """Tree path for specified document suitable for gtk.TreeModel."""
-        path = []
-        item = self
-        while item.path != "":
-            siblings = item.parent.children
-            i = siblings.index(item)
-            path.insert(0, i)
-            item = item.parent
-        return tuple(path)
-
     ## File operations ##
 
     def move(self, destination):
@@ -407,7 +385,6 @@ class File(object):
         old_path = self.path
         old_full_path = self.full_path
         old_target_full_path = self.target_full_path
-        old_tree_path = self.tree_path
         self.index.remove(old_path)
         self.path = new_path
         self.index.put(self)
@@ -415,7 +392,6 @@ class File(object):
         os.rename(old_full_path, self.full_path)
         if self.convertible and os.path.exists(old_target_full_path):
             os.rename(old_target_full_path, self.target_full_path)
-        self.index.listeners.on_moved(old_path, old_tree_path, new_path)
 
     def rename(self, new_name):
         """Rename document."""
@@ -426,12 +402,10 @@ class File(object):
 
     def remove(self):
         """Remove document."""
-        tree_path = self.tree_path
         os.remove(self.full_path)
         self.index.remove(self.path) # Remove itself from the list
         if self.convertible and os.path.exists(self.target_full_path):
             os.remove(self.target_full_path)
-        self.index.listeners.on_removed(self.path, tree_path)
 
 
 class Directory(File):
@@ -454,13 +428,11 @@ class Directory(File):
 
     def remove(self):
         """Remove directory (overrides Document.remove())."""
-        tree_path = self.tree_path
         for child in self.children:
             child.remove()
         os.rmdir(self.full_path)
 
         self.index.remove(self.path) # Remove itself from the list
-        self.index.listeners.on_remove(self.path, tree_path)
 
 
 class Page(File):
