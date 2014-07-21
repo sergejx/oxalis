@@ -83,7 +83,7 @@ def process_template(page, content):
 def fill_template(tpl, tags):
     """Fill tags into template."""
     repl = lambda match: replace(match, tags)
-    return TAG_RE.sub(repl, tpl.read())
+    return TAG_RE.sub(repl, open(tpl.full_path).read())
 
 def replace(match, tags):
     tag = match.group(1)

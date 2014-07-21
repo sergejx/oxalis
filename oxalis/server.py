@@ -86,7 +86,7 @@ class OxalisHTTPRequestHandler(BaseHTTPRequestHandler):
                 if isinstance(page, Page):
                     html = process_page(page)
                 else:
-                    html = page.read()
+                    html = open(page.full_path).read()
                 self.wfile.write(html)
 
             elif os.path.exists(full_path):  # Other files

@@ -433,18 +433,6 @@ class File(object):
             os.remove(self.target_full_path)
         self.index.listeners.on_removed(self.path, tree_path)
 
-    # File contents operations
-
-    def read(self):
-        """Read document contents from file."""
-        f = open(self.full_path, 'r', 'utf-8')
-        return f.read()
-
-    def write(self, text):
-        """Write document contents to file."""
-        f = open(self.full_path, 'w', 'utf-8')
-        f.write(text)
-
 
 class Directory(File):
     """Directory in Oxalis site."""
@@ -517,11 +505,6 @@ class Page(File):
                 if match is not None:
                     self.header[match.group(1)] = match.group(2)
 
-    def _write_header(self, file_obj):
-        for (key, value) in list(self.header.items()):
-            file_obj.write(key + ': ' + value + '\n')
-        file_obj.write('\n')
-
     def read(self):
         f = open(self.full_path, 'r', 'utf-8')
         self._read_header(f)
@@ -529,12 +512,6 @@ class Page(File):
         for line in f:
             text += line
         return text
-
-    def write(self, text):
-        f = open(self.full_path, 'w', 'utf-8')
-        self._write_header(f)
-        f.write(text)
-        generate(self) # Automatically generate HTML on write
 
 
 # Classes by file type
