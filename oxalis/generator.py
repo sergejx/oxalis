@@ -28,7 +28,7 @@ import os
 import re
 
 import markdown
-from . import smartypants
+from .smartypants import smartypants
 
 TAG_RE = re.compile('\{(\w+)\}')
 
@@ -58,7 +58,7 @@ def need_to_regenerate(page, tpl):
 def process_page(page):
     """Get HTML version of page."""
     html = markdown.markdown(page.read())
-    html = smartypants.smartyPants(html)
+    html = smartypants(html)
 
     html = process_template(page, html)
     encoding = determine_encoding(html)
