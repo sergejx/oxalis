@@ -153,8 +153,8 @@ class Site(object):
 
         self.config = Configuration(self.config_dir, 'config', CONFIG_DEFAULTS)
 
-        self.files = DocumentsIndex(self.directory)
-        self.templates = DocumentsIndex(self.templates_dir)
+        self._files = DocumentsIndex(self.directory)
+        self._templates = DocumentsIndex(self.templates_dir)
 
         self.files_model = self._tree_model()
         self.templates_model = self._tree_model()
@@ -193,8 +193,8 @@ class Site(object):
 
         dirpath - directory to load, path relative to self.directory
         """
-        document = Directory(dirpath, self, self.files)
-        self.files.put(document)
+        document = Directory(dirpath, self, self._files)
+        self._files.put(document)
         self._add_to_model(document)
 
         for filename in os.listdir(os.path.join(self.directory, dirpath)):
@@ -221,7 +221,7 @@ class Site(object):
         elif event_type == Gio.FileMonitorEvent.DELETED:
             document = self.get_document(path, False)
             self.files_model.remove(document.tree_iter)  # Remove from model
-            self.files.remove(path)                      # Remove from index
+            self._files.remove(path)                     # Remove from index
             if hasattr(document, 'file_monitor'):        # Stop a monitor
                 document.file_monitor.cancel()
 
@@ -233,8 +233,8 @@ class Site(object):
         """
         if not filename.startswith("."):
             type_ = get_file_type(filename)
-            document = CLASSES[type_](path, self, self.files)
-            self.files.put(document)
+            document = CLASSES[type_](path, self, self._files)
+            self._files.put(document)
             self._add_to_model(document)
 
     def _load_templates_list(self):
@@ -243,11 +243,11 @@ class Site(object):
         List is stored in self.templates
         """
         tpl_dir = os.path.join(self.directory, '_oxalis', 'templates')
-        self.templates.put(Directory("", self, self.templates))
+        self._templates.put(Directory("", self, self._templates))
         for filename in os.listdir(tpl_dir):
             name = os.path.basename(filename)
-            template = File(name, self, self.templates)
-            self.templates.put(template)
+            template = File(name, self, self._templates)
+            self._templates.put(template)
             self.templates_model.append(None,
                 [template, template.path, template.name, TEMPLATE])
 
@@ -266,19 +266,19 @@ class Site(object):
     def get_document(self, path, template=False):
         """Get document identified by path."""
         if template:
-            return self.templates[path]
+            return self._templates[path]
         else:
-            return self.files[path]
+            return self._files[path]
 
     def new_file(self, type, name, parent):
         """Create new file."""
         class_ = CLASSES[type]
         path = os.path.join(parent.path, name)
-        self.files.put(class_(path, self, self.files, True))
+        self._files.put(class_(path, self, self._files, True))
 
     def new_template(self, name):
         """Create new template."""
-        self.templates.put(File(name, self, self.templates, True))
+        self._templates.put(File(name, self, self._templates, True))
 
     def add_file(self, filename, parent):
         """Copy existing file to the site"""
@@ -286,11 +286,11 @@ class Site(object):
         path = os.path.join(parent.path, name)
         full_path = os.path.join(self.directory, path)
         shutil.copyfile(filename, full_path)
-        self.files.put(File(path, self, self.files))
+        self._files.put(File(path, self, self._files))
 
     def generate(self):
         """Generate site output files"""
-        for item in self.files.documents():
+        for item in self._files.documents():
             if isinstance(item, Page):
                 generate(item)
 
