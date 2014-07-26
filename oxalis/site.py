@@ -28,7 +28,7 @@ from codecs import open
 from collections import namedtuple
 import shutil
 
-from gi.repository import Gtk
+from gi.repository import Gio, Gtk
 
 from .config import Configuration
 from .generator import generate
@@ -205,6 +205,25 @@ class Site(object):
                     self._load_dir(path)
                 else:
                     self._load_file(filename, path)
+
+        document.file_monitor = Gio.File.new_for_path(dirpath)\
+            .monitor_directory(Gio.FileMonitorFlags.NONE)
+        document.file_monitor.connect('changed', self.on_file_changed)
+
+    def on_file_changed(self, monitor, file, other_file, event_type):
+        full_path = file.get_path()
+        path = os.path.relpath(full_path, self.directory)
+        if event_type == Gio.FileMonitorEvent.CREATED:
+            if os.path.isdir(full_path):
+                self._load_dir(path)
+            else:
+                self._load_file(os.path.basename(path), path)
+        elif event_type == Gio.FileMonitorEvent.DELETED:
+            document = self.get_document(path, False)
+            self.files_model.remove(document.tree_iter)  # Remove from model
+            self.files.remove(path)                      # Remove from index
+            if hasattr(document, 'file_monitor'):        # Stop a monitor
+                document.file_monitor.cancel()
 
     def _load_file(self, filename, path):
         """Append file
