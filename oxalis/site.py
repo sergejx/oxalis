@@ -22,7 +22,6 @@ directories.
 """
 
 import os
-import re
 from functools import cmp_to_key
 from codecs import open
 from collections import namedtuple
@@ -31,7 +30,7 @@ import shutil
 from gi.repository import Gio, Gtk
 
 from .config import Configuration
-from .generator import generate
+from oxalis import converters
 
 # File types
 FILE, DIRECTORY, PAGE, STYLE, IMAGE, TEMPLATE = list(range(6))
@@ -291,8 +290,7 @@ class Site(object):
     def generate(self):
         """Generate site output files"""
         for item in self._files.documents():
-            if isinstance(item, Page):
-                generate(item)
+            item.convert()
 
 
 class DocumentsIndex(object):
@@ -355,6 +353,7 @@ class File(object):
         self.index = index
         self.path = path
         self.tree_iter = None
+        self.converter = converters.matching_converter(site.directory, path)
         if create:
             open(self.full_path, 'w')
 
@@ -387,6 +386,12 @@ class File(object):
     def children(self):
         """Document children in tree structure."""
         return []
+
+    ## Methods
+
+    def convert(self):
+        if self.converter is not None:
+            self.converter.convert()
 
     ## File operations ##
 
@@ -454,62 +459,11 @@ class Directory(File):
         self.index.remove(self.path) # Remove itself from the list
 
 
-class Page(File):
-    """Markdown page with metadata in headers."""
-
-    convertible = True
-
-    _header_re = re.compile('(\w+): ?(.*)')
-
-    def __init__(self, path, site, index, create=False):
-        """Initialize page.
-
-        * if create == True, create new page file
-        """
-        super(Page, self).__init__(path, site, index, create)
-        if create:
-            src = open(self.full_path, 'w')
-            src.write("Template: default\n\n")
-        self.header = {}
-        try:
-            self._read_header(open(self.full_path, 'r', 'utf-8'))
-        except IOError:
-            pass # Source file may not exist yet.
-
-    @property
-    def target_path(self):
-        root, __ = os.path.splitext(self.path)
-        return root + ".html"
-
-    @property
-    def target_full_path(self):
-        """Full path to target of document."""
-        return os.path.join(self.index.base_dir, self.target_path)
-
-    def _read_header(self, file_obj):
-        """Reads page header and stores it in self.header."""
-        for line in file_obj:
-            if line == '\n':
-                break
-            else:
-                match = self._header_re.match(line)
-                if match is not None:
-                    self.header[match.group(1)] = match.group(2)
-
-    def read(self):
-        f = open(self.full_path, 'r', 'utf-8')
-        self._read_header(f)
-        text = ""
-        for line in f:
-            text += line
-        return text
-
-
 # Classes by file type
 CLASSES = {
     FILE: File,
     DIRECTORY: Directory,
-    PAGE: Page,
+    PAGE: File,
     STYLE: File,
     IMAGE: File,
     TEMPLATE: File,
