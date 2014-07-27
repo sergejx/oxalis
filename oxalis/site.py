@@ -232,7 +232,7 @@ class Site(object):
         """
         if not filename.startswith("."):
             type_ = get_file_type(filename)
-            document = CLASSES[type_](path, self, self._files)
+            document = File(path, self, self._files)
             self._files.put(document)
             self._add_to_model(document)
 
@@ -271,7 +271,7 @@ class Site(object):
 
     def new_file(self, type, name, parent):
         """Create new file."""
-        class_ = CLASSES[type]
+        class_ = File if type == FILE else Directory
         path = os.path.join(parent.path, name)
         self._files.put(class_(path, self, self._files, True))
 
@@ -457,14 +457,3 @@ class Directory(File):
         os.rmdir(self.full_path)
 
         self.index.remove(self.path) # Remove itself from the list
-
-
-# Classes by file type
-CLASSES = {
-    FILE: File,
-    DIRECTORY: Directory,
-    PAGE: File,
-    STYLE: File,
-    IMAGE: File,
-    TEMPLATE: File,
-}
