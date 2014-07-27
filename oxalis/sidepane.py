@@ -23,7 +23,8 @@ from . import site
 # Constants for column numbers
 OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = list(range(4))
 
-class SidePane(Gtk.VPaned):
+
+class SidePane:
     """Side panel with list of files and templates"""
 
     # Drag and Drop constants
@@ -41,30 +42,20 @@ class SidePane(Gtk.VPaned):
     }
 
     def __init__(self, application, site):
-        Gtk.VPaned.__init__(self)
+        self.widget = Gtk.ScrolledWindow.new()
+        self.widget.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.application = application
         self.site = site
 
+
         # Create tree views
         self.files_view = self._create_tree_view('files')
-        self.templates_view = self._create_tree_view('templates')
-
-        # Create scrolled windows and labels
-        files_box = self._create_scrolled_box('<b>Files</b>', self.files_view)
-        templates_box = self._create_scrolled_box('<b>Templates</b>',
-                                                 self.templates_view)
-
-        # Pack everything
-        self.pack1(files_box, resize=True)
-        self.pack2(templates_box, resize=False)
+        self.widget.add(self.files_view)
 
         # Fill views with data
         files_model = self.site.files_model
         self.files_view.set_model(files_model)
         self.files_view.set_reorderable(True)
-
-        templates_model = self.site.templates_model
-        self.templates_view.set_model(templates_model)
 
     def get_selected(self):
         """Returns selected item in files_view
@@ -72,8 +63,6 @@ class SidePane(Gtk.VPaned):
         Returns tuple: (model, iter)
         """
         selection = self.files_view.get_selection()
-        if selection.count_selected_rows() == 0:
-            selection = self.templates_view.get_selection()
         selected = selection.get_selected()
         return selected
 
@@ -124,22 +113,6 @@ class SidePane(Gtk.VPaned):
         selection.connect('changed', self._on_selection_changed, name)
         return view
 
-    def _create_scrolled_box(self, label_text, view):
-        """Helper function for creating vbox with label and treeview in
-           scrolled window.
-        """
-        box = Gtk.VBox()
-        label = Gtk.Label()
-        label.set_markup(label_text)
-        label.set_alignment(0, 0.5)
-        label.set_padding(6, 6)
-        box.pack_start(label, False, False, 0)
-        scrolled = Gtk.ScrolledWindow()
-        scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        scrolled.add(view)
-        box.pack_start(scrolled, True, True, 0)
-        return box
-
     ### Callbacks ###
 
     def _set_file_icon_cb(self, column, cell, model, iter, __):
@@ -167,10 +140,5 @@ class SidePane(Gtk.VPaned):
         if count == 0:
             self.application.selection_actions.set_sensitive(False)
         else:
-            # Remove selection from second list
-            if name == 'files':
-                self.templates_view.get_selection().unselect_all()
-            if name == 'templates':
-                self.files_view.get_selection().unselect_all()
             self.application.selection_actions.set_sensitive(True)
 

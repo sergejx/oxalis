@@ -358,8 +358,8 @@ class Oxalis(object):
         self.create_filebrowser()
 
         self.vbox.remove(self.start_panel)
-        self.vbox.pack_start(self.filebrowser, True, True, 0)
-        self.filebrowser.show_all()
+        self.vbox.pack_start(self.filebrowser.widget, True, True, 0)
+        self.filebrowser.widget.show_all()
 
         self.site_actions.set_sensitive(True)
         self.selection_actions.set_sensitive(False)  # Nothing is selected
