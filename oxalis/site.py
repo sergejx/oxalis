@@ -153,16 +153,9 @@ class Site(object):
         self.config = Configuration(self.config_dir, 'config', CONFIG_DEFAULTS)
 
         self._files = DocumentsIndex(self.directory)
-        self._templates = DocumentsIndex(self.templates_dir)
-
-        self.files_model = self._tree_model()
-        self.templates_model = self._tree_model()
-
+        # Model fields: Document, path, name, type
+        self.files_model = Gtk.TreeStore(object, str, str, int)
         self._load_files_tree()
-        self._load_templates_list()
-
-    def _tree_model(self):
-        return Gtk.TreeStore(object, str, str, int) # Document, path, name, type
 
     def _document_type(self, document):
         if isinstance(document, Directory):
@@ -218,7 +211,7 @@ class Site(object):
             else:
                 self._load_file(os.path.basename(path), path)
         elif event_type == Gio.FileMonitorEvent.DELETED:
-            document = self.get_document(path, False)
+            document = self._files[path]
             self.files_model.remove(document.tree_iter)  # Remove from model
             self._files.remove(path)                     # Remove from index
             if hasattr(document, 'file_monitor'):        # Stop a monitor
@@ -236,20 +229,6 @@ class Site(object):
             self._files.put(document)
             self._add_to_model(document)
 
-    def _load_templates_list(self):
-        """Loads list of site templates
-
-        List is stored in self.templates
-        """
-        tpl_dir = os.path.join(self.directory, '_oxalis', 'templates')
-        self._templates.put(Directory("", self, self._templates))
-        for filename in os.listdir(tpl_dir):
-            name = os.path.basename(filename)
-            template = File(name, self, self._templates)
-            self._templates.put(template)
-            self.templates_model.append(None,
-                [template, template.path, template.name, TEMPLATE])
-
     def _add_to_model(self, document):
         if document.path == "":
             return  # Do not store root dir into model
@@ -262,13 +241,6 @@ class Site(object):
         """Close site and save its state"""
         self.config.write()
 
-    def get_document(self, path, template=False):
-        """Get document identified by path."""
-        if template:
-            return self._templates[path]
-        else:
-            return self._files[path]
-
     def new_file(self, type, name, parent):
         """Create new file."""
         class_ = File if type == FILE else Directory
@@ -277,7 +249,7 @@ class Site(object):
 
     def new_template(self, name):
         """Create new template."""
-        self._templates.put(File(name, self, self._templates, True))
+        pass  # FIXME: Unimplemented
 
     def add_file(self, filename, parent):
         """Copy existing file to the site"""
