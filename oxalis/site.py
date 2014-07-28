@@ -22,7 +22,6 @@ directories.
 """
 
 import os
-from functools import cmp_to_key
 from codecs import open
 import shutil
 
@@ -267,7 +266,7 @@ class SiteStore:
         if document.path == "":
             return  # Do not store root dir into tree model
         doc_type = document_type(document)
-        tree_iter = self.tree_model.append(document.parent.tree_iter,
+        tree_iter = self.tree_model.append(self.get_parent(document).tree_iter,
                 [document, document.path, document.name, doc_type])
         document.tree_iter = tree_iter
 
@@ -279,7 +278,24 @@ class SiteStore:
         return self.index[path]
 
     def all_documents(self):
+        """Get all project documents."""
         return self.index.values()
+
+    def get_parent(self, document):
+        """Get document parent in tree structure."""
+        if document.path == "": # Special case for root dir
+            return None
+        parent_path = os.path.dirname(document.path)
+        return self.index[parent_path]
+
+    def get_children(self, document):
+        """Document children in tree structure."""
+        children = []
+        child_iter = self.tree_model.iter_children(document.tree_iter)
+        while child_iter:
+            children.append(self.tree_model[child_iter][0])
+            child_iter = self.tree_model.iter_next(child_iter)
+        return children
 
 
 class File(object):
@@ -310,23 +326,8 @@ class File(object):
         """File name of document."""
         return os.path.basename(self.path)
 
-    @property
-    def parent(self):
-        """
-        Parent document.
-
-        If document has no parent, special Document object is used with path
-        set to "".
-        """
-        if self.path == "": # Special case for root dir
-            return None
-        parent_path = os.path.dirname(self.path)
-        return self.site.store.get_by_path(parent_path)
-
-    @property
-    def children(self):
-        """Document children in tree structure."""
-        return []
+    def __repr__(self):
+        return "%s('%s')" % (self.__class__.__name__, self.path)
 
     ## Methods
 
@@ -381,19 +382,9 @@ class Directory(File):
         if create:
             os.mkdir(self.full_path)
 
-    @property
-    def children(self):
-        """Document children in tree structure."""
-        return sorted(
-            [doc for doc in self.site.store.all_documents() if doc.parent == self],
-            key=cmp_to_key(compare_files))
-
-    def rename(self, new_name):
-        super(Directory, self).rename(new_name)
-
     def remove(self):
         """Remove directory (overrides Document.remove())."""
-        for child in self.children:
+        for child in self.site.store.get_children(self):
             child.remove()
         os.rmdir(self.full_path)
 
