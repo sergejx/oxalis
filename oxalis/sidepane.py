@@ -53,7 +53,7 @@ class SidePane:
         self.widget.add(self.files_view)
 
         # Fill views with data
-        files_model = self.site.files_model
+        files_model = self.site.get_tree_model()
         self.files_view.set_model(files_model)
         self.files_view.set_reorderable(True)
 

@@ -24,7 +24,6 @@ directories.
 import os
 from functools import cmp_to_key
 from codecs import open
-from collections import namedtuple
 import shutil
 
 from gi.repository import Gio, Gtk
@@ -130,10 +129,13 @@ def compare_files(x, y):
         else:
             return 1
 
-def get_file_type(filename):
+
+def document_type(document):
     """Get file type from filename"""
-    root, ext = os.path.splitext(filename)
-    if ext == '.text':
+    root, ext = os.path.splitext(document.name)
+    if isinstance(document, Directory):
+        return DIRECTORY
+    elif ext == '.text':
         return PAGE
     elif ext == '.css':
         return STYLE
@@ -152,16 +154,8 @@ class Site(object):
 
         self.config = Configuration(self.config_dir, 'config', CONFIG_DEFAULTS)
 
-        self._files = DocumentsIndex(self.directory)
-        # Model fields: Document, path, name, type
-        self.files_model = Gtk.TreeStore(object, str, str, int)
+        self.store = SiteStore()
         self._load_files_tree()
-
-    def _document_type(self, document):
-        if isinstance(document, Directory):
-            return DIRECTORY
-        else:
-            return get_file_type(document.name)
 
     def get_url_path(self):
         """Return path part of site preview URL."""
@@ -176,6 +170,9 @@ class Site(object):
         """Preview URL of the site."""
         return 'http://127.0.0.1:8000/' + self.get_url_path()
 
+    def get_tree_model(self):
+        return self.store.tree_model
+
     def _load_files_tree(self):
         """Loads tree of site files"""
         self._load_dir('')
@@ -185,9 +182,8 @@ class Site(object):
 
         dirpath - directory to load, path relative to self.directory
         """
-        document = Directory(dirpath, self, self._files)
-        self._files.put(document)
-        self._add_to_model(document)
+        document = Directory(dirpath, self)
+        self.store.add(document)
 
         for filename in os.listdir(os.path.join(self.directory, dirpath)):
             if filename != '_oxalis':
@@ -211,10 +207,9 @@ class Site(object):
             else:
                 self._load_file(os.path.basename(path), path)
         elif event_type == Gio.FileMonitorEvent.DELETED:
-            document = self._files[path]
-            self.files_model.remove(document.tree_iter)  # Remove from model
-            self._files.remove(path)                     # Remove from index
-            if hasattr(document, 'file_monitor'):        # Stop a monitor
+            document = self.store.get_by_path(path)
+            self.store.remove(document)             # Remove from store
+            if hasattr(document, 'file_monitor'):   # Stop a monitor
                 document.file_monitor.cancel()
 
     def _load_file(self, filename, path):
@@ -224,18 +219,8 @@ class Site(object):
         path - path relative to self.directory
         """
         if not filename.startswith("."):
-            type_ = get_file_type(filename)
-            document = File(path, self, self._files)
-            self._files.put(document)
-            self._add_to_model(document)
-
-    def _add_to_model(self, document):
-        if document.path == "":
-            return  # Do not store root dir into model
-        doc_type = self._document_type(document)
-        tree_iter = self.files_model.append(document.parent.tree_iter,
-                [document, document.path, document.name, doc_type])
-        document.tree_iter = tree_iter
+            document = File(path, self)
+            self.store.add(document)
 
     def close(self):
         """Close site and save its state"""
@@ -245,7 +230,7 @@ class Site(object):
         """Create new file."""
         class_ = File if type == FILE else Directory
         path = os.path.join(parent.path, name)
-        self._files.put(class_(path, self, self._files, True))
+        self.store.add(class_(path, self, True))
 
     def new_template(self, name):
         """Create new template."""
@@ -257,59 +242,44 @@ class Site(object):
         path = os.path.join(parent.path, name)
         full_path = os.path.join(self.directory, path)
         shutil.copyfile(filename, full_path)
-        self._files.put(File(path, self, self._files))
+        self.store.add(File(path, self))
 
     def generate(self):
         """Generate site output files"""
-        for item in self._files.documents():
+        for item in self.store.all_documents():
             item.convert()
 
 
-class DocumentsIndex(object):
+class SiteStore:
     """
-    Dictionary of all documents (files or templates) indexed by path.
+    Tree store containing site files and directories (with exception of
+    generated and hidden files).
     """
-    DocumentRecord = namedtuple('DocumentRecord', ['document', 'generated'])
-    """
-    Data type for records stored in the index: document object and flag
-    marking if the path is generated automatically from the document.
-    """
+    def __init__(self):
+        # Model fields: Document, path, name, type
+        self.tree_model = Gtk.TreeStore(object, str, str, int)
+        self.index = {}
 
-    def __init__(self, base_dir):
-        self._documents = dict()
-        self.base_dir = base_dir
+    def add(self, document):
+        # Store into index
+        self.index[document.path] = document
+        # Store into tree
+        if document.path == "":
+            return  # Do not store root dir into tree model
+        doc_type = document_type(document)
+        tree_iter = self.tree_model.append(document.parent.tree_iter,
+                [document, document.path, document.name, doc_type])
+        document.tree_iter = tree_iter
 
-    def put(self, document):
-        """
-        Add document into the index.
+    def remove(self, document):
+        del self.index[document.path]
+        self.tree_model.remove(document.tree_iter)
 
-        If document is convertible, both source and target paths would be
-        registered.
-        """
-        path = document.path
-        if path not in self._documents:
-            self._documents[path] = self.DocumentRecord(document, False)
-            if document.convertible:
-                self._documents[document.target_path] = self.DocumentRecord(
-                    document, True)
+    def get_by_path(self, path):
+        return self.index[path]
 
-    def remove(self, path):
-        document = self._documents[path].document
-        del self._documents[path]
-        if document.convertible:
-            del self._documents[document.target_path]
-
-    def __getitem__(self, path):
-        """Get document corresponding to the path."""
-        return self._documents[path].document
-
-    def __contains__(self, path):
-        return path in self._documents
-
-    def documents(self, include_generated=False):
-        """Get all documents in the index."""
-        return [document for (document, generated) in list(self._documents.values())
-                if generated == include_generated]
+    def all_documents(self):
+        return self.index.values()
 
 
 class File(object):
@@ -320,9 +290,8 @@ class File(object):
     target_path = None
     target_full_path = None
 
-    def __init__(self, path, site, index, create=False):
+    def __init__(self, path, site, create=False):
         self.site = site
-        self.index = index
         self.path = path
         self.tree_iter = None
         self.converter = converters.matching_converter(site.directory, path)
@@ -334,7 +303,7 @@ class File(object):
     @property
     def full_path(self):
         """Full path to document file."""
-        return os.path.join(self.index.base_dir, self.path)
+        return os.path.join(self.site.directory, self.path)
 
     @property
     def name(self):
@@ -352,7 +321,7 @@ class File(object):
         if self.path == "": # Special case for root dir
             return None
         parent_path = os.path.dirname(self.path)
-        return self.index[parent_path]
+        return self.site.store.get_by_path(parent_path)
 
     @property
     def children(self):
@@ -381,9 +350,9 @@ class File(object):
         old_path = self.path
         old_full_path = self.full_path
         old_target_full_path = self.target_full_path
-        self.index.remove(old_path)
+        self.site.store.remove(old_path)
         self.path = new_path
-        self.index.put(self)
+        self.site.store.add(self)
 
         os.rename(old_full_path, self.full_path)
         if self.convertible and os.path.exists(old_target_full_path):
@@ -399,7 +368,7 @@ class File(object):
     def remove(self):
         """Remove document."""
         os.remove(self.full_path)
-        self.index.remove(self.path) # Remove itself from the list
+        self.site.store.remove(self.path)  # Remove itself from the list
         if self.convertible and os.path.exists(self.target_full_path):
             os.remove(self.target_full_path)
 
@@ -407,8 +376,8 @@ class File(object):
 class Directory(File):
     """Directory in Oxalis site."""
 
-    def __init__(self, path, site, index, create=False):
-        super(Directory, self).__init__(path, site, index)
+    def __init__(self, path, site, create=False):
+        super(Directory, self).__init__(path, site)
         if create:
             os.mkdir(self.full_path)
 
@@ -416,7 +385,7 @@ class Directory(File):
     def children(self):
         """Document children in tree structure."""
         return sorted(
-            [doc for doc in self.index.documents() if doc.parent == self],
+            [doc for doc in self.site.store.all_documents() if doc.parent == self],
             key=cmp_to_key(compare_files))
 
     def rename(self, new_name):
@@ -428,4 +397,4 @@ class Directory(File):
             child.remove()
         os.rmdir(self.full_path)
 
-        self.index.remove(self.path) # Remove itself from the list
+        self.site.store.remove(self.path) # Remove itself from the list
