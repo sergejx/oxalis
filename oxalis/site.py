@@ -229,7 +229,12 @@ class Site(object):
         """Create new file."""
         class_ = File if type == FILE else Directory
         path = os.path.join(parent.path, name)
-        self.store.add(class_(path, self, True))
+        full_path = os.path.join(self.directory, path)
+        if type == DIRECTORY:
+            os.mkdir(full_path)
+        else:
+            open(full_path, 'w').close()
+        self.store.add(class_(path, self))
 
     def new_template(self, name):
         """Create new template."""
@@ -306,13 +311,11 @@ class File(object):
     target_path = None
     target_full_path = None
 
-    def __init__(self, path, site, create=False):
+    def __init__(self, path, site):
         self.site = site
         self.path = path
         self.tree_iter = None
         self.converter = converters.matching_converter(site.directory, path)
-        if create:
-            open(self.full_path, 'w')
 
     ## Properties ##
 
@@ -376,11 +379,6 @@ class File(object):
 
 class Directory(File):
     """Directory in Oxalis site."""
-
-    def __init__(self, path, site, create=False):
-        super(Directory, self).__init__(path, site)
-        if create:
-            os.mkdir(self.full_path)
 
     def remove(self):
         """Remove directory (overrides Document.remove())."""

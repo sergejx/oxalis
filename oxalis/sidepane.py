@@ -84,7 +84,7 @@ class SidePane:
         """
         model, treeiter = self.get_selected()
         if treeiter == None:
-            return self.site.files[""]
+            return self.site.store.get_by_path("")
         else:
             type = model.get_value(treeiter, TYPE_COL)
             if (position == Gtk.TREE_VIEW_DROP_BEFORE or
