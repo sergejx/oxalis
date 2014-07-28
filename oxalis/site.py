@@ -184,7 +184,8 @@ class Site(object):
         document = Directory(dirpath, self)
         self.store.add(document)
 
-        for filename in os.listdir(os.path.join(self.directory, dirpath)):
+        full_dir_path = os.path.join(self.directory, dirpath)
+        for filename in os.listdir(full_dir_path):
             if filename != '_oxalis':
                 path = os.path.join(dirpath, filename)
                 full_path = os.path.join(self.directory, path)
@@ -193,7 +194,7 @@ class Site(object):
                 else:
                     self._load_file(filename, path)
 
-        document.file_monitor = Gio.File.new_for_path(dirpath)\
+        document.file_monitor = Gio.File.new_for_path(full_dir_path)\
             .monitor_directory(Gio.FileMonitorFlags.NONE)
         document.file_monitor.connect('changed', self.on_file_changed)
 
