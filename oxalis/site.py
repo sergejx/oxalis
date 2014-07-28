@@ -228,14 +228,11 @@ class Site(object):
 
     def new_file(self, type, name, parent):
         """Create new file."""
-        class_ = File if type == FILE else Directory
-        path = os.path.join(parent.path, name)
-        full_path = os.path.join(self.directory, path)
+        full_path = os.path.join(self.directory, parent.path, name)
         if type == DIRECTORY:
             os.mkdir(full_path)
         else:
             open(full_path, 'w').close()
-        self.store.add(class_(path, self))
 
     def new_template(self, name):
         """Create new template."""
@@ -244,10 +241,8 @@ class Site(object):
     def add_file(self, filename, parent):
         """Copy existing file to the site"""
         name = os.path.basename(filename)
-        path = os.path.join(parent.path, name)
-        full_path = os.path.join(self.directory, path)
+        full_path = os.path.join(self.directory, parent.path, name)
         shutil.copyfile(filename, full_path)
-        self.store.add(File(path, self))
 
     def generate(self):
         """Generate site output files"""
@@ -352,16 +347,10 @@ class File(object):
 
     def _move_files(self, new_path):
         """Move document files to new_path."""
-        old_path = self.path
-        old_full_path = self.full_path
-        old_target_full_path = self.target_full_path
-        self.site.store.remove(old_path)
-        self.path = new_path
-        self.site.store.add(self)
-
-        os.rename(old_full_path, self.full_path)
-        if self.convertible and os.path.exists(old_target_full_path):
-            os.rename(old_target_full_path, self.target_full_path)
+        new_full_path = os.path.join(self.site.directory, new_path)
+        os.rename(self.full_path, new_full_path)
+        if self.convertible and os.path.exists(self.target_full_path):
+            pass  # FIXME: Use converters system
 
     def rename(self, new_name):
         """Rename document."""
@@ -373,9 +362,8 @@ class File(object):
     def remove(self):
         """Remove document."""
         os.remove(self.full_path)
-        self.site.store.remove(self.path)  # Remove itself from the list
         if self.convertible and os.path.exists(self.target_full_path):
-            os.remove(self.target_full_path)
+            pass  # FIXME: Use converters system
 
 
 class Directory(File):
@@ -386,5 +374,3 @@ class Directory(File):
         for child in self.site.store.get_children(self):
             child.remove()
         os.rmdir(self.full_path)
-
-        self.site.store.remove(self.path) # Remove itself from the list
