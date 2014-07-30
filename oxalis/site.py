@@ -201,12 +201,14 @@ class Site(object):
     def on_file_changed(self, monitor, file, other_file, event_type):
         full_path = file.get_path()
         path = os.path.relpath(full_path, self.directory)
-        if event_type == Gio.FileMonitorEvent.CREATED:
+        if (event_type == Gio.FileMonitorEvent.CREATED
+                and not self.store.contains_path(path)):
             if os.path.isdir(full_path):
                 self._load_dir(path)
             else:
                 self._load_file(os.path.basename(path), path)
-        elif event_type == Gio.FileMonitorEvent.DELETED:
+        elif (event_type == Gio.FileMonitorEvent.DELETED
+                and self.store.contains_path(path)):
             document = self.store.get_by_path(path)
             self.store.remove(document)             # Remove from store
             if hasattr(document, 'file_monitor'):   # Stop a monitor
@@ -259,6 +261,9 @@ class SiteStore:
         # Model fields: Document, path, name, type
         self.tree_model = Gtk.TreeStore(object, str, str, int)
         self.index = {}
+
+    def contains_path(self, path):
+        return path in self.index
 
     def add(self, document):
         # Store into index
@@ -313,6 +318,11 @@ class File(object):
         self.tree_iter = None
         self.converter = converters.matching_converter(site.directory, path)
 
+        if self.converter is not None:
+            self.file_monitor = Gio.File.new_for_path(self.full_path)\
+                .monitor(Gio.FileMonitorFlags.NONE)
+            self.file_monitor.connect('changed', self._on_file_changed)
+
     ## Properties ##
 
     @property
@@ -364,6 +374,10 @@ class File(object):
         os.remove(self.full_path)
         if self.convertible and os.path.exists(self.target_full_path):
             pass  # FIXME: Use converters system
+
+    def _on_file_changed(self, monitor, file, other_file, event_type):
+        if event_type in [Gio.FileMonitorEvent.CHANGED, Gio.FileMonitorEvent.CREATED]:
+            self.convert()
 
 
 class Directory(File):
