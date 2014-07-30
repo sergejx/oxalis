@@ -23,7 +23,7 @@ from gi.repository import Gtk, GLib, Gdk
 
 from . import config
 from . import site
-from . import sidepane
+from . import files_browser
 from . import site_properties
 from . import server
 from . import util
@@ -201,7 +201,7 @@ class Oxalis(object):
                 dlg.destroy()
 
     def create_filebrowser(self):
-        self.filebrowser = sidepane.SidePane(self, self.site)
+        self.filebrowser = files_browser.FilesBrowser(self, self.site)
 
     NEW_DOC_DATA = {
         'NewPage': (site.PAGE, "Markdown Page", ".text"),

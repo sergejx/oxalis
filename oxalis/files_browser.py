@@ -24,7 +24,7 @@ from . import site
 OBJECT_COL, PATH_COL, NAME_COL, TYPE_COL = list(range(4))
 
 
-class SidePane:
+class FilesBrowser:
     """Side panel with list of files and templates"""
 
     # Drag and Drop constants
