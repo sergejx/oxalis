@@ -21,7 +21,7 @@ from gi.repository import Gtk
 from . import site
 
 # Constants for column numbers
-OBJECT_COL, NAME_COL, PATH_COL, TYPE_COL = list(range(4))
+OBJECT_COL, PATH_COL, NAME_COL, TYPE_COL = list(range(4))
 
 
 class SidePane:
@@ -83,13 +83,13 @@ class SidePane:
         Returns directory object.
         """
         model, treeiter = self.get_selected()
-        if treeiter == None:
+        if treeiter is None:
             return self.site.store.get_by_path("")
         else:
             type = model.get_value(treeiter, TYPE_COL)
-            if (position == Gtk.TREE_VIEW_DROP_BEFORE or
-                position == Gtk.TREE_VIEW_DROP_AFTER or
-                type != 'dir'):
+            if (position == Gtk.TreeViewDropPosition.BEFORE or
+                position == Gtk.TreeViewDropPosition.AFTER or
+                type != site.DIRECTORY):
                 treeiter = model.iter_parent(treeiter)
             return model.get_value(treeiter, OBJECT_COL)
 
