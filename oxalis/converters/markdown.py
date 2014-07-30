@@ -20,10 +20,7 @@ import os.path
 from markdown import Markdown
 from jinja2 import Environment, FileSystemLoader
 
-from oxalis.converters import register
 
-
-@register
 class MarkdownConverter:
     """
     Converts Markdown files into HTML using templates specified in the header.

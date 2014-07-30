@@ -28,14 +28,9 @@ They must implement following methods:
   would trigger conversion)
 * convert() -- do the conversion
 """
+from oxalis.converters.markdown import MarkdownConverter
 
-registry = []
-
-
-def register(clazz):
-    """Register a new converter class."""
-    registry.append(clazz)
-    return clazz
+registry = [MarkdownConverter]
 
 
 def matching_converter(site_path, path):
