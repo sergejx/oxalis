@@ -261,11 +261,20 @@ class SiteStore:
         # Model fields: Document, path, name, type
         self.tree_model = Gtk.TreeStore(object, str, str, int)
         self.index = {}
+        self._generated = set()
 
     def contains_path(self, path):
         return path in self.index
 
     def add(self, document):
+        # Handle generated files
+        if document.path in self._generated:
+            return  # Ignore it
+        generated_path = document.generated_path()
+        self._generated.add(generated_path)
+        if generated_path in self.index:
+            self.remove(self.index[generated_path])
+
         # Store into index
         self.index[document.path] = document
         # Store into tree
@@ -279,6 +288,7 @@ class SiteStore:
     def remove(self, document):
         del self.index[document.path]
         self.tree_model.remove(document.tree_iter)
+        self._generated.remove(document.generated_path())
 
     def get_by_path(self, path):
         return self.index[path]
@@ -339,6 +349,13 @@ class File(object):
         return "%s('%s')" % (self.__class__.__name__, self.path)
 
     ## Methods
+
+    def generated_path(self):
+        """Path to file generated based on this one, or None."""
+        if self.converter:
+            return self.converter.target()
+        else:
+            return None
 
     def convert(self):
         if self.converter is not None:
