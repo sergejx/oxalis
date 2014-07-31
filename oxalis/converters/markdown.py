@@ -20,6 +20,8 @@ import os.path
 from markdown import Markdown
 from jinja2 import Environment, FileSystemLoader
 
+TEMPLATES_DIR = '_templates'
+
 
 class MarkdownConverter:
     """
@@ -32,7 +34,7 @@ class MarkdownConverter:
         self.target_path = base + ".html"
         self.full_target_path = os.path.join(site_path, self.target_path)
         self._md = Markdown(extensions=['meta'])
-        templates_dir = os.path.join(site_path, "_templates")
+        templates_dir = os.path.join(site_path, TEMPLATES_DIR)
         self._env = Environment(loader=FileSystemLoader(templates_dir))
 
     @staticmethod

@@ -8,7 +8,7 @@ TESTDIR = os.path.join(os.path.dirname(__file__), "working")
 CONFDIR = os.path.join(TESTDIR, "_oxalis")
 
 def perm(path):
-    """Get file permissioms"""
+    """Get file permissions"""
     return stat.S_IMODE(os.stat(path).st_mode)
 
 def setup():
@@ -40,7 +40,7 @@ def test_sitecopy_config():
 
 def test_index_templates():
     """Was index file and templates created?"""
-    assert os.path.exists(os.path.join(TESTDIR, "index.text"))
-    tpldir = os.path.join(CONFDIR, "templates")
+    assert os.path.exists(os.path.join(TESTDIR, "index.md"))
+    tpldir = os.path.join(TESTDIR, "_templates")
     assert os.path.isdir(tpldir)
-    assert os.path.exists(os.path.join(tpldir, "default"))
+    assert os.path.exists(os.path.join(tpldir, "default.html"))

@@ -27,25 +27,27 @@ import shutil
 
 from gi.repository import Gio, Gtk
 
-from .config import Configuration
+from oxalis.config import Configuration
 from oxalis import converters
+from oxalis.converters.markdown import TEMPLATES_DIR
 
 # File types
 FILE, DIRECTORY, PAGE, STYLE, IMAGE, TEMPLATE = list(range(6))
 
-default_template = '''<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+default_template = """
+<!DOCTYPE html>
+<html>
   <head>
-    <title>{Title}</title>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
   </head>
   <body>
-    {Content}
+    {{ content }}
   </body>
-</html>'''
+</html>
+"""
 
 DEFAULT_INDEX = """Title: {name}
-Template: default
 
 {name}
 ====================
@@ -55,10 +57,6 @@ CONFIG_DEFAULTS = {
     'project': {},
     'preview': {
         'url_path': "/",
-    },
-    'state': {
-        'last_document': "index.text",
-        'last_document_type': 'file',
     },
     'upload': {},
 }
@@ -72,24 +70,24 @@ def create_site(path):
 
     # Write site configuration
     config = Configuration(oxalis_dir, 'config', CONFIG_DEFAULTS)
-    config.set('project', 'format', '0.1')
+    config.set('project', 'format', '0.3-dev')
     config.write()
 
     # Make configuration file readable only by owner
     # (it contains FTP password)
     os.chmod(os.path.join(oxalis_dir, 'config'), 0o600)
 
-    index_text_path = os.path.join(path, 'index.text')
+    index_text_path = os.path.join(path, 'index.md')
     index_html_path = os.path.join(path, 'index.html')
     # Create default index file only if index is not already present
     if not (os.path.exists(index_text_path) or os.path.exists(index_html_path)):
         with open(index_text_path, 'w') as f:
             f.write(DEFAULT_INDEX.format(name=name))
 
-    templates_dir = os.path.join(oxalis_dir, 'templates')
+    templates_dir = os.path.join(path, TEMPLATES_DIR)
     os.mkdir(templates_dir)
 
-    f = open(os.path.join(templates_dir, 'default'), 'w')
+    f = open(os.path.join(templates_dir, 'default.html'), 'w')
     f.write(default_template)
     f.close()
 
@@ -102,6 +100,7 @@ def create_site(path):
     os.mkdir(os.path.join(oxalis_dir, 'sitecopy'))
     os.chmod(os.path.join(oxalis_dir, 'sitecopy'), 0o700)
 
+
 def dir_is_site(directory):
     '''Checks if directory contains Oxalis site
 
@@ -110,6 +109,7 @@ def dir_is_site(directory):
     '''
     # Simply check if directory contains subdirectory _oxalis
     return os.path.isdir(os.path.join(directory, '_oxalis'))
+
 
 def compare_files(x, y):
     """Compare files for sorting."""

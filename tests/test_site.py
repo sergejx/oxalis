@@ -11,21 +11,23 @@ class TestSite(TestCase):
         """Was site tree loaded properly?"""
         site = oxalis.site.Site(TESTDIR)
         self.assertEqual(site.store.get_by_path("").name, "")  # root
-        self.assertEqual(site.store.get_by_path("index.text").name, "index.text")
-        # self.assertRaises(KeyError, site.store.get_by_path("index.html"))
+        self.assertEqual(site.store.get_by_path("index.md").name, "index.md")
+        with self.assertRaises(KeyError):
+            site.store.get_by_path("index.html")
         self.assertEqual(site.store.get_by_path("test.css").name, "test.css")
         self.assertEqual(site.store.get_by_path("subdir").name, "subdir")
-        self.assertEqual(site.store.get_by_path("subdir/test.jpeg").name, "test.jpeg")
+        self.assertEqual(site.store.get_by_path("subdir/test.jpeg").name,
+                         "test.jpeg")
 
     def test_tree(self):
         """Does tree traversal works properly?"""
         site = oxalis.site.Site(TESTDIR)
         root = site.store.get_by_path("")
         subdir = site.store.get_by_path("subdir")
-        index = site.store.get_by_path("index.text")
-        subdir_index = site.store.get_by_path("subdir/index.text")
-        self.assertEqual(len(site.store.get_children(root)), 4)  # 3
-        self.assertEqual(len(site.store.get_children(subdir)), 3)  # 2
+        index = site.store.get_by_path("index.md")
+        subdir_index = site.store.get_by_path("subdir/index.md")
+        self.assertEqual(len(site.store.get_children(root)), 4)
+        self.assertEqual(len(site.store.get_children(subdir)), 2)
         self.assertIn(subdir, site.store.get_children(root))
         self.assertIn(index, site.store.get_children(root))
         self.assertIn(subdir_index, site.store.get_children(subdir))
