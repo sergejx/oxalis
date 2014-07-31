@@ -260,6 +260,8 @@ class SiteStore:
     def __init__(self):
         # Model fields: Document, path, name, type
         self.tree_model = Gtk.TreeStore(object, str, str, int)
+        self.tree_model.set_sort_func(0, self._model_sort_func)
+        self.tree_model.set_sort_column_id(0, Gtk.SortType.ASCENDING)
         self.index = {}
         self._generated = set()
 
@@ -312,6 +314,11 @@ class SiteStore:
             children.append(self.tree_model[child_iter][0])
             child_iter = self.tree_model.iter_next(child_iter)
         return children
+
+    def _model_sort_func(self, model, iter_x, iter_y, data):
+        x = self.tree_model[iter_x][0]
+        y = self.tree_model[iter_y][0]
+        return compare_files(x, y)
 
 
 class File(object):
