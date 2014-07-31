@@ -1,0 +1,12 @@
+[project]
+format = 0.1
+
+[state]
+last_document = index.html
+last_document_type = file
+
+[preview]
+url_path = /
+
+[upload]
+

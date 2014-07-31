@@ -1,9 +1,5 @@
 [project]
-format = 0.1
-
-[state]
-last_document = index.html
-last_document_type = file
+format = 0.3-dev
 
 [preview]
 url_path = /
