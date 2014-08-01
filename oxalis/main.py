@@ -16,6 +16,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
+import os
 from threading import Thread
 import subprocess
 
@@ -43,36 +44,28 @@ AUTHORS = ('Sergej Chodarev',
 
 ui = '''
 <ui>
-  <menubar name="MenuBar">
-    <menu action="SiteMenu">
-      <menu action="New">
-        <menuitem action="NewPage" />
-        <menuitem action="NewHtml" />
-        <menuitem action="NewStyle" />
-        <menuitem action="NewFile" />
-        <menuitem action="NewDirectory" />
-        <menuitem action="NewTemplate" />
-      </menu>
-      <menuitem action="AddFile" />
-      <menuitem action="RenameSelected" />
-      <menuitem action="DeleteSelected" />
-      <separator />
-      <menuitem action="Generate" />
-      <menuitem action="Upload" />
-      <separator />
-      <menuitem action="Properties" />
-      <separator />
-      <menuitem action="Quit" />
-    </menu>
-    <menu action="EditMenu">
-      <placeholder name="EditActions" />
-      <separator />
-      <menuitem action="Preferences" />
-    </menu>
-    <menu action="HelpMenu">
-      <menuitem action="About" />
-    </menu>
-  </menubar>
+    <popup action="SiteMenu">
+        <menu action="New">
+            <menuitem action="NewPage" />
+            <menuitem action="NewHtml" />
+            <menuitem action="NewStyle" />
+            <menuitem action="NewFile" />
+            <menuitem action="NewDirectory" />
+            <menuitem action="NewTemplate" />
+        </menu>
+        <menuitem action="AddFile" />
+        <menuitem action="RenameSelected" />
+        <menuitem action="DeleteSelected" />
+        <separator />
+        <menuitem action="Generate" />
+        <menuitem action="Upload" />
+        <separator />
+        <menuitem action="Properties" />
+        <separator />
+        <menuitem action="About" />
+        <separator />
+        <menuitem action="Close" />
+    </popup>
 </ui>
 '''
 
@@ -96,10 +89,8 @@ class Oxalis(object):
         app_actions = Gtk.ActionGroup('app_actions')
         app_actions.add_actions((
             ('SiteMenu', None, 'Site'),
-            ('Quit', Gtk.STOCK_QUIT, None, None, None, self.quit_cb),
+            ('Close', Gtk.STOCK_CLOSE, None, None, None, self.quit_cb),
             ('EditMenu', None, 'Edit'),
-            ('Preferences', Gtk.STOCK_PREFERENCES, None, None, None,
-                self.preferences_cb),
             ('HelpMenu', None, 'Help'),
             ('About', Gtk.STOCK_ABOUT, None, None, None, self.about_cb)
         ))
@@ -132,19 +123,22 @@ class Oxalis(object):
         self.ui_manager.insert_action_group(app_actions, 0)
         self.ui_manager.insert_action_group(self.site_actions, 0)
         self.ui_manager.insert_action_group(self.selection_actions, 0)
-        menubar = self.ui_manager.get_widget('/MenuBar')
 
-        self.vbox = Gtk.VBox()
-        self.vbox.pack_start(menubar, False, False, 0)
+        # Create header bar
+        self.header = Gtk.HeaderBar(show_close_button=True)
+        self.header.set_title("Oxalis")
+        menu_button = Gtk.MenuButton()
+        menu_button.set_popup(self.ui_manager.get_widget('/SiteMenu'))
+        menu_button.set_image(Gtk.Image.new_from_icon_name(
+            'emblem-system-symbolic', Gtk.IconSize.BUTTON))
+        self.header.pack_end(menu_button)
+        self.window.set_titlebar(self.header)
 
         self.create_start_panel()
-
-        self.window.add(self.vbox)
 
         width = config.settings.getint('state', 'width')
         height = config.settings.getint('state', 'height')
         self.window.resize(width, height)
-
 
     def create_start_panel(self):
         new = Gtk.Button('New site')
@@ -162,7 +156,7 @@ class Oxalis(object):
         box.pack_start(open, False, False, 0)
         self.start_panel = Gtk.Alignment.new(0.5, 0.5, 0.2, 0.0)
         self.start_panel.add(box)
-        self.vbox.pack_start(self.start_panel, True, True, 0)
+        self.window.add(self.start_panel)
 
     def new_site_cb(self, *args):
         chooser = Gtk.FileChooserDialog(
@@ -355,10 +349,14 @@ class Oxalis(object):
     def load_site(self, filename):
         self.site = site.Site(filename)
 
+        # Set window title to site name
+        self.header.set_title(os.path.basename(filename))
+        self.header.set_subtitle(os.path.dirname(filename))
+
         self.create_filebrowser()
 
-        self.vbox.remove(self.start_panel)
-        self.vbox.pack_start(self.filebrowser.widget, True, True, 0)
+        self.window.remove(self.start_panel)
+        self.window.add(self.filebrowser.widget)
         self.filebrowser.widget.show_all()
 
         self.site_actions.set_sensitive(True)
