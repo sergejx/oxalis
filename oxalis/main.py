@@ -353,11 +353,6 @@ class MainWindow:
         """
         subprocess.Popen(("xdg-open", doc.full_path))
 
-    def preferences_cb(self, action):
-        pref = PreferencesDialog(self.window)
-        pref.run()
-        pref.destroy()
-
     def quit_cb(self, *args):
         if 'site' in self.__dict__:
             self.site.close()
@@ -366,11 +361,3 @@ class MainWindow:
         config.settings.set('state', 'width', width)
         config.settings.set('state', 'height', height)
         config.settings.write()
-
-
-class PreferencesDialog(Gtk.Dialog):
-    def __init__(self, parent):
-        buttons = (Gtk.STOCK_CLOSE, Gtk.ResponseType.CLOSE)
-        Gtk.Dialog.__init__(self, 'Oxalis Preferences', parent,
-                            buttons=buttons)
-        self.show_all()
