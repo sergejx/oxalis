@@ -20,7 +20,7 @@ import os
 from threading import Thread
 import subprocess
 
-from gi.repository import Gtk, GLib, Gdk
+from gi.repository import Gtk, GLib
 
 from . import config
 from . import site
@@ -30,17 +30,6 @@ from . import server
 from . import util
 from . import upload
 
-NAME = 'Oxalis'
-VERSION = '0.1'
-COMMENTS = 'Web Site Editor'
-COPYRIGHT = 'Copyright \302\251 2005-2006 Sergej Chodarev'
-WEBSITE = 'http://sergejx.mysteria.cz/oxalis/'
-AUTHORS = ('Sergej Chodarev',
-    '',
-    'Oxalis includes:',
-    '* smartypants.py by Chad Miller',
-    'Author of original Markdown and SmartyPants is John Gruber'
-)
 
 ui = '''
 <ui>
@@ -61,22 +50,19 @@ ui = '''
         <menuitem action="Upload" />
         <separator />
         <menuitem action="Properties" />
-        <separator />
-        <menuitem action="About" />
-        <separator />
-        <menuitem action="Close" />
     </popup>
 </ui>
 '''
 
-class Oxalis(object):
-    def make_window(self):
-        self.window = Gtk.Window()
+
+class MainWindow:
+    def __init__(self):
+        self.window = Gtk.ApplicationWindow()
         self.window.set_title('Oxalis')
         self.window.connect_after('delete-event', self.quit_cb)
 
         try:
-            Gtk.Window.set_default_icon_from_file('/usr/share/pixmaps/oxalis.png')
+            Gtk.Window.set_default_icon_name('oxalis')
         except GLib.GError:
             print("Warning: Can't load window icon")
 
@@ -86,14 +72,6 @@ class Oxalis(object):
         self.window.add_accel_group(accelgroup)
         self.ui_manager.add_ui_from_string(ui)
 
-        app_actions = Gtk.ActionGroup('app_actions')
-        app_actions.add_actions((
-            ('SiteMenu', None, 'Site'),
-            ('Close', Gtk.STOCK_CLOSE, None, None, None, self.quit_cb),
-            ('EditMenu', None, 'Edit'),
-            ('HelpMenu', None, 'Help'),
-            ('About', Gtk.STOCK_ABOUT, None, None, None, self.about_cb)
-        ))
         self.site_actions = Gtk.ActionGroup('site_actions')
         self.site_actions.add_actions((
             ('New', Gtk.STOCK_NEW, "New", ''),
@@ -120,7 +98,6 @@ class Oxalis(object):
         ))
         self.selection_actions.set_sensitive(False)
 
-        self.ui_manager.insert_action_group(app_actions, 0)
         self.ui_manager.insert_action_group(self.site_actions, 0)
         self.ui_manager.insert_action_group(self.selection_actions, 0)
 
@@ -376,27 +353,10 @@ class Oxalis(object):
         """
         subprocess.Popen(("xdg-open", doc.full_path))
 
-    def run(self):
-        self.make_window()
-        self.window.show_all()
-        Gdk.threads_init()
-        Gtk.main()
-
     def preferences_cb(self, action):
         pref = PreferencesDialog(self.window)
         pref.run()
         pref.destroy()
-
-    def about_cb(self, action):
-        about = Gtk.AboutDialog()
-        about.set_name(NAME)
-        about.set_version(VERSION)
-        about.set_comments(COMMENTS)
-        about.set_copyright(COPYRIGHT)
-        about.set_website(WEBSITE)
-        about.set_authors(AUTHORS)
-        about.run()
-        about.destroy()
 
     def quit_cb(self, *args):
         if 'site' in self.__dict__:
@@ -406,7 +366,6 @@ class Oxalis(object):
         config.settings.set('state', 'width', width)
         config.settings.set('state', 'height', height)
         config.settings.write()
-        Gtk.main_quit()
 
 
 class PreferencesDialog(Gtk.Dialog):
@@ -415,8 +374,3 @@ class PreferencesDialog(Gtk.Dialog):
         Gtk.Dialog.__init__(self, 'Oxalis Preferences', parent,
                             buttons=buttons)
         self.show_all()
-
-
-def run():
-    Oxalis().run()
-
