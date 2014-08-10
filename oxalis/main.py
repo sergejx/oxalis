@@ -22,26 +22,14 @@ import subprocess
 
 from gi.repository import Gtk, GLib
 
-from . import config
-from . import site
-from . import files_browser
-from . import site_properties
-from . import server
-from . import util
-from . import upload
+from oxalis import config, files_browser, site, site_properties, server, upload, util
 
 
 ui = '''
 <ui>
     <popup action="SiteMenu">
-        <menu action="New">
-            <menuitem action="NewPage" />
-            <menuitem action="NewHtml" />
-            <menuitem action="NewStyle" />
-            <menuitem action="NewFile" />
-            <menuitem action="NewDirectory" />
-            <menuitem action="NewTemplate" />
-        </menu>
+        <menuitem action="NewFile" />
+        <menuitem action="NewDirectory" />
         <menuitem action="AddFile" />
         <menuitem action="RenameSelected" />
         <menuitem action="DeleteSelected" />
@@ -74,14 +62,9 @@ class MainWindow:
 
         self.site_actions = Gtk.ActionGroup('site_actions')
         self.site_actions.add_actions((
-            ('New', Gtk.STOCK_NEW, "New", ''),
-            ('NewPage', None, "Markdown Page", None, None,
-                self.new_document_cb),
-            ('NewHtml', None, "HTML Page", None, None, self.new_document_cb),
-            ('NewStyle', None, "CSS Style", None, None, self.new_document_cb),
-            ('NewFile', None, "File", None, None, self.new_document_cb),
-            ('NewDirectory', None, 'Directory', None, None, self.new_document_cb),
-            ('NewTemplate', None, 'Template', None, None, self.new_template_cb),
+            ('NewFile', None, "New File", None, None, self.on_new_file),
+            ('NewDirectory', None, 'New Directory', None, None,
+             self.on_new_directory),
             ('AddFile', Gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
             ('Generate', None, 'Generate', None, None, self.generate_cb),
             ('Upload', None, 'Upload', None, None, self.upload_cb),
@@ -174,28 +157,15 @@ class MainWindow:
     def create_filebrowser(self):
         self.filebrowser = files_browser.FilesBrowser(self, self.site)
 
-    NEW_DOC_DATA = {
-        'NewPage': (site.PAGE, "Markdown Page", ".text"),
-        'NewHtml': (site.FILE, "HTML Page", ".html"),
-        "NewStyle": (site.STYLE, "Style", ".css"),
-        'NewFile': (site.FILE, "File", ""),
-        "NewDirectory": (site.DIRECTORY, "Directory", ""),
-    }
-
-    def new_document_cb(self, action):
-        type, label, ext = self.NEW_DOC_DATA[action.get_name()]
-        response, name = self.ask_name(label)
+    def on_new_file(self, action):
+        response, name = self.ask_name("File")
         if response == Gtk.ResponseType.OK and name != '':
-            if not name.endswith(ext):
-                name += ext
-            self.site.new_file(type, name, self.filebrowser.get_target_dir())
+            self.site.new_file(name, self.filebrowser.get_target_dir())
 
-    def new_template_cb(self, action):
-        response, name = self.ask_name('Template')
-
-        if response == Gtk.ResponseType.OK:
-            if name != '':
-                self.site.new_template(name)
+    def on_new_directory(self, action):
+        response, name = self.ask_name("Label")
+        if response == Gtk.ResponseType.OK and name != '':
+            self.site.new_directory(name, self.filebrowser.get_target_dir())
 
     def add_file_cb(self, action):
         chooser = Gtk.FileChooserDialog('Add File', parent=self.window,

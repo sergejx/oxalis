@@ -228,17 +228,15 @@ class Site(object):
         """Close site and save its state"""
         self.config.write()
 
-    def new_file(self, type, name, parent):
+    def new_file(self, name, parent):
         """Create new file."""
         full_path = os.path.join(self.directory, parent.path, name)
-        if type == DIRECTORY:
-            os.mkdir(full_path)
-        else:
-            open(full_path, 'w').close()
+        open(full_path, 'w').close()
 
-    def new_template(self, name):
-        """Create new template."""
-        pass  # FIXME: Unimplemented
+    def new_directory(self, name, parent):
+        """Create new directory."""
+        full_path = os.path.join(self.directory, parent.path, name)
+        os.mkdir(full_path)
 
     def add_file(self, filename, parent):
         """Copy existing file to the site"""
