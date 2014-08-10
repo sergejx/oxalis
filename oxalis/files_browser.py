@@ -16,9 +16,9 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
-from gi.repository import Gtk
+import mimetypes
 
-from . import site
+from gi.repository import Gio, Gtk
 
 # Constants for column numbers
 OBJECT_COL, PATH_COL, NAME_COL, TYPE_COL = list(range(4))
@@ -31,22 +31,11 @@ class FilesBrowser:
     DND_FILE_PATH = 80
     DND_URI_LIST = 81
 
-    # File type icons
-    icons = {
-        site.DIRECTORY: ['gnome-fs-directory', 'folder'],
-        site.PAGE: ['gnome-mime-text-html', 'text-html'],
-        site.STYLE: ['gnome-mime-text-css', 'text-x-css', 'text-x-generic'],
-        site.FILE: ['gnome-mime-application', 'text-x-preview'],
-        site.IMAGE: ['gnome-mime-image', 'image-x-generic'],
-        site.TEMPLATE: ['text-x-generic-template'],
-    }
-
     def __init__(self, application, site):
         self.widget = Gtk.ScrolledWindow.new()
         self.widget.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.application = application
         self.site = site
-
 
         # Create tree views
         self.files_view = self._create_tree_view('files')
@@ -86,15 +75,15 @@ class FilesBrowser:
         if treeiter is None:
             return self.site.store.get_by_path("")
         else:
-            type = model.get_value(treeiter, TYPE_COL)
+            doc = model.get_value(treeiter, OBJECT_COL)
             if (position == Gtk.TreeViewDropPosition.BEFORE or
-                position == Gtk.TreeViewDropPosition.AFTER or
-                type != site.DIRECTORY):
+                    position == Gtk.TreeViewDropPosition.AFTER or
+                    not doc.is_directory()):
                 treeiter = model.iter_parent(treeiter)
             return model.get_value(treeiter, OBJECT_COL)
 
     ### Helpers ###
-    
+
     def _create_tree_view(self, name):
         """Helper function for creating tree views for files and templates."""
         view = Gtk.TreeView()
@@ -116,13 +105,19 @@ class FilesBrowser:
     ### Callbacks ###
 
     def _set_file_icon_cb(self, column, cell, model, iter, __):
-        type = model.get_value(iter, TYPE_COL)
+        doc = model.get_value(iter, OBJECT_COL)
         icon_theme = Gtk.IconTheme.get_default()
-        for icon_name in self.icons[type]:
-            if icon_theme.has_icon(icon_name):
-                icon = icon_theme.load_icon(icon_name, 24, 0)
-                cell.set_property('pixbuf', icon)
-                break
+        if doc.is_directory():
+            content_type = 'inode/directory'
+        else:
+            mime_type = mimetypes.guess_type(doc.name)[0]
+            if mime_type is None:
+                mime_type = 'text/plain'
+            content_type = Gio.content_type_from_mime_type(mime_type)
+        icon_names = Gio.content_type_get_icon(content_type)
+        icon = icon_theme.choose_icon(icon_names.get_names(), 24, 0)
+        if icon is not None:
+            cell.set_property('pixbuf', icon.load_icon())
         else:
             cell.set_property('pixbuf', None)
 

@@ -355,6 +355,10 @@ class File(object):
 
     ## Methods
 
+    @staticmethod
+    def is_directory():
+        return False
+
     def generated_path(self):
         """Path to file generated based on this one, or None."""
         if self.converter:
@@ -404,6 +408,10 @@ class File(object):
 
 class Directory(File):
     """Directory in Oxalis site."""
+
+    @staticmethod
+    def is_directory():
+        return True
 
     def remove(self):
         """Remove directory (overrides Document.remove())."""
