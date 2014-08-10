@@ -20,8 +20,7 @@ import mimetypes
 
 from gi.repository import Gio, Gtk
 
-# Constants for column numbers
-OBJECT_COL, PATH_COL, NAME_COL, TYPE_COL = list(range(4))
+from oxalis.site import SiteStore
 
 
 class FilesBrowser:
@@ -61,7 +60,7 @@ class FilesBrowser:
         Returned object is subclass of site.File.
         """
         model, itr = self.get_selected()
-        return model.get_value(itr, OBJECT_COL)
+        return model.get_value(itr, SiteStore.OBJECT_COL)
 
     def get_target_dir(self, position=Gtk.TreeViewDropPosition.INTO_OR_AFTER):
         """
@@ -75,12 +74,12 @@ class FilesBrowser:
         if treeiter is None:
             return self.site.store.get_by_path("")
         else:
-            doc = model.get_value(treeiter, OBJECT_COL)
+            doc = model.get_value(treeiter, SiteStore.OBJECT_COL)
             if (position == Gtk.TreeViewDropPosition.BEFORE or
                     position == Gtk.TreeViewDropPosition.AFTER or
                     not doc.is_directory()):
                 treeiter = model.iter_parent(treeiter)
-            return model.get_value(treeiter, OBJECT_COL)
+            return model.get_value(treeiter, SiteStore.OBJECT_COL)
 
     ### Helpers ###
 
@@ -95,8 +94,8 @@ class FilesBrowser:
         column.set_cell_data_func(icon_cell, self._set_file_icon_cb)
         cell = Gtk.CellRendererText()
         column.pack_start(cell, True)
-        column.add_attribute(cell, 'text', NAME_COL)
-        view.set_search_column(NAME_COL)
+        column.add_attribute(cell, 'text', SiteStore.NAME_COL)
+        view.set_search_column(SiteStore.NAME_COL)
         view.connect('row-activated', self._on_file_activated)
         selection = view.get_selection()
         selection.connect('changed', self._on_selection_changed, name)
@@ -105,7 +104,7 @@ class FilesBrowser:
     ### Callbacks ###
 
     def _set_file_icon_cb(self, column, cell, model, iter, __):
-        doc = model.get_value(iter, OBJECT_COL)
+        doc = model.get_value(iter, SiteStore.OBJECT_COL)
         icon_theme = Gtk.IconTheme.get_default()
         if doc.is_directory():
             content_type = 'inode/directory'
@@ -126,7 +125,7 @@ class FilesBrowser:
         store = tree_view.get_model()
 
         itr = store.get_iter(path)
-        doc = store.get_value(itr, OBJECT_COL)
+        doc = store.get_value(itr, SiteStore.OBJECT_COL)
 
         self.application.load_file(doc)
 

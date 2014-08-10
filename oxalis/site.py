@@ -31,9 +31,6 @@ from oxalis.config import Configuration
 from oxalis import converters
 from oxalis.converters.markdown import TEMPLATES_DIR
 
-# File types
-FILE, DIRECTORY, PAGE, STYLE, IMAGE, TEMPLATE = list(range(6))
-
 default_template = """
 <!DOCTYPE html>
 <html>
@@ -127,21 +124,6 @@ def compare_files(x, y):
             return 0
         else:
             return 1
-
-
-def document_type(document):
-    """Get file type from filename"""
-    root, ext = os.path.splitext(document.name)
-    if isinstance(document, Directory):
-        return DIRECTORY
-    elif ext == '.text':
-        return PAGE
-    elif ext == '.css':
-        return STYLE
-    elif ext in ('.png', '.jpeg', '.jpg', '.gif'):
-        return IMAGE
-    else:
-        return FILE
 
 
 class Site(object):
@@ -255,11 +237,16 @@ class SiteStore:
     Tree store containing site files and directories (with exception of
     generated and hidden files).
     """
+
+    # Constants for column numbers
+    OBJECT_COL, PATH_COL, NAME_COL = list(range(3))
+
     def __init__(self):
-        # Model fields: Document, path, name, type
-        self.tree_model = Gtk.TreeStore(object, str, str, int)
-        self.tree_model.set_sort_func(0, self._model_sort_func)
-        self.tree_model.set_sort_column_id(0, Gtk.SortType.ASCENDING)
+        # Model fields: Document, path, name
+        self.tree_model = Gtk.TreeStore(object, str, str)
+        self.tree_model.set_sort_func(self.OBJECT_COL, self._model_sort_func)
+        self.tree_model.set_sort_column_id(self.OBJECT_COL,
+                                           Gtk.SortType.ASCENDING)
         self.index = {}
         self._generated = set()
 
@@ -280,9 +267,8 @@ class SiteStore:
         # Store into tree
         if document.path == "":
             return  # Do not store root dir into tree model
-        doc_type = document_type(document)
         tree_iter = self.tree_model.append(self.get_parent(document).tree_iter,
-                [document, document.path, document.name, doc_type])
+                [document, document.path, document.name])
         document.tree_iter = tree_iter
 
     def remove(self, document):
@@ -309,13 +295,13 @@ class SiteStore:
         children = []
         child_iter = self.tree_model.iter_children(document.tree_iter)
         while child_iter:
-            children.append(self.tree_model[child_iter][0])
+            children.append(self.tree_model[child_iter][self.OBJECT_COL])
             child_iter = self.tree_model.iter_next(child_iter)
         return children
 
     def _model_sort_func(self, model, iter_x, iter_y, data):
-        x = self.tree_model[iter_x][0]
-        y = self.tree_model[iter_y][0]
+        x = self.tree_model[iter_x][self.OBJECT_COL]
+        y = self.tree_model[iter_y][self.OBJECT_COL]
         return compare_files(x, y)
 
 
