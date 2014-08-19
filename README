@@ -1,4 +1,4 @@
-Oxalis is a web site editor for Gnome. Its goal is to make process of web site
+Oxalis is a website building tool for Gnome. Its goal is to make process of web site
 creation simple and pleasant. Currently it supports mainly static web sites and
 provides automatic Markdown to HTML conversion and basic templates.
 
@@ -6,17 +6,13 @@ provides automatic Markdown to HTML conversion and basic templates.
 Requirements
 ------------
 
-- Python 2.4
-- PyGTK 2.6
-- [PyGtkSourceView2][1]
-- [PyWebKitGtk][2]
-- [Markdown in Python][3]
-- [sitecopy][4] (if you want to use uploading to server)
+- Python 3
+- Gtk 3.12 and PyGI
+- [Python Markdown][1]
+- [sitecopy][2] (if you want to use uploading to server)
 
-[1]: http://projects.gnome.org/gtksourceview/pygtksourceview.html
-[2]: http://code.google.com/p/pywebkitgtk/
-[3]: http://www.freewisdom.org/projects/python-markdown/
-[4]: http://www.manyfish.co.uk/sitecopy/
+[1]: https://pypi.python.org/pypi/Markdown
+[2]: http://www.manyfish.co.uk/sitecopy/
 
 Installation
 ------------
