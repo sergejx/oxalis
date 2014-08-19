@@ -19,6 +19,7 @@ setup(name="oxalis",
            ['data/icons/hicolor/48x48/apps/oxalis.png']),
           ('share/icons/hicolor/256x256/apps',
            ['data/icons/hicolor/256x256/apps/oxalis.png']),
+          ('/usr/share/oxalis/ui', ['data/ui/site-settings.ui']),
           ('share/doc/oxalis', ['COPYING'])
       ],
       requires=['markdown', 'jinja2']
