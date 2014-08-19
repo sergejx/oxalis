@@ -1,5 +1,18 @@
-#! /usr/bin/env python3
+#!/usr/bin/env python3
+import os
+import sys
 
-from oxalis.application import run
+import oxalis
+from oxalis import application
 
-run()
+if __name__ == '__main__':
+
+    if not __file__.startswith(sys.prefix):  # Running without installation
+        # Set data directory
+        oxalis.DATA_DIR = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), '..', 'data'))
+        # Also alter XDG_DATA_DIR
+        xdg_data_dirs = os.environ.get('XDG_DATA_DIRS', '/usr/share/')
+        os.environ['XDG_DATA_DIRS'] = oxalis.DATA_DIR + ':' + xdg_data_dirs
+
+    application.run()
