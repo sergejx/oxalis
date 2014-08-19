@@ -19,50 +19,6 @@
 
 from gi.repository import Gtk
 
-def make_table(rows):
-    '''Create Gtk.Table for controls and their labels
-
-    rows - sequence of rows. Each of rows is tuple with 2 items:
-        label text and control widget
-    '''
-    height = len(rows)
-    table = Gtk.Table(height, 2)
-    i = 0
-    for row in rows:
-        label = Gtk.Label(row[0])
-        label.set_alignment(0, 0.5)
-        table.attach(label, 0, 1, i, i+1, Gtk.AttachOptions.FILL, 0)
-        table.attach(row[1], 1, 2, i, i+1, Gtk.AttachOptions.EXPAND|Gtk.AttachOptions.FILL, 0)
-        i += 1
-    return table
-
-def make_dialog_layout(groups):
-    '''Create Gtk.VBox for dialog windows with groups of controls properly
-    indented.
-
-    groups - sequence of groups of contollers. Each item of sequence contain
-        2 items: group label text and group controllers
-    '''
-
-    vbox = Gtk.VBox()
-    vbox.set_border_width(6)
-    vbox.set_spacing(18)
-
-    for group in groups:
-        group_box = Gtk.VBox()
-        group_box.set_spacing(6)
-        label = Gtk.Label()
-        label.set_markup('<b>%s</b>' % group[0])
-        label.set_alignment(0, 0.5)
-        group_box.pack_start(label, True, True, 0)
-
-        alignment = Gtk.Alignment.new(0.5, 0.5, 1, 1)
-        alignment.add(group[1])
-        alignment.set_padding(0, 0, 12, 0)
-        group_box.pack_start(alignment, True, True, 0)
-
-        vbox.pack_start(group_box, True, True, 0)
-    return vbox
 
 def input_dialog(parent, title, label, ok_label, value=''):
     '''Show dialog asking user for input
@@ -93,5 +49,3 @@ def input_dialog(parent, title, label, ok_label, value=''):
     value = entry.get_text()
     dialog.destroy()
     return response, value
-
-# vim:tabstop=4:expandtab

@@ -22,7 +22,8 @@ import subprocess
 
 from gi.repository import Gtk, GLib
 
-from oxalis import config, files_browser, site, site_properties, server, upload, util
+from oxalis import config, files_browser, site, server, upload, util
+from oxalis.site_settings import SiteSettingsDialog
 
 
 ui = '''
@@ -37,7 +38,7 @@ ui = '''
         <menuitem action="Generate" />
         <menuitem action="Upload" />
         <separator />
-        <menuitem action="Properties" />
+        <menuitem action="SiteSettings" />
     </popup>
 </ui>
 '''
@@ -68,8 +69,8 @@ class MainWindow:
             ('AddFile', Gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
             ('Generate', None, 'Generate', None, None, self.generate_cb),
             ('Upload', None, 'Upload', None, None, self.upload_cb),
-            ('Properties', Gtk.STOCK_PROPERTIES, None, None, None,
-                self.properties_cb)
+            ('SiteSettings', None, "Site Settings...", None, None,
+                self.show_site_settings)
         ))
         self.site_actions.set_sensitive(False)
         self.selection_actions = Gtk.ActionGroup('selection_actions')
@@ -99,6 +100,8 @@ class MainWindow:
         width = config.settings.getint('state', 'width')
         height = config.settings.getint('state', 'height')
         self.window.resize(width, height)
+
+        self.settings_dialog = None
 
     def create_start_panel(self):
         new = Gtk.Button('New site')
@@ -290,8 +293,10 @@ class MainWindow:
             self.upload_dlg.set_response_sensitive(Gtk.ResponseType.CLOSE, True)
             return False
 
-    def properties_cb(self, action):
-        site_properties.properties_dialog(self.site, self.window)
+    def show_site_settings(self, action):
+        if self.settings_dialog is None:
+            self.settings_dialog = SiteSettingsDialog(self.site, self.window)
+        self.settings_dialog.run()
 
     def load_site(self, filename):
         self.site = site.Site(filename)
