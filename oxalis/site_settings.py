@@ -61,11 +61,12 @@ class SiteSettingsDialog:
         self.dialog.hide()
 
     def fill_settings(self, settings):
-        for entry, (section, key) in self.entries_to_settings.items():
-            self.entries[entry].set_text(settings[section][key])
+        for entry, (section, option) in self.entries_to_settings.items():
+            value = settings.get(section, option, fallback="")
+            self.entries[entry].set_text(value)
 
     def save_settings(self, settings):
-        for entry, (section, setting) in self.entries_to_settings.items():
+        for entry, (section, option) in self.entries_to_settings.items():
             if section not in settings:
                 settings[section] = {}
-            settings[section][setting] = self.entries[entry].get_text()
+            settings[section][option] = self.entries[entry].get_text()
