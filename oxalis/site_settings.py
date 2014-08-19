@@ -51,13 +51,13 @@ class SiteSettingsDialog:
             self.entries[entry] = builder.get_object(entry)
 
     def run(self):
-        "Run dialog and save user modifications of settings"
+        """Run dialog and save user modifications of settings."""
         self.fill_settings(self.site.config)
         self.dialog.show_all()
         response = self.dialog.run()
         if response == Gtk.ResponseType.OK:
             self.save_settings(self.site.config)
-            self.site.config.write()
+            self.site.config.save()
         self.dialog.hide()
 
     def fill_settings(self, settings):

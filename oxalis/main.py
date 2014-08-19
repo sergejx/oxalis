@@ -22,8 +22,14 @@ import subprocess
 
 from gi.repository import Gtk, GLib
 
-from oxalis import config, files_browser, site, server, upload, util
+from oxalis import files_browser, site, server, upload, util
+from oxalis.config import Configuration
 from oxalis.site_settings import SiteSettingsDialog
+
+XDG_CONFIG_HOME = (os.environ.get("XDG_CONFIG_HOME")
+                   or os.path.expanduser("~/.config"))
+# Read application configuration
+settings = Configuration(os.path.join(XDG_CONFIG_HOME, 'oxalis', 'settings'))
 
 
 ui = '''
@@ -97,8 +103,8 @@ class MainWindow:
 
         self.create_start_panel()
 
-        width = config.settings.getint('state', 'width')
-        height = config.settings.getint('state', 'height')
+        width = settings.getint('state', 'width', fallback=500)
+        height = settings.getint('state', 'height', fallback=500)
         self.window.resize(width, height)
 
         self.settings_dialog = None
@@ -333,6 +339,6 @@ class MainWindow:
             self.site.close()
 
         width, height = self.window.get_size()
-        config.settings.set('state', 'width', width)
-        config.settings.set('state', 'height', height)
-        config.settings.write()
+        settings.setint('state', 'width', width)
+        settings.setint('state', 'height', height)
+        settings.save()

@@ -50,14 +50,6 @@ DEFAULT_INDEX = """Title: {name}
 ====================
 """
 
-CONFIG_DEFAULTS = {
-    'project': {},
-    'preview': {
-        'url_path': "/",
-    },
-    'upload': {},
-}
-
 
 def create_site(path):
     name = os.path.basename(path)
@@ -66,9 +58,9 @@ def create_site(path):
     os.mkdir(oxalis_dir)
 
     # Write site configuration
-    config = Configuration(oxalis_dir, 'config', CONFIG_DEFAULTS)
+    config = Configuration(os.path.join(oxalis_dir, 'config'))
     config.set('project', 'format', '0.3-dev')
-    config.write()
+    config.save()
 
     # Make configuration file readable only by owner
     # (it contains FTP password)
@@ -133,14 +125,14 @@ class Site(object):
         self.config_dir = os.path.join(self.directory, "_oxalis")
         self.templates_dir = os.path.join(self.config_dir, 'templates')
 
-        self.config = Configuration(self.config_dir, 'config', CONFIG_DEFAULTS)
+        self.config = Configuration(os.path.join(self.config_dir, 'config'))
 
         self.store = SiteStore()
         self._load_files_tree()
 
     def get_url_path(self):
         """Return path part of site preview URL."""
-        path = self.config.get('preview', 'url_path').strip('/')
+        path = self.config.get('preview', 'url_path', fallback='').strip('/')
         if len(path) == 0:
             return path
         else:
@@ -208,7 +200,7 @@ class Site(object):
 
     def close(self):
         """Close site and save its state"""
-        self.config.write()
+        self.config.save()
 
     def new_file(self, name, parent):
         """Create new file."""
