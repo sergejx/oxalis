@@ -56,11 +56,8 @@ def about_app(action, param):
                             comments=oxalis.__description__,
                             copyright=oxalis.__copyright__,
                             website=oxalis.__url__,
-                            license_type=Gtk.License.GPL_2_0)
-    about.set_authors([oxalis.__author__])
-    about.add_credit_section("Code Includes",
-                             ["smartypants.py by Chad Miller and Yu-Jie Lin",
-                              "Author of original SmartyPants is John Gruber"])
+                            license_type=Gtk.License.GPL_2_0,
+                            authors=[oxalis.__author__])
     about.run()
     about.destroy()
 
