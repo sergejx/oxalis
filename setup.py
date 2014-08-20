@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 from setuptools import setup
 
-from oxalis import APP_INFO
+import oxalis
 
-setup(name="oxalis",
-      version=APP_INFO['version'],
-      description=APP_INFO['description'],
-      author="Sergej Chodarev",
+setup(name=oxalis.__package__,
+      version=oxalis.__version__,
+      description=oxalis.__description__,
+      author=oxalis.__author__,
       author_email="sergejx@centrum.sk",
-      url=APP_INFO['url'],
+      url=oxalis.__url__,
       packages=['oxalis'],
       scripts=['scripts/oxalis'],
       data_files=[

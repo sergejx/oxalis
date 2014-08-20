@@ -1,4 +1,4 @@
-# Oxalis - A website building tool for Gnome
+# Oxalis -- A website building tool for Gnome
 # Copyright (C) 2014 Sergej Chodarev
 #
 # This program is free software; you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 
 from gi.repository import Gtk
 
-import oxalis
+from oxalis.resources import resource_path
 
 
 class SiteSettingsDialog:
@@ -35,9 +35,8 @@ class SiteSettingsDialog:
         self.site = site
 
         builder = Gtk.Builder()
-        builder.add_objects_from_file(
-            oxalis.resource_path('ui', 'site-settings.ui'),
-            ('site-settings-box',))
+        builder.add_objects_from_file(resource_path('ui', 'site-settings.ui'),
+                                      ['site-settings-box'])
         self.dialog = Gtk.Dialog(title="Site Settings", parent=window,
                                  use_header_bar=1)
         self.dialog.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,

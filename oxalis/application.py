@@ -18,7 +18,7 @@
 import sys
 from gi.repository import Gio, Gtk
 
-from oxalis import APP_INFO
+import oxalis
 from oxalis.main import MainWindow
 
 
@@ -51,13 +51,13 @@ def activate_app(app):
 
 
 def about_app(action, param):
-    about = Gtk.AboutDialog(name=APP_INFO['name'], version=APP_INFO['version'],
-                            logo_icon_name='oxalis',
-                            comments=APP_INFO['description'],
-                            copyright=APP_INFO['copyright'],
-                            website=APP_INFO['url'],
+    about = Gtk.AboutDialog(name="Oxalis", version=oxalis.__version__,
+                            logo_icon_name=oxalis.__package__,
+                            comments=oxalis.__description__,
+                            copyright=oxalis.__copyright__,
+                            website=oxalis.__url__,
                             license_type=Gtk.License.GPL_2_0)
-    about.set_authors(["Sergej Chodarev"])
+    about.set_authors([oxalis.__author__])
     about.add_credit_section("Code Includes",
                              ["smartypants.py by Chad Miller and Yu-Jie Lin",
                               "Author of original SmartyPants is John Gruber"])
