@@ -158,7 +158,7 @@ class MainWindow:
                 # Display error message
                 message = 'Selected directory is not valid Oxalis site'
                 dlg = Gtk.MessageDialog(parent=self.window,
-                    type=Gtk.MessageType.ERROR, buttons=Gtk.BUTTONS_OK,
+                    type=Gtk.MessageType.ERROR, buttons=Gtk.ButtonsType.OK,
                     message_format=message)
                 dlg.run()
                 dlg.destroy()
@@ -251,7 +251,7 @@ class MainWindow:
 
         if not process:
             dlg = Gtk.MessageDialog(self.window, 0, Gtk.MessageType.ERROR,
-                Gtk.BUTTONS_OK, 'Uploading is not configured')
+                Gtk.ButtonsType.OK, 'Uploading is not configured')
             dlg.run()
             dlg.destroy()
             return
