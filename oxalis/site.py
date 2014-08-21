@@ -90,14 +90,17 @@ def create_site(path):
     os.chmod(os.path.join(oxalis_dir, 'sitecopy'), 0o700)
 
 
-def dir_is_site(directory):
-    '''Checks if directory contains Oxalis site
-
-    directory - full path to directory
-    Returns True if directory contains Oxalis site or False if not
-    '''
-    # Simply check if directory contains subdirectory _oxalis
-    return os.path.isdir(os.path.join(directory, '_oxalis'))
+def check_site_format(path):
+    """
+    Checks if directory contains Oxalis site and what is the version of site
+    format. Returns format version as a string or False it there is no Oxalis
+    site on the path.
+    """
+    oxalis_dir = os.path.join(path, '_oxalis')
+    if not os.path.isdir(oxalis_dir):
+        return False  # Not an oxalis site
+    config = Configuration(os.path.join(oxalis_dir, 'config'))
+    return config.get('project', 'format')
 
 
 def compare_files(x, y):

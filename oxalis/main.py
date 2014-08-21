@@ -152,7 +152,7 @@ class MainWindow:
         chooser.destroy()
 
         if response == Gtk.ResponseType.OK:
-            if site.dir_is_site(dirname):
+            if site.check_site_format(dirname):
                 self.load_site(dirname)
             else:
                 # Display error message
