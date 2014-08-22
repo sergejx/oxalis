@@ -40,7 +40,7 @@ def start_upload(site):
     Process of uploading can be monitored using check_upload function.
     """
     for key in ('host', 'remotedir', 'user', 'passwd'):
-        if not site.config.has_option('upload', key):
+        if not site.upload_config.has_option('upload', key):
             return False
 
     rcfile = os.path.join(site.config_dir, "sitecopyrc")
@@ -50,9 +50,9 @@ def start_upload(site):
     # It is needed if we upload to given location for the first time
     need_init = False
     for key in ('host', 'remotedir'):
-        if site.config.has_option('upload', 'last_'+key):
-            last = site.config.get('upload', 'last_'+key)
-            current = site.config.get('upload', key)
+        if site.upload_config.has_option('upload', 'last_'+key):
+            last = site.upload_config.get('upload', 'last_'+key)
+            current = site.upload_config.get('upload', key)
             if current != last:
                 need_init = True
     if not os.path.exists(os.path.join(storepath, SITENAME)):
@@ -61,7 +61,7 @@ def start_upload(site):
     # Update sitecopyrc file
     f = open(rcfile, 'w')
     tpl = string.Template(SITECOPYRC_TPL)
-    f.write(tpl.substitute(dict(site.config.items('upload')),
+    f.write(tpl.substitute(dict(site.upload_config.items('upload')),
         name=SITENAME, local=site.directory))
     f.close()
 
@@ -74,8 +74,8 @@ def start_upload(site):
         stdout=subprocess.PIPE)
 
     for key in ('host', 'remotedir'):
-        site.config.set('upload', 'last_'+key,
-                           site.config.get('upload', key))
+        site.upload_config.set('upload', 'last_'+key,
+                               site.upload_config.get('upload', key))
 
     return process
 

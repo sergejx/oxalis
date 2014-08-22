@@ -59,12 +59,16 @@ def create_site(path):
 
     # Write site configuration
     config = Configuration(os.path.join(oxalis_dir, 'config'))
-    config.set('project', 'format', '0.3-dev')
+    config.set('project', 'format', '0.3')
     config.save()
 
-    # Make configuration file readable only by owner
+    upload_conf = Configuration(os.path.join(oxalis_dir, 'upload'))
+    upload_conf.add_section('upload')
+    upload_conf.save()
+
+    # Make upload configuration file readable only by owner
     # (it contains FTP password)
-    os.chmod(os.path.join(oxalis_dir, 'config'), 0o600)
+    os.chmod(os.path.join(oxalis_dir, 'upload'), 0o600)
 
     index_text_path = os.path.join(path, 'index.md')
     index_html_path = os.path.join(path, 'index.html')
@@ -129,6 +133,8 @@ class Site(object):
         self.templates_dir = os.path.join(self.config_dir, 'templates')
 
         self.config = Configuration(os.path.join(self.config_dir, 'config'))
+        self.upload_config = Configuration(
+            os.path.join(self.config_dir, 'upload'))
 
         self.store = SiteStore()
         self._load_files_tree()
@@ -204,6 +210,7 @@ class Site(object):
     def close(self):
         """Close site and save its state"""
         self.config.save()
+        self.upload_config.save()
 
     def new_file(self, name, parent):
         """Create new file."""

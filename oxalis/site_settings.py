@@ -23,12 +23,11 @@ from oxalis.resources import resource_path
 class SiteSettingsDialog:
     """Dialog for editing site settings."""
 
-    entries_to_settings = {
-        'preview_url': ('preview', 'url_path'),
-        'upload_host': ('upload', 'host'),
-        'upload_user': ('upload', 'user'),
-        'upload_password': ('upload', 'passwd'),
-        'upload_dir': ('upload', 'remotedir')
+    upload_entries = {  # entry ID: configuration key
+        'upload_host': 'host',
+        'upload_user': 'user',
+        'upload_password': 'passwd',
+        'upload_dir': 'remotedir'
     }
 
     def __init__(self, site,  window):
@@ -45,27 +44,30 @@ class SiteSettingsDialog:
         box = builder.get_object('site-settings-box')
         self.dialog.get_content_area().add(box)
 
+        self.preview_url_entry = builder.get_object('preview_url')
         self.entries = {}
-        for entry in self.entries_to_settings.keys():
+        for entry in self.upload_entries.keys():
             self.entries[entry] = builder.get_object(entry)
 
     def run(self):
         """Run dialog and save user modifications of settings."""
-        self.fill_settings(self.site.config)
+        self.fill_settings(self.site)
         self.dialog.show_all()
         response = self.dialog.run()
         if response == Gtk.ResponseType.OK:
-            self.save_settings(self.site.config)
+            self.save_settings(self.site)
             self.site.config.save()
         self.dialog.hide()
 
-    def fill_settings(self, settings):
-        for entry, (section, option) in self.entries_to_settings.items():
-            value = settings.get(section, option, fallback="")
+    def fill_settings(self, site):
+        self.preview_url_entry.set_text(
+            site.config.get('preview', 'url_path', fallback=''))
+        for entry, option in self.upload_entries.items():
+            value = site.upload_config.get('upload', option, fallback="")
             self.entries[entry].set_text(value)
 
-    def save_settings(self, settings):
-        for entry, (section, option) in self.entries_to_settings.items():
-            if section not in settings:
-                settings[section] = {}
-            settings[section][option] = self.entries[entry].get_text()
+    def save_settings(self, site):
+        site.config.set('preview', 'url_path', self.preview_url_entry.get_text())
+        for entry, option in self.upload_entries.items():
+            site.upload_config.set('upload', option,
+                                   self.entries[entry].get_text())

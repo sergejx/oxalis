@@ -22,12 +22,17 @@ def test_site_dir():
     """Was site dir created?"""
     assert os.path.isdir(TESTDIR)
 
+def test_site_format():
+    assert oxalis.site.check_site_format(TESTDIR) == '0.3'
+
 def test_config():
     """Was site configuration created with right permissions?"""
     assert os.path.isdir(CONFDIR)
     conffile = os.path.join(CONFDIR, "config")
     assert os.path.exists(conffile)
-    assert perm(conffile) == 0o600
+    uploadconf = os.path.join(CONFDIR, "upload")
+    assert os.path.exists(uploadconf)
+    assert perm(uploadconf) == 0o600
 
 def test_sitecopy_config():
     """Was Sitecopy configuration created with right permissions?"""

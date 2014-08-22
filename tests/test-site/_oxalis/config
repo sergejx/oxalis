@@ -1,8 +1,5 @@
 [project]
-format = 0.3-dev
+format = 0.3
 
 [preview]
 url_path = /
-
-[upload]
-
