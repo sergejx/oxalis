@@ -276,7 +276,8 @@ class SiteStore:
     def remove(self, document):
         del self.index[document.path]
         self.tree_model.remove(document.tree_iter)
-        self._generated.remove(document.generated_path())
+        if document.generated_path() is not None:
+            self._generated.remove(document.generated_path())
 
     def get_by_path(self, path):
         return self.index[path]
