@@ -100,10 +100,10 @@ def check_site_format(path):
     format. Returns format version as a string or False it there is no Oxalis
     site on the path.
     """
-    oxalis_dir = os.path.join(path, '_oxalis')
-    if not os.path.isdir(oxalis_dir):
+    config_file = os.path.join(path, '_oxalis', 'config')
+    if not os.path.isfile(config_file):
         return False  # Not an oxalis site
-    config = Configuration(os.path.join(oxalis_dir, 'config'))
+    config = Configuration(config_file)
     return config.get('project', 'format')
 
 

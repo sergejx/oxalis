@@ -24,6 +24,7 @@ from gi.repository import Gtk, GLib
 
 from oxalis import files_browser, site, server, upload, util
 from oxalis.config import Configuration
+from oxalis.format_conversion import convert_01_to_03
 from oxalis.site_settings import SiteSettingsDialog
 
 XDG_CONFIG_HOME = (os.environ.get("XDG_CONFIG_HOME")
@@ -141,6 +142,28 @@ class MainWindow:
             site.create_site(dirname)
             self.load_site(dirname)
 
+    def convert_site(self, path):
+        """Convert site to new format and load it."""
+        message = "Convert selected site to Oxalis 0.3 format?"
+        secondary_message = (
+            "From version 0.3 Oxalis uses new format of sites. Selected site " +
+            "has older format and needs to be converted before opening. " +
+            "The conversion preserves all site contents.\n" +
+            "Note, however, that after conversion it would not be possible " +
+            "to open the site in Oxalis 0.1.")
+        dlg = Gtk.MessageDialog(parent=self.window,
+                                type=Gtk.MessageType.QUESTION,
+                                message_format=message)
+        dlg.format_secondary_text(secondary_message)
+        dlg.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                        "Convert", Gtk.ResponseType.YES)
+        dlg.set_default_response(Gtk.ResponseType.YES)
+        response = dlg.run()
+        if response == Gtk.ResponseType.YES:
+            convert_01_to_03(path)
+            self.load_site(path)
+        dlg.destroy()
+
     def open_site_cb(self, *args):
         chooser = Gtk.FileChooserDialog(
             'Open Site', action=Gtk.FileChooserAction.SELECT_FOLDER,
@@ -152,8 +175,11 @@ class MainWindow:
         chooser.destroy()
 
         if response == Gtk.ResponseType.OK:
-            if site.check_site_format(dirname):
+            site_format = site.check_site_format(dirname)
+            if site_format == '0.3':
                 self.load_site(dirname)
+            elif site_format == '0.1':
+                self.convert_site(dirname)
             else:
                 # Display error message
                 message = 'Selected directory is not valid Oxalis site'
