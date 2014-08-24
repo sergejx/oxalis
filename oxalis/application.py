@@ -16,13 +16,14 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 import sys
-from gi.repository import Gio, Gtk
+from gi.repository import Gio, GLib, Gtk
 
 import oxalis
 from oxalis import main, resources
 
 
 def init_app():
+    GLib.set_application_name("Oxalis")
     app = Gtk.Application.new('sergejx.oxalis', Gio.ApplicationFlags.FLAGS_NONE)
     app.connect('activate', activate_app)
     return app
@@ -51,7 +52,7 @@ def activate_app(app):
 
 
 def about_app(action, param):
-    about = Gtk.AboutDialog(name="Oxalis", version=oxalis.__version__,
+    about = Gtk.AboutDialog(version=oxalis.__version__,
                             logo_icon_name=oxalis.__package__,
                             comments=oxalis.__description__,
                             copyright=oxalis.__copyright__,
