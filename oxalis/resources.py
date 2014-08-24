@@ -16,12 +16,14 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 from os import environ
-from os.path import abspath, dirname, expanduser, join
+from os.path import abspath, dirname, join
 import sys
 
+from gi.repository import GLib
+
+
 DATA_DIR = join(sys.prefix, 'share', 'oxalis')
-XDG_CONFIG_HOME = environ.get('XDG_CONFIG_HOME') or expanduser('~/.config')
-CONFIG_DIR = join(XDG_CONFIG_HOME, 'oxalis')
+CONFIG_DIR = join(GLib.get_user_config_dir(), 'oxalis')
 
 
 def resource_path(*path):
