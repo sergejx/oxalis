@@ -23,8 +23,9 @@ from oxalis import main, resources
 
 
 def init_app():
-    GLib.set_application_name("Oxalis")
     app = Gtk.Application.new('sergejx.oxalis', Gio.ApplicationFlags.FLAGS_NONE)
+    GLib.set_application_name("Oxalis")
+    Gtk.Window.set_default_icon_name('oxalis')
     app.connect('activate', activate_app)
     return app
 

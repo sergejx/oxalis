@@ -57,11 +57,6 @@ class MainWindow:
         self.window.set_title('Oxalis')
         self.window.connect_after('delete-event', self.quit_cb)
 
-        try:
-            Gtk.Window.set_default_icon_name('oxalis')
-        except GLib.GError:
-            print("Warning: Can't load window icon")
-
         # Create menu bar
         self.ui_manager = Gtk.UIManager()
         accelgroup = self.ui_manager.get_accel_group()
