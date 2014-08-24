@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from setuptools import setup
+from distutils.core import setup
 
 import oxalis
 
@@ -9,7 +9,7 @@ setup(name=oxalis.__package__,
       author=oxalis.__author__,
       author_email="sergejx@centrum.sk",
       url=oxalis.__url__,
-      packages=['oxalis'],
+      packages=['oxalis', 'oxalis.converters'],
       scripts=['scripts/oxalis'],
       data_files=[
           ('share/applications', ['data/oxalis.desktop']),
@@ -21,6 +21,4 @@ setup(name=oxalis.__package__,
            ['data/icons/hicolor/256x256/apps/oxalis.png']),
           ('/usr/share/oxalis/ui', ['data/ui/site-settings.ui']),
           ('share/doc/oxalis', ['COPYING'])
-      ],
-      requires=['markdown', 'jinja2']
-)
+      ])
