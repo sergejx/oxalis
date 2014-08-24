@@ -1,10 +1,9 @@
 [Desktop Entry]
-Encoding=UTF-8
-Name=Oxalis Web Site Editor
-Comment=Create and edit web sites
-Icon=oxalis
+Name=Oxalis
+Comment=A website building tool for Gnome
 Exec=oxalis
+Icon=oxalis
 Terminal=false
 Type=Application
 StartupNotify=true
-Categories=GTK;GNOME;Application;Development;WebDevelopment;
+Categories=GTK;GNOME;Development;WebDevelopment;

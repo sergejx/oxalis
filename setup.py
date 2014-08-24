@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
+import os
 from distutils.core import setup
+from distutils.command.install_data import install_data
 
 import oxalis
+
+
+class InstallData(install_data):
+    def run(self):
+        super().run()
+        icon_path = os.path.join(self.install_dir, "share/icons/hicolor")
+        self.spawn(["gtk-update-icon-cache", icon_path])
+
 
 setup(name=oxalis.__package__,
       version=oxalis.__version__,
@@ -21,4 +31,5 @@ setup(name=oxalis.__package__,
            ['data/icons/hicolor/256x256/apps/oxalis.png']),
           ('/usr/share/oxalis/ui', ['data/ui/site-settings.ui']),
           ('share/doc/oxalis', ['COPYING'])
-      ])
+      ],
+      cmdclass={'install_data': InstallData})
