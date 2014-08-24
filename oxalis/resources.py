@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 from os import environ
-from os.path import join, expanduser
+from os.path import abspath, dirname, expanduser, join
 import sys
 
 DATA_DIR = join(sys.prefix, 'share', 'oxalis')
@@ -32,3 +32,15 @@ def resource_path(*path):
 def configuration_path(path):
     """Get full path to user configuration file."""
     return join(CONFIG_DIR, *path)
+
+
+def setup_development_paths():
+    """Setup paths to resources for cases when application is not installed."""
+    global DATA_DIR
+    if not __file__.startswith(sys.prefix):  # Running without installation
+        # Set data directory
+        DATA_DIR = abspath(
+            join(dirname(__file__), '..', 'data'))
+        # Also alter XDG_DATA_DIR
+        xdg_data_dirs = environ.get('XDG_DATA_DIRS', '/usr/share/')
+        environ['XDG_DATA_DIRS'] = DATA_DIR + ':' + xdg_data_dirs

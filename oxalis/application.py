@@ -19,7 +19,7 @@ import sys
 from gi.repository import Gio, Gtk
 
 import oxalis
-from oxalis.main import MainWindow
+from oxalis import main, resources
 
 
 def init_app():
@@ -45,7 +45,7 @@ def setup_menu(app):
 
 def activate_app(app):
     setup_menu(app)
-    win = MainWindow()
+    win = main.MainWindow()
     app.add_window(win.window)
     win.window.show_all()
 
@@ -63,6 +63,7 @@ def about_app(action, param):
 
 
 def run():
+    resources.setup_development_paths()
     app = init_app()
     app.run(sys.argv)
 
