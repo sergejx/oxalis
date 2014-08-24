@@ -49,4 +49,5 @@ class Configuration(ConfigParser):
         directory = os.path.dirname(self.filename)
         if not os.path.exists(directory):
             os.makedirs(directory)
-        ConfigParser.write(self, open(self.filename, 'w'))
+        with open(self.filename, 'w') as file:
+            ConfigParser.write(self, file)
