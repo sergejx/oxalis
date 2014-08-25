@@ -49,10 +49,10 @@ class MarkdownConverter:
 
     def _convert_markdown(self, text):
         html = self._md.convert(text)
-        meta = self._md.Meta
+        context = {'content': html}
+        for key, value in self._md.Meta.items():
+            context[key] = "\n".join(value)
         self._md.reset()
-        context = dict(meta)
-        context['content'] = html
         return context
 
     def convert(self):
@@ -60,7 +60,7 @@ class MarkdownConverter:
             text = f.read()
         context = self._convert_markdown(text)
 
-        template_name = context.get("template", ["default"])[0] + ".html"
+        template_name = context.get("template", "default") + ".html"
         template = self._env.get_template(template_name)
         full_html = template.render(context)
 

@@ -25,13 +25,13 @@ class TestMarkdownConverter(TestCase):
             with open(os.path.join(tempdir, "test.md"), 'w') as f:
                 f.write("# Hello\n")
             with open(os.path.join(tempdir, "meta.md"), 'w') as f:
-                f.write("Template: other\n\n# Hello\n")
+                f.write("Title: title\nTemplate: other\n\n# Hello\n")
             templates_path = os.path.join(tempdir, "_templates")
             os.mkdir(templates_path)
             with open(os.path.join(templates_path, "default.html"), 'w') as f:
                 f.write("Default: {{ content }}")
             with open(os.path.join(templates_path, "other.html"), 'w') as f:
-                f.write("Other: {{ content }}")
+                f.write("Other {{ title }}: {{ content }}")
 
             # Without metadata
             mc = MarkdownConverter(tempdir, "test.md")
@@ -43,4 +43,4 @@ class TestMarkdownConverter(TestCase):
             mc = MarkdownConverter(tempdir, "meta.md")
             mc.convert()
             with open(os.path.join(tempdir, "meta.html")) as f:
-                self.assertEqual(f.read(), "Other: <h1>Hello</h1>")
+                self.assertEqual(f.read(), "Other title: <h1>Hello</h1>")
