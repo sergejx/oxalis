@@ -47,16 +47,22 @@ class MarkdownConverter:
     def dependencies(self):
         return []  # Not implemented
 
+    def _convert_markdown(self, text):
+        html = self._md.convert(text)
+        meta = self._md.Meta
+        self._md.reset()
+        context = dict(meta)
+        context['content'] = html
+        return context
+
     def convert(self):
         with open(self.full_path) as f:
             text = f.read()
-        html = self._md.convert(text)
-        meta = self._md.Meta
-        template_name = meta.get("template", ["default"])[0] + ".html"
+        context = self._convert_markdown(text)
+
+        template_name = context.get("template", ["default"])[0] + ".html"
         template = self._env.get_template(template_name)
-        context = dict(meta)
-        context['content'] = html
         full_html = template.render(context)
+
         with open(self.full_target_path, "w") as f:
             f.write(full_html)
-        self._md.reset()  # Reset Markdown
