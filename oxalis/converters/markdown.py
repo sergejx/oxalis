@@ -33,7 +33,7 @@ class MarkdownConverter:
         base, ext = os.path.splitext(self.path)
         self.target_path = base + ".html"
         self.full_target_path = os.path.join(site_path, self.target_path)
-        self._md = Markdown(extensions=['meta'])
+        self._md = Markdown(extensions=['meta', 'extra'])
         templates_dir = os.path.join(site_path, TEMPLATES_DIR)
         self._env = Environment(loader=FileSystemLoader(templates_dir))
 
