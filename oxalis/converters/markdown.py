@@ -50,8 +50,9 @@ class MarkdownConverter:
     def _convert_markdown(self, text):
         html = self._md.convert(text)
         context = {'content': html}
-        for key, value in self._md.Meta.items():
-            context[key] = "\n".join(value)
+        if hasattr(self._md, 'Meta'):
+            for key, value in self._md.Meta.items():
+                context[key] = "\n".join(value)
         self._md.reset()
         return context
 

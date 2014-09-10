@@ -44,3 +44,18 @@ class TestMarkdownConverter(TestCase):
             mc.convert()
             with open(os.path.join(tempdir, "meta.html")) as f:
                 self.assertEqual(f.read(), "Other title: <h1>Hello</h1>")
+
+    def test_empty_file(self):
+        with TemporaryDirectory() as tempdir:
+            # Prepare test files
+            with open(os.path.join(tempdir, "test.md"), 'w') as f:
+                f.write("")
+            templates_path = os.path.join(tempdir, "_templates")
+            os.mkdir(templates_path)
+            with open(os.path.join(templates_path, "default.html"), 'w') as f:
+                f.write("Default: {{ content }}")
+
+            mc = MarkdownConverter(tempdir, "test.md")
+            mc.convert()
+            with open(os.path.join(tempdir, "test.html")) as f:
+                self.assertEqual(f.read(), "Default: ")
