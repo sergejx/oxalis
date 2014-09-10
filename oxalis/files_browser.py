@@ -132,7 +132,7 @@ class FilesBrowser:
     def _on_selection_changed(self, selection, name):
         count = selection.count_selected_rows()
         if count == 0:
-            self.application.selection_actions.set_sensitive(False)
+            self.application.enable_selection_actions(False)
         else:
-            self.application.selection_actions.set_sensitive(True)
+            self.application.enable_selection_actions(True)
 

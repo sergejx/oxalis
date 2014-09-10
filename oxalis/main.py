@@ -1,6 +1,5 @@
-# Oxalis Web Editor
-#
-# Copyright (C) 2005-2007 Sergej Chodarev
+# Oxalis -- A website building tool for Gnome
+# Copyright (C) 2005-2014 Sergej Chodarev
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,7 +19,7 @@ import os
 from threading import Thread
 import subprocess
 
-from gi.repository import Gtk, GLib
+from gi.repository import Gio, GLib, Gtk
 
 from oxalis import files_browser, site, server, upload, util
 from oxalis.config import Configuration
@@ -33,77 +32,42 @@ XDG_CONFIG_HOME = (os.environ.get("XDG_CONFIG_HOME")
 settings = Configuration(os.path.join(XDG_CONFIG_HOME, 'oxalis', 'settings'))
 
 
-ui = '''
-<ui>
-    <popup action="SiteMenu">
-        <menuitem action="NewFile" />
-        <menuitem action="NewDirectory" />
-        <menuitem action="AddFile" />
-        <menuitem action="RenameSelected" />
-        <menuitem action="DeleteSelected" />
-        <separator />
-        <menuitem action="Generate" />
-        <menuitem action="Upload" />
-        <separator />
-        <menuitem action="SiteSettings" />
-    </popup>
-</ui>
-'''
 
 
 class MainWindow:
     def __init__(self):
         self.window = Gtk.ApplicationWindow()
-        self.window.set_title('Oxalis')
         self.window.connect_after('delete-event', self.quit_cb)
-
-        # Create menu bar
-        self.ui_manager = Gtk.UIManager()
-        accelgroup = self.ui_manager.get_accel_group()
-        self.window.add_accel_group(accelgroup)
-        self.ui_manager.add_ui_from_string(ui)
-
-        self.site_actions = Gtk.ActionGroup('site_actions')
-        self.site_actions.add_actions((
-            ('NewFile', None, "New File", None, None, self.on_new_file),
-            ('NewDirectory', None, 'New Directory', None, None,
-             self.on_new_directory),
-            ('AddFile', Gtk.STOCK_ADD, 'Add File', None, None, self.add_file_cb),
-            ('Generate', None, 'Generate', None, None, self.generate_cb),
-            ('Upload', None, 'Upload', None, None, self.upload_cb),
-            ('SiteSettings', None, "Site Settings...", None, None,
-                self.show_site_settings)
-        ))
-        self.site_actions.set_sensitive(False)
-        self.selection_actions = Gtk.ActionGroup('selection_actions')
-        self.selection_actions.add_actions((
-            ('RenameSelected', None, 'Rename selected', None, None,
-                self.rename_selected_cb),
-            ('DeleteSelected', Gtk.STOCK_DELETE, 'Delete selected', None, None,
-                self.delete_selected_cb)
-        ))
-        self.selection_actions.set_sensitive(False)
-
-        self.ui_manager.insert_action_group(self.site_actions, 0)
-        self.ui_manager.insert_action_group(self.selection_actions, 0)
 
         # Create header bar
         self.header = Gtk.HeaderBar(show_close_button=True)
         self.header.set_title("Oxalis")
-        menu_button = Gtk.MenuButton()
-        menu_button.set_popup(self.ui_manager.get_widget('/SiteMenu'))
-        menu_button.set_image(Gtk.Image.new_from_icon_name(
-            'emblem-system-symbolic', Gtk.IconSize.BUTTON))
-        self.header.pack_end(menu_button)
         self.window.set_titlebar(self.header)
 
         self.create_start_panel()
 
+        # Restore window size
         width = settings.getint('state', 'width', fallback=500)
         height = settings.getint('state', 'height', fallback=500)
         self.window.resize(width, height)
 
+        self.init_actions()
         self.settings_dialog = None
+
+    def init_actions(self):
+        self.add_action("new-file", self.on_new_file)
+        self.add_action("new-directory", self.on_new_directory)
+        self.add_action('add-file', self.on_add_file)
+        self.add_action('rename-selected', self.on_rename_selected)
+        self.add_action('delete-selected', self.on_delete_selected)
+        self.add_action('generate', self.on_generate)
+        self.add_action('upload', self.on_upload)
+        self.add_action('settings', self.show_site_settings)
+
+    def add_action(self, name, callback):
+        new_file_action = Gio.SimpleAction(name=name)
+        new_file_action.connect('activate', callback)
+        self.window.add_action(new_file_action)
 
     def create_start_panel(self):
         new = Gtk.Button('New site')
@@ -184,20 +148,49 @@ class MainWindow:
                 dlg.run()
                 dlg.destroy()
 
+    def setup_site_header(self):
+        # Set window title to site name
+        self.header.set_title(os.path.basename(self.site.directory))
+        self.header.set_subtitle(os.path.dirname(self.site.directory))
+
+        # Add "gear" menu
+        menu_button = Gtk.MenuButton()
+        menu_button.set_menu_model(self.create_menu())
+        menu_button.set_image(Gtk.Image.new_from_icon_name(
+            'emblem-system-symbolic', Gtk.IconSize.BUTTON))
+        self.header.pack_end(menu_button)
+        menu_button.show()
+
+    def create_menu(self):
+        gear_menu = Gio.Menu.new()
+        files_menu_section = Gio.Menu()
+        files_menu_section.append("New File", 'win.new-file')
+        files_menu_section.append("New Directory", 'win.new-directory')
+        files_menu_section.append("Add File", 'win.add-file')
+        files_menu_section.append("Rename Selected", 'win.rename-selected')
+        files_menu_section.append("Delete Selected", 'win.delete-selected')
+        gear_menu.append_section(None, files_menu_section)
+        site_menu_section = Gio.Menu()
+        site_menu_section.append("Generate", 'win.generate')
+        site_menu_section.append("Upload", 'win.upload')
+        site_menu_section.append("Site Settings...", 'win.settings')
+        gear_menu.append_section(None, site_menu_section)
+        return gear_menu
+
     def create_filebrowser(self):
         self.filebrowser = files_browser.FilesBrowser(self, self.site)
 
-    def on_new_file(self, action):
+    def on_new_file(self, action, param):
         response, name = self.ask_name("File")
         if response == Gtk.ResponseType.OK and name != '':
             self.site.new_file(name, self.filebrowser.get_target_dir())
 
-    def on_new_directory(self, action):
-        response, name = self.ask_name("Label")
+    def on_new_directory(self, action, param):
+        response, name = self.ask_name("Directory")
         if response == Gtk.ResponseType.OK and name != '':
             self.site.new_directory(name, self.filebrowser.get_target_dir())
 
-    def add_file_cb(self, action):
+    def on_add_file(self, action, param):
         chooser = Gtk.FileChooserDialog('Add File', parent=self.window,
             action=Gtk.FileChooserAction.OPEN,
             buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
@@ -210,7 +203,7 @@ class MainWindow:
         if response == Gtk.ResponseType.OK:
             self.site.add_file(filename, self.filebrowser.get_target_dir())
 
-    def rename_selected_cb(self, action):
+    def on_rename_selected(self, action, param):
         '''Rename selected file'''
         obj = self.filebrowser.get_selected_document()
 
@@ -223,7 +216,7 @@ class MainWindow:
         if name != '':
             obj.rename(name)
 
-    def delete_selected_cb(self, action):
+    def on_delete_selected(self, action, param):
         '''Delete selected file, directory or template'''
         obj = self.filebrowser.get_selected_document()
 
@@ -252,10 +245,10 @@ class MainWindow:
     def ask_name(self, title):
         return util.input_dialog(self.window, 'New '+title, 'Name:', 'Create')
 
-    def generate_cb(self, action):
+    def on_generate(self, action, param):
         self.site.generate()
 
-    def upload_cb(self, action):
+    def on_upload(self, action, param):
         dlg = Gtk.MessageDialog(self.window, 0, Gtk.MessageType.QUESTION, 0,
             'Should the site be generated before uploading?')
         dlg.format_secondary_text('''If you made some changes to the site and didn't generate it after that, you should generate it now.''')
@@ -265,7 +258,7 @@ class MainWindow:
         dlg.destroy()
 
         if response == Gtk.ResponseType.YES:
-            self.generate_cb(None)
+            self.on_generate(None, None)
 
         # Start uploading
         process = upload.start_upload(self.site)
@@ -320,7 +313,7 @@ class MainWindow:
             self.upload_dlg.set_response_sensitive(Gtk.ResponseType.CLOSE, True)
             return False
 
-    def show_site_settings(self, action):
+    def show_site_settings(self, action, param):
         if self.settings_dialog is None:
             self.settings_dialog = SiteSettingsDialog(self.site, self.window)
         self.settings_dialog.run()
@@ -328,18 +321,14 @@ class MainWindow:
     def load_site(self, filename):
         self.site = site.Site(filename)
 
-        # Set window title to site name
-        self.header.set_title(os.path.basename(filename))
-        self.header.set_subtitle(os.path.dirname(filename))
-
+        self.setup_site_header()
         self.create_filebrowser()
 
         self.window.remove(self.start_panel)
         self.window.add(self.filebrowser.widget)
         self.filebrowser.widget.show_all()
 
-        self.site_actions.set_sensitive(True)
-        self.selection_actions.set_sensitive(False)  # Nothing is selected
+        self.enable_selection_actions(False)  # Nothing is selected
 
         self.start_server()
 
@@ -363,3 +352,8 @@ class MainWindow:
         settings.setint('state', 'width', width)
         settings.setint('state', 'height', height)
         settings.save()
+
+    def enable_selection_actions(self, enabled):
+        for name in ['rename-selected', 'delete-selected']:
+            self.window.lookup_action(name).set_enabled(enabled)
+
