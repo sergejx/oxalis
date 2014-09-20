@@ -26,6 +26,11 @@ def open_editor(path):
     subprocess.Popen(("xdg-open", path))
 
 
+def open_browser(url):
+    """Open web browser for a URL."""
+    subprocess.Popen(("xdg-open", url))
+
+
 def input_dialog(parent, title, label, ok_label, value=''):
     '''Show dialog asking user for input
 
