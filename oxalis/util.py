@@ -18,6 +18,12 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 from gi.repository import Gtk
+import subprocess
+
+
+def open_editor(path):
+    """Open editor for a file."""
+    subprocess.Popen(("xdg-open", path))
 
 
 def input_dialog(parent, title, label, ok_label, value=''):

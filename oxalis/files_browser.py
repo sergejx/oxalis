@@ -21,6 +21,7 @@ import mimetypes
 from gi.repository import Gio, Gtk
 
 from oxalis.site import SiteStore
+from oxalis.util import open_editor
 
 
 class FilesBrowser:
@@ -127,7 +128,7 @@ class FilesBrowser:
         itr = store.get_iter(path)
         doc = store.get_value(itr, SiteStore.OBJECT_COL)
 
-        self.application.load_file(doc)
+        open_editor(doc.full_path)
 
     def _on_selection_changed(self, selection, name):
         count = selection.count_selected_rows()
@@ -135,4 +136,3 @@ class FilesBrowser:
             self.application.enable_selection_actions(False)
         else:
             self.application.enable_selection_actions(True)
-
