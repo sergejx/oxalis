@@ -31,6 +31,12 @@ def open_browser(url):
     subprocess.Popen(("xdg-open", url))
 
 
+def open_terminal(path):
+    """Open terminal emulator in a path."""
+    # TODO: Detect default terminal, or make it configurable?
+    subprocess.Popen(("gnome-terminal", "--working-directory=" + path))
+
+
 def input_dialog(parent, title, label, ok_label, value=''):
     '''Show dialog asking user for input
 

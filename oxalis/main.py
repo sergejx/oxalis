@@ -24,7 +24,7 @@ from oxalis import files_browser, site, server, upload, util
 from oxalis.config import Configuration
 from oxalis.format_conversion import convert_01_to_03
 from oxalis.site_settings import SiteSettingsDialog
-from oxalis.util import open_browser
+from oxalis.util import open_browser, open_terminal
 
 XDG_CONFIG_HOME = (os.environ.get("XDG_CONFIG_HOME")
                    or os.path.expanduser("~/.config"))
@@ -182,6 +182,7 @@ class SiteWindow:
         self.main.add_action('rename-selected', self.on_rename_selected)
         self.main.add_action('delete-selected', self.on_delete_selected)
         self.main.add_action('preview', self.display_preview)
+        self.main.add_action('terminal', self.display_terminal)
         self.main.add_action('generate', self.on_generate)
         self.main.add_action('upload', self.on_upload)
         self.main.add_action('settings', self.show_site_settings)
@@ -202,8 +203,14 @@ class SiteWindow:
         preview_button = Gtk.Button(action_name='win.preview')
         preview_button.set_image(Gtk.Image.new_from_icon_name(
             'web-browser-symbolic', Gtk.IconSize.BUTTON))
-        self.main.header.pack_end(preview_button)
+        self.main.header.pack_start(preview_button)
         preview_button.show()
+
+        terminal_button = Gtk.Button(action_name='win.terminal')
+        terminal_button.set_image(Gtk.Image.new_from_icon_name(
+            'utilities-terminal-symbolic', Gtk.IconSize.BUTTON))
+        self.main.header.pack_start(terminal_button)
+        terminal_button.show()
 
     def _create_menu(self):
         gear_menu = Gio.Menu.new()
@@ -305,6 +312,10 @@ class SiteWindow:
     def display_preview(self, action, param):
         path = self.site.get_url_path()
         open_browser("http://127.0.0.1:8000/" + path)
+
+    def display_terminal(self, action, param):
+        path = self.site.directory
+        open_terminal(path)
 
     def on_generate(self, action, param):
         self.site.generate()
