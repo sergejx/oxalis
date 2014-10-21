@@ -304,7 +304,7 @@ class SiteWindow:
 
     def display_preview(self, action, param):
         path = self.site.get_url_path()
-        open_browser("http://127.0.0.1:8000" + path)
+        open_browser("http://127.0.0.1:8000/" + path)
 
     def on_generate(self, action, param):
         self.site.generate()
