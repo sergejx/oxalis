@@ -24,6 +24,24 @@ from oxalis.site import SiteStore
 from oxalis.util import open_editor
 
 
+MENU = """
+<interface>
+  <menu id="menu">
+    <section>
+      <item>
+        <attribute name="label" translatable="yes">Rename</attribute>
+        <attribute name="action">win.rename-selected</attribute>
+      </item>
+      <item>
+        <attribute name="label" translatable="yes">Delete</attribute>
+        <attribute name="action">win.delete-selected</attribute>
+      </item>
+    </section>
+  </menu>
+</interface>
+"""
+
+
 class FilesBrowser:
     """Side panel with list of files and templates"""
 
@@ -40,6 +58,7 @@ class FilesBrowser:
         # Create tree views
         self.files_view = self._create_tree_view('files')
         self.widget.add(self.files_view)
+        self.menu = self._setup_menu(self.files_view)
 
         # Fill views with data
         files_model = self.site.get_tree_model()
@@ -102,6 +121,16 @@ class FilesBrowser:
         selection.connect('changed', self._on_selection_changed, name)
         return view
 
+    def _setup_menu(self, files_view):
+        builder = Gtk.Builder.new_from_string(MENU, -1)
+        menu_model = builder.get_object('menu')
+        menu = Gtk.Menu.new_from_model(menu_model)
+        # Connect to the files view
+        menu.attach_to_widget(files_view)
+        files_view.connect('button-press-event', self.on_button_press)
+        files_view.connect('popup-menu', self.display_menu)
+        return menu
+
     ### Callbacks ###
 
     def _set_file_icon_cb(self, column, cell, model, iter, __):
@@ -136,3 +165,12 @@ class FilesBrowser:
             self.application.enable_selection_actions(False)
         else:
             self.application.enable_selection_actions(True)
+
+    def on_button_press(self, widget, event):
+        if event.triggers_context_menu():
+            self.display_menu(widget, event)
+
+    def display_menu(self, widget, event=None):
+        button = event.button if event else 0
+        time = event.time if event else Gtk.get_current_event_time()
+        self.menu.popup(None, None, None, None, button, time)

@@ -218,8 +218,6 @@ class SiteWindow:
         files_menu_section.append("New File", 'win.new-file')
         files_menu_section.append("New Directory", 'win.new-directory')
         files_menu_section.append("Add File", 'win.add-file')
-        files_menu_section.append("Rename Selected", 'win.rename-selected')
-        files_menu_section.append("Delete Selected", 'win.delete-selected')
         gear_menu.append_section(None, files_menu_section)
         site_menu_section = Gio.Menu()
         site_menu_section.append("Generate", 'win.generate')
