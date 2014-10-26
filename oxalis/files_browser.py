@@ -186,7 +186,8 @@ class FilesBrowser:
 
     def on_button_press(self, widget, event):
         if event.triggers_context_menu():
-            self.display_menu(widget, event)
+            if widget.get_path_at_pos(event.x, event.y) is not None:
+                self.display_menu(widget, event)
 
     def display_menu(self, widget, event=None):
         button = event.button if event else 0
