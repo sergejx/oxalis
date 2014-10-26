@@ -1,7 +1,6 @@
-# Oxalis Web Site Editor
-#
-# Copyright (C) 2005-2011 Sergej Chodarev
-#
+# Oxalis -- A website building tool for Gnome
+# Copyright (C) 2005-2014 Sergej Chodarev
+
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
@@ -19,9 +18,10 @@
 import mimetypes
 
 from gi.repository import Gio, Gtk
+from oxalis import site
 
 from oxalis.site import SiteStore
-from oxalis.util import open_editor
+from oxalis.util import open_editor, input_dialog
 
 
 MENU = """
@@ -30,11 +30,11 @@ MENU = """
     <section>
       <item>
         <attribute name="label" translatable="yes">Rename</attribute>
-        <attribute name="action">win.rename-selected</attribute>
+        <attribute name="action">file.rename</attribute>
       </item>
       <item>
         <attribute name="label" translatable="yes">Delete</attribute>
-        <attribute name="action">win.delete-selected</attribute>
+        <attribute name="action">file.delete</attribute>
       </item>
     </section>
   </menu>
@@ -49,16 +49,17 @@ class FilesBrowser:
     DND_FILE_PATH = 80
     DND_URI_LIST = 81
 
-    def __init__(self, application, site):
+    def __init__(self, main_window, site):
         self.widget = Gtk.ScrolledWindow.new()
         self.widget.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
-        self.application = application
+        self.main_window = main_window
         self.site = site
 
         # Create tree views
         self.files_view = self._create_tree_view('files')
         self.widget.add(self.files_view)
-        self.menu = self._setup_menu(self.files_view)
+        self.actions = self._setup_actions()
+        self.menu = self._setup_menu(self.files_view, self.actions)
 
         # Fill views with data
         files_model = self.site.get_tree_model()
@@ -121,7 +122,20 @@ class FilesBrowser:
         selection.connect('changed', self._on_selection_changed, name)
         return view
 
-    def _setup_menu(self, files_view):
+    def _setup_actions(self):
+        action_group = Gio.SimpleActionGroup()
+        rename_action = Gio.SimpleAction(name="rename")
+        rename_action.connect('activate', self.rename_selected)
+        action_group.add_action(rename_action)
+        delete_action = Gio.SimpleAction(name="delete")
+        delete_action.connect('activate', self.delete_selected)
+        action_group.add_action(delete_action)
+        return action_group
+
+    def _setup_menu(self, files_view, actions):
+        # Connect actions
+        files_view.insert_action_group("file", actions)
+        # Create menu
         builder = Gtk.Builder.new_from_string(MENU, -1)
         menu_model = builder.get_object('menu')
         menu = Gtk.Menu.new_from_model(menu_model)
@@ -130,6 +144,10 @@ class FilesBrowser:
         files_view.connect('button-press-event', self.on_button_press)
         files_view.connect('popup-menu', self.display_menu)
         return menu
+
+    def _enable_selection_actions(self, enabled):
+        for name in ['rename', 'delete']:
+            self.actions.lookup_action(name).set_enabled(enabled)
 
     ### Callbacks ###
 
@@ -162,9 +180,9 @@ class FilesBrowser:
     def _on_selection_changed(self, selection, name):
         count = selection.count_selected_rows()
         if count == 0:
-            self.application.enable_selection_actions(False)
+            self._enable_selection_actions(False)
         else:
-            self.application.enable_selection_actions(True)
+            self._enable_selection_actions(True)
 
     def on_button_press(self, widget, event):
         if event.triggers_context_menu():
@@ -174,3 +192,38 @@ class FilesBrowser:
         button = event.button if event else 0
         time = event.time if event else Gtk.get_current_event_time()
         self.menu.popup(None, None, None, None, button, time)
+
+    def rename_selected(self, action, param):
+        """Rename selected file."""
+        obj = self.get_selected_document()
+        response, name = input_dialog(self.main_window, "Rename", "Name:",
+                                      "Rename", obj.name)
+        if response == Gtk.ResponseType.OK and name != '':
+            obj.rename(name)
+
+    def delete_selected(self, action, param):
+        """Delete selected file."""
+        obj = self.get_selected_document()
+        # TODO: Delete to trashcan
+
+        if isinstance(obj, site.Directory):
+            message = ('Delete directory "%(name)s" and its contents?' %
+                       {'name': obj.name})
+            message2 = 'If you delete the directory, all of its files and its subdirectories will be permanently lost.'
+        else:
+            message = 'Delete "%(name)s"?' % {'name': obj.name}
+            message2 = 'If you delete the item, it will be permanently lost.'
+
+        # Create message dialog
+        msg_dlg = Gtk.MessageDialog(parent=self.main_window,
+                                    type=Gtk.MessageType.WARNING,
+                                    message_format=message)
+        msg_dlg.format_secondary_text(message2)
+        msg_dlg.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                            Gtk.STOCK_DELETE, Gtk.ResponseType.OK)
+        msg_dlg.show_all()
+        response = msg_dlg.run()
+        msg_dlg.destroy()
+
+        if response == Gtk.ResponseType.OK:
+            obj.remove()

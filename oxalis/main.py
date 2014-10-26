@@ -169,7 +169,6 @@ class SiteWindow:
         self.file_browser = files_browser.FilesBrowser(self, self.site)
         self.main.window.add(self.file_browser.widget)
         self.file_browser.widget.show_all()
-        self.enable_selection_actions(False)  # Nothing is selected
 
         self.start_server()
 
@@ -179,8 +178,6 @@ class SiteWindow:
         self.main.add_action("new-file", self.on_new_file)
         self.main.add_action("new-directory", self.on_new_directory)
         self.main.add_action('add-file', self.on_add_file)
-        self.main.add_action('rename-selected', self.on_rename_selected)
-        self.main.add_action('delete-selected', self.on_delete_selected)
         self.main.add_action('preview', self.display_preview)
         self.main.add_action('terminal', self.display_terminal)
         self.main.add_action('generate', self.on_generate)
@@ -226,10 +223,6 @@ class SiteWindow:
         gear_menu.append_section(None, site_menu_section)
         return gear_menu
 
-    def enable_selection_actions(self, enabled):
-        for name in ['rename-selected', 'delete-selected']:
-            self.main.window.lookup_action(name).set_enabled(enabled)
-
     def start_server(self):
         server.site = self.site
         server_thread = Thread(target=server.run)
@@ -263,45 +256,6 @@ class SiteWindow:
 
         if response == Gtk.ResponseType.OK:
             self.site.add_file(filename, self.file_browser.get_target_dir())
-
-    def on_rename_selected(self, action, param):
-        """Rename selected file"""
-        obj = self.file_browser.get_selected_document()
-
-        response, name = util.input_dialog(self.main.window,
-                'Rename', 'Name:', 'Rename', obj.name)
-
-        if type == 'page' and not name.endswith('.html'):
-            name += '.html'
-
-        if name != '':
-            obj.rename(name)
-
-    def on_delete_selected(self, action, param):
-        """Delete selected file, directory or template"""
-        obj = self.file_browser.get_selected_document()
-
-        if isinstance(obj, site.Directory):
-            message = ('Delete directory "%(name)s" and its contents?' %
-                       {'name': obj.name})
-            message2 = 'If you delete the directory, all of its files and its subdirectories will be permanently lost.'
-        else:
-            message = 'Delete "%(name)s"?' % {'name': obj.name}
-            message2 = 'If you delete the item, it will be permanently lost.'
-
-        # Create message dialog
-        msg_dlg = Gtk.MessageDialog(parent=self.main.window,
-            type=Gtk.MessageType.WARNING, message_format=message)
-        msg_dlg.format_secondary_text(message2)
-        msg_dlg.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                            Gtk.STOCK_DELETE, Gtk.ResponseType.OK)
-
-        msg_dlg.show_all()
-        response = msg_dlg.run()
-        msg_dlg.destroy()
-
-        if response == Gtk.ResponseType.OK:
-            obj.remove()
 
     def ask_name(self, title):
         return util.input_dialog(self.main.window, "New " + title, "Name:",
@@ -388,4 +342,3 @@ class SiteWindow:
             self.settings_dialog = SiteSettingsDialog(self.site,
                                                       self.main.window)
         self.settings_dialog.run()
-
