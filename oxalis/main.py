@@ -166,7 +166,8 @@ class SiteWindow:
         self._init_actions()
         self._setup_site_header()
 
-        self.file_browser = files_browser.FilesBrowser(self, self.site)
+        self.file_browser = files_browser.FilesBrowser(self.main.window,
+                                                       self.site)
         self.main.window.add(self.file_browser.widget)
         self.file_browser.widget.show_all()
 
