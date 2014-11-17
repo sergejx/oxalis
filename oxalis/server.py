@@ -24,7 +24,8 @@ from threading import Thread
 
 class PreviewServer:
     def __init__(self, site):
-        self.RequestHandler.site = site
+        self.site = site
+        self.port = 0
 
     def start(self):
         server_thread = Thread(target=self.run)
@@ -32,18 +33,22 @@ class PreviewServer:
         server_thread.start()
 
     def run(self):
-        server_address = ('127.0.0.1', 8000)
-        httpd = HTTPServer(server_address, PreviewServer.RequestHandler)
+        try:
+            server_address = ('0.0.0.0', 8000)  # Use port 8000 by default.
+            httpd = HTTPServer(server_address, PreviewServer.RequestHandler)
+        except OSError:                         # If port is not available,
+            server_address = ('0.0.0.0', 0)     # use random free port number.
+            httpd = HTTPServer(server_address, PreviewServer.RequestHandler)
+        httpd.site = self.site  # Make site object available to the handler
+        self.port = httpd.server_port
         httpd.serve_forever()
 
     class RequestHandler(BaseHTTPRequestHandler):
-        site = None
-
         def do_GET(self):
-                base_path = self.site.get_url_path()
+                base_path = self.server.site.get_url_path()
                 request_path = self.path[1:]
                 request_path = request_path[len(base_path):]
-                full_path = os.path.join(self.site.directory, request_path)
+                full_path = os.path.join(self.server.site.directory, request_path)
                 if os.path.isdir(full_path):
                     full_path = os.path.join(full_path, 'index.html')
 

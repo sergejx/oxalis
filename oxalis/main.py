@@ -170,7 +170,8 @@ class SiteWindow:
         self.main.window.add(self.file_browser.widget)
         self.file_browser.widget.show_all()
 
-        PreviewServer(self.site).start()
+        self.server = PreviewServer(self.site)
+        self.server.start()
 
         self.settings_dialog = None
 
@@ -257,7 +258,7 @@ class SiteWindow:
 
     def display_preview(self, action, param):
         path = self.site.get_url_path()
-        open_browser("http://127.0.0.1:8000/" + path)
+        open_browser("http://localhost:%s/%s" % (self.server.port, path))
 
     def display_terminal(self, action, param):
         path = self.site.directory
