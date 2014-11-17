@@ -16,13 +16,12 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 import os
-from threading import Thread
-
 from gi.repository import Gio, GLib, Gtk
 
-from oxalis import files_browser, site, server, upload, util
+from oxalis import files_browser, site, upload, util
 from oxalis.config import Configuration
 from oxalis.format_conversion import convert_01_to_03
+from oxalis.server import PreviewServer
 from oxalis.site_settings import SiteSettingsDialog
 from oxalis.util import open_browser, open_terminal
 
@@ -171,7 +170,7 @@ class SiteWindow:
         self.main.window.add(self.file_browser.widget)
         self.file_browser.widget.show_all()
 
-        self.start_server()
+        PreviewServer(self.site).start()
 
         self.settings_dialog = None
 
@@ -223,12 +222,6 @@ class SiteWindow:
         site_menu_section.append("Site Settings...", 'win.settings')
         gear_menu.append_section(None, site_menu_section)
         return gear_menu
-
-    def start_server(self):
-        server.site = self.site
-        server_thread = Thread(target=server.run)
-        server_thread.setDaemon(True)
-        server_thread.start()
 
     def close(self):
         self.site.close()

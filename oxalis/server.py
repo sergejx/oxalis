@@ -23,9 +23,21 @@ import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import mimetypes
 import shutil
+from threading import Thread
 
 # Global variables
 site = None
+
+class PreviewServer:
+    def __init__(self, site):
+        self.site = site
+
+    def start(self):
+        global site
+        site = self.site
+        server_thread = Thread(target=run)
+        server_thread.setDaemon(True)
+        server_thread.start()
 
 
 def run():
