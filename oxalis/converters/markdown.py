@@ -16,10 +16,10 @@
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
 
 import os.path
-
 from markdown import Markdown
 from jinja2 import Environment, FileSystemLoader
-from .converter import Converter
+
+from oxalis.converters.base import Converter
 
 TEMPLATES_DIR = '_templates'
 
