@@ -1,4 +1,4 @@
-# Oxalis Web Site Editor
+# Oxalis -- A website building tool for Gnome
 # Copyright (C) 2014 Sergej Chodarev
 #
 # This program is free software; you can redistribute it and/or modify
@@ -18,15 +18,7 @@
 """
 Converters handle the conversion of source files to targets.
 
-They must implement following methods:
-
-* Constructor (site_path, file_path)
-* matches(path) -- tests if the converter can be applied to the file on specified
-  path (static method)
-* target() -- get a name of generated file
-* dependencies() -- a list of paths to file dependencies (change of dependency
-  would trigger conversion)
-* convert() -- do the conversion
+They must implement the converters.Converter abstract base class.
 """
 from oxalis.converters.markdown import MarkdownConverter
 

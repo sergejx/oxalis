@@ -1,4 +1,4 @@
-# Oxalis Web Site Editor
+# Oxalis -- A website building tool for Gnome
 # Copyright (C) 2014 Sergej Chodarev
 #
 # This program is free software; you can redistribute it and/or modify
@@ -19,11 +19,12 @@ import os.path
 
 from markdown import Markdown
 from jinja2 import Environment, FileSystemLoader
+from .converter import Converter
 
 TEMPLATES_DIR = '_templates'
 
 
-class MarkdownConverter:
+class MarkdownConverter(Converter):
     """
     Converts Markdown files into HTML using templates specified in the header.
     """
