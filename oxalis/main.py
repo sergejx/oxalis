@@ -42,8 +42,9 @@ class MainWindow(Gtk.ApplicationWindow):
         self.header.set_title("Oxalis")
         self.set_titlebar(self.header)
 
-        self.start_panel = StartPanel(self)
-        self.add(self.start_panel.widget)
+        self.start_panel = StartPanel()
+        StartPanelController(self, self.start_panel)
+        self.add(self.start_panel)
         self.site_panel = None
 
         # Restore window size
@@ -61,7 +62,7 @@ class MainWindow(Gtk.ApplicationWindow):
         if site_format == '0.1':
             return self.convert_site(site_path)
 
-        self.remove(self.start_panel.widget)
+        self.remove(self.start_panel)
         self.site_panel = SiteWindowController(self, site_path)
 
     def convert_site(self, path):
@@ -96,25 +97,30 @@ class MainWindow(Gtk.ApplicationWindow):
         settings.save()
 
 
-class StartPanel:
+class StartPanel(Gtk.Alignment):
     """A panel displayed in main window if no site was loaded."""
-    def __init__(self, main_window):
-        self.window = main_window
-        new = Gtk.Button('New site')
-        icon = Gtk.Image.new_from_stock(Gtk.STOCK_NEW, Gtk.IconSize.BUTTON)
-        new.set_image(icon)
-        new.connect('clicked', self.new_site_cb)
+    def __init__(self):
+        super().__init__(xalign=0.5, yalign=0.5, xscale=0.2, yscale=0.0)
 
-        open = Gtk.Button('Open site')
+        icon = Gtk.Image.new_from_stock(Gtk.STOCK_NEW, Gtk.IconSize.BUTTON)
+        self.new_button = Gtk.Button('New site')
+        self.new_button.set_image(icon)
+
         icon = Gtk.Image.new_from_stock(Gtk.STOCK_OPEN, Gtk.IconSize.BUTTON)
-        open.set_image(icon)
-        open.connect('clicked', self.open_site_cb)
+        self.open_button = Gtk.Button('Open site')
+        self.open_button.set_image(icon)
 
         box = Gtk.VBox()
-        box.pack_start(new, False, False, 0)
-        box.pack_start(open, False, False, 0)
-        self.widget = Gtk.Alignment.new(0.5, 0.5, 0.2, 0.0)
-        self.widget.add(box)
+        box.pack_start(self.new_button, False, False, 0)
+        box.pack_start(self.open_button, False, False, 0)
+        self.add(box)
+
+
+class StartPanelController:
+    def __init__(self, main_window, start_panel):
+        self.window = main_window
+        start_panel.new_button.connect('clicked', self.new_site_cb)
+        start_panel.open_button.connect('clicked', self.open_site_cb)
 
     def new_site_cb(self, *args):
         chooser = Gtk.FileChooserDialog(
