@@ -47,9 +47,9 @@ def setup_menu(app):
 
 def activate_app(app):
     setup_menu(app)
-    win = main.MainWindow()
-    app.add_window(win.window)
-    win.window.show_all()
+    window = main.MainWindow()
+    app.add_window(window)
+    window.show_all()
 
 
 def about_app(action, param):

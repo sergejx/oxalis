@@ -31,38 +31,38 @@ XDG_CONFIG_HOME = (os.environ.get("XDG_CONFIG_HOME")
 settings = Configuration(os.path.join(XDG_CONFIG_HOME, 'oxalis', 'settings'))
 
 
-class MainWindow:
+class MainWindow(Gtk.ApplicationWindow):
     """Main application window."""
     def __init__(self):
-        self.window = Gtk.ApplicationWindow()
-        self.window.connect_after('delete-event', self.quit_cb)
+        super().__init__()
+        self.connect_after('delete-event', self.quit_cb)
 
         # Create header bar
         self.header = Gtk.HeaderBar(show_close_button=True)
         self.header.set_title("Oxalis")
-        self.window.set_titlebar(self.header)
+        self.set_titlebar(self.header)
 
         self.start_panel = StartPanel(self)
-        self.window.add(self.start_panel.widget)
+        self.add(self.start_panel.widget)
         self.site_panel = None
 
         # Restore window size
         width = settings.getint('state', 'width', fallback=500)
         height = settings.getint('state', 'height', fallback=500)
-        self.window.resize(width, height)
+        self.resize(width, height)
 
-    def add_action(self, name, callback):
+    def add_simple_action(self, name, callback):
         new_file_action = Gio.SimpleAction(name=name)
         new_file_action.connect('activate', callback)
-        self.window.add_action(new_file_action)
+        self.add_action(new_file_action)
 
     def load_site(self, site_path):
         site_format = site.check_site_format(site_path)
         if site_format == '0.1':
             return self.convert_site(site_path)
 
-        self.window.remove(self.start_panel.widget)
-        self.site_panel = SiteWindow(self, site_path)
+        self.remove(self.start_panel.widget)
+        self.site_panel = SiteWindowController(self, site_path)
 
     def convert_site(self, path):
         """Convert site to new format and load it."""
@@ -73,7 +73,7 @@ class MainWindow:
             "The conversion preserves all site contents.\n" +
             "Note, however, that after conversion it would not be possible " +
             "to open the site in Oxalis 0.1.")
-        dlg = Gtk.MessageDialog(parent=self.window,
+        dlg = Gtk.MessageDialog(parent=self,
                                 type=Gtk.MessageType.QUESTION,
                                 message_format=message)
         dlg.format_secondary_text(secondary_message)
@@ -90,7 +90,7 @@ class MainWindow:
         if self.site_panel is not None:
             self.site_panel.close()
 
-        width, height = self.window.get_size()
+        width, height = self.get_size()
         settings.setint('state', 'width', width)
         settings.setint('state', 'height', height)
         settings.save()
@@ -99,7 +99,7 @@ class MainWindow:
 class StartPanel:
     """A panel displayed in main window if no site was loaded."""
     def __init__(self, main_window):
-        self.main = main_window
+        self.window = main_window
         new = Gtk.Button('New site')
         icon = Gtk.Image.new_from_stock(Gtk.STOCK_NEW, Gtk.IconSize.BUTTON)
         new.set_image(icon)
@@ -128,7 +128,7 @@ class StartPanel:
 
         if response == Gtk.ResponseType.OK:
             site.create_site(dir_name)
-            self.main.load_site(dir_name)
+            self.window.load_site(dir_name)
 
     def open_site_cb(self, *args):
         chooser = Gtk.FileChooserDialog(
@@ -143,31 +143,31 @@ class StartPanel:
         if response == Gtk.ResponseType.OK:
             is_site = site.check_site_format(dir_name)
             if is_site:
-                self.main.load_site(dir_name)
+                self.window.load_site(dir_name)
             else:
                 # Display error message
                 message = 'Selected directory is not valid Oxalis site'
-                dlg = Gtk.MessageDialog(parent=self.main.window,
+                dlg = Gtk.MessageDialog(parent=self.window,
                         type=Gtk.MessageType.ERROR, buttons=Gtk.ButtonsType.OK,
                         message_format=message)
                 dlg.run()
                 dlg.destroy()
 
 
-class SiteWindow:
+class SiteWindowController:
     """
     This object turns main window into a site window with loaded site contents.
     """
     def __init__(self, main, site_path):
-        self.main = main
+        self.window = main
         self.site = site.Site(site_path)
 
         self._init_actions()
         self._setup_site_header()
 
-        self.file_browser = files_browser.FilesBrowser(self.main.window,
+        self.file_browser = files_browser.FilesBrowser(self.window,
                                                        self.site)
-        self.main.window.add(self.file_browser.widget)
+        self.window.add(self.file_browser.widget)
         self.file_browser.widget.show_all()
 
         self.server = PreviewServer(self.site)
@@ -176,38 +176,38 @@ class SiteWindow:
         self.settings_dialog = None
 
     def _init_actions(self):
-        self.main.add_action("new-file", self.on_new_file)
-        self.main.add_action("new-directory", self.on_new_directory)
-        self.main.add_action('add-file', self.on_add_file)
-        self.main.add_action('preview', self.display_preview)
-        self.main.add_action('terminal', self.display_terminal)
-        self.main.add_action('generate', self.on_generate)
-        self.main.add_action('upload', self.on_upload)
-        self.main.add_action('settings', self.show_site_settings)
+        self.window.add_simple_action("new-file", self.on_new_file)
+        self.window.add_simple_action("new-directory", self.on_new_directory)
+        self.window.add_simple_action('add-file', self.on_add_file)
+        self.window.add_simple_action('preview', self.display_preview)
+        self.window.add_simple_action('terminal', self.display_terminal)
+        self.window.add_simple_action('generate', self.on_generate)
+        self.window.add_simple_action('upload', self.on_upload)
+        self.window.add_simple_action('settings', self.show_site_settings)
 
     def _setup_site_header(self):
         # Set window title to site name
-        self.main.header.set_title(os.path.basename(self.site.directory))
-        self.main.header.set_subtitle(os.path.dirname(self.site.directory))
+        self.window.header.set_title(os.path.basename(self.site.directory))
+        self.window.header.set_subtitle(os.path.dirname(self.site.directory))
 
         # Add "gear" menu
         menu_button = Gtk.MenuButton()
         menu_button.set_menu_model(self._create_menu())
         menu_button.set_image(Gtk.Image.new_from_icon_name(
             'emblem-system-symbolic', Gtk.IconSize.BUTTON))
-        self.main.header.pack_end(menu_button)
+        self.window.header.pack_end(menu_button)
         menu_button.show()
 
         preview_button = Gtk.Button(action_name='win.preview')
         preview_button.set_image(Gtk.Image.new_from_icon_name(
             'web-browser-symbolic', Gtk.IconSize.BUTTON))
-        self.main.header.pack_start(preview_button)
+        self.window.header.pack_start(preview_button)
         preview_button.show()
 
         terminal_button = Gtk.Button(action_name='win.terminal')
         terminal_button.set_image(Gtk.Image.new_from_icon_name(
             'utilities-terminal-symbolic', Gtk.IconSize.BUTTON))
-        self.main.header.pack_start(terminal_button)
+        self.window.header.pack_start(terminal_button)
         terminal_button.show()
 
     def _create_menu(self):
@@ -240,7 +240,7 @@ class SiteWindow:
             self.site.new_directory(name, self.file_browser.get_target_dir())
 
     def on_add_file(self, action, param):
-        chooser = Gtk.FileChooserDialog('Add File', parent=self.main.window,
+        chooser = Gtk.FileChooserDialog('Add File', parent=self.window,
             action=Gtk.FileChooserAction.OPEN,
             buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
                 Gtk.STOCK_OK, Gtk.ResponseType.OK))
@@ -253,7 +253,7 @@ class SiteWindow:
             self.site.add_file(filename, self.file_browser.get_target_dir())
 
     def ask_name(self, title):
-        return util.input_dialog(self.main.window, "New " + title, "Name:",
+        return util.input_dialog(self.window, "New " + title, "Name:",
                                  "Create")
 
     def display_preview(self, action, param):
@@ -268,7 +268,7 @@ class SiteWindow:
         self.site.generate()
 
     def on_upload(self, action, param):
-        dlg = Gtk.MessageDialog(self.main.window, 0, Gtk.MessageType.QUESTION, 0,
+        dlg = Gtk.MessageDialog(self.window, 0, Gtk.MessageType.QUESTION, 0,
             'Should the site be generated before uploading?')
         dlg.format_secondary_text('''If you made some changes to the site and didn't generate it after that, you should generate it now.''')
         dlg.add_button("Don't generate", Gtk.ResponseType.NO)
@@ -283,14 +283,14 @@ class SiteWindow:
         process = upload.start_upload(self.site)
 
         if not process:
-            dlg = Gtk.MessageDialog(self.main.window, 0, Gtk.MessageType.ERROR,
+            dlg = Gtk.MessageDialog(self.window, 0, Gtk.MessageType.ERROR,
                 Gtk.ButtonsType.OK, 'Uploading is not configured')
             dlg.run()
             dlg.destroy()
             return
 
         # Create upload progress dialog
-        self.upload_dlg = Gtk.Dialog('Upload', self.main.window,
+        self.upload_dlg = Gtk.Dialog('Upload', self.window,
             buttons=(Gtk.STOCK_CLOSE, Gtk.ResponseType.CLOSE))
         self.upload_dlg.set_response_sensitive(Gtk.ResponseType.CLOSE, False)
         self.upload_dlg.set_default_size(500, 310)
@@ -335,5 +335,5 @@ class SiteWindow:
     def show_site_settings(self, action, param):
         if self.settings_dialog is None:
             self.settings_dialog = SiteSettingsDialog(self.site,
-                                                      self.main.window)
+                                                      self.window)
         self.settings_dialog.run()
