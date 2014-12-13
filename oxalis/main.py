@@ -35,7 +35,7 @@ class MainWindow(Gtk.ApplicationWindow):
     """Main application window."""
     def __init__(self):
         super().__init__()
-        self.connect_after('delete-event', self.quit_cb)
+        self.connect_after('delete-event', self.on_quit)
 
         # Create header bar
         self.header = Gtk.HeaderBar(show_close_button=True)
@@ -45,7 +45,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.start_panel = StartPanel()
         StartPanelController(self, self.start_panel)
         self.add(self.start_panel)
-        self.site_panel = None
+        self.controller = SiteWindowController(self)
 
         # Restore window size
         width = settings.getint('state', 'width', fallback=500)
@@ -57,40 +57,49 @@ class MainWindow(Gtk.ApplicationWindow):
         new_file_action.connect('activate', callback)
         self.add_action(new_file_action)
 
-    def load_site(self, site_path):
-        site_format = site.check_site_format(site_path)
-        if site_format == '0.1':
-            return self.convert_site(site_path)
+    def setup_site_header(self, site):
+        # Set window title to site name
+        self.header.set_title(os.path.basename(site.directory))
+        self.header.set_subtitle(os.path.dirname(site.directory))
 
-        self.remove(self.start_panel)
-        self.site_panel = SiteWindowController(self, site_path)
+        # Add "gear" menu
+        menu_button = Gtk.MenuButton()
+        menu_button.set_menu_model(self._create_menu())
+        menu_button.set_image(Gtk.Image.new_from_icon_name(
+            'emblem-system-symbolic', Gtk.IconSize.BUTTON))
+        self.header.pack_end(menu_button)
+        menu_button.show()
 
-    def convert_site(self, path):
-        """Convert site to new format and load it."""
-        message = "Convert selected site to Oxalis 0.3 format?"
-        secondary_message = (
-            "From version 0.3 Oxalis uses new format of sites. Selected site " +
-            "has older format and needs to be converted before opening. " +
-            "The conversion preserves all site contents.\n" +
-            "Note, however, that after conversion it would not be possible " +
-            "to open the site in Oxalis 0.1.")
-        dlg = Gtk.MessageDialog(parent=self,
-                                type=Gtk.MessageType.QUESTION,
-                                message_format=message)
-        dlg.format_secondary_text(secondary_message)
-        dlg.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-                        "Convert", Gtk.ResponseType.YES)
-        dlg.set_default_response(Gtk.ResponseType.YES)
-        response = dlg.run()
-        if response == Gtk.ResponseType.YES:
-            convert_01_to_03(path)
-            self.load_site(path)
-        dlg.destroy()
+        preview_button = Gtk.Button(action_name='win.preview')
+        preview_button.set_image(Gtk.Image.new_from_icon_name(
+            'web-browser-symbolic', Gtk.IconSize.BUTTON))
+        self.header.pack_start(preview_button)
+        preview_button.show()
 
-    def quit_cb(self, *args):
-        if self.site_panel is not None:
-            self.site_panel.close()
+        terminal_button = Gtk.Button(action_name='win.terminal')
+        terminal_button.set_image(Gtk.Image.new_from_icon_name(
+            'utilities-terminal-symbolic', Gtk.IconSize.BUTTON))
+        self.header.pack_start(terminal_button)
+        terminal_button.show()
 
+    def _create_menu(self):
+        gear_menu = Gio.Menu.new()
+        files_menu_section = Gio.Menu()
+        files_menu_section.append("New File", 'win.new-file')
+        files_menu_section.append("New Directory", 'win.new-directory')
+        files_menu_section.append("Add File", 'win.add-file')
+        gear_menu.append_section(None, files_menu_section)
+        site_menu_section = Gio.Menu()
+        site_menu_section.append("Generate", 'win.generate')
+        site_menu_section.append("Upload", 'win.upload')
+        site_menu_section.append("Site Settings...", 'win.settings')
+        gear_menu.append_section(None, site_menu_section)
+        return gear_menu
+
+    def remove_start_panel(self):
+        self.start_panel.destroy()
+
+    def on_quit(self, *args):
         width, height = self.get_size()
         settings.setint('state', 'width', width)
         settings.setint('state', 'height', height)
@@ -134,7 +143,7 @@ class StartPanelController:
 
         if response == Gtk.ResponseType.OK:
             site.create_site(dir_name)
-            self.window.load_site(dir_name)
+            self.window.controller.load_site(dir_name)
 
     def open_site_cb(self, *args):
         chooser = Gtk.FileChooserDialog(
@@ -147,9 +156,11 @@ class StartPanelController:
         chooser.destroy()
 
         if response == Gtk.ResponseType.OK:
-            is_site = site.check_site_format(dir_name)
-            if is_site:
-                self.window.load_site(dir_name)
+            site_format = site.check_site_format(dir_name)
+            if site_format == '0.3':
+                self.window.controller.load_site(dir_name)
+            elif site_format == '0.1':
+                self.convert_site(dir_name)
             else:
                 # Display error message
                 message = 'Selected directory is not valid Oxalis site'
@@ -159,18 +170,46 @@ class StartPanelController:
                 dlg.run()
                 dlg.destroy()
 
+    def convert_site(self, path):
+        """Convert site to new format and load it."""
+        message = "Convert selected site to Oxalis 0.3 format?"
+        secondary_message = (
+            "From version 0.3 Oxalis uses new format of sites. Selected site " +
+            "has older format and needs to be converted before opening. " +
+            "The conversion preserves all site contents.\n" +
+            "Note, however, that after conversion it would not be possible " +
+            "to open the site in Oxalis 0.1.")
+        dlg = Gtk.MessageDialog(parent=self,
+                                type=Gtk.MessageType.QUESTION,
+                                message_format=message)
+        dlg.format_secondary_text(secondary_message)
+        dlg.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                        "Convert", Gtk.ResponseType.YES)
+        dlg.set_default_response(Gtk.ResponseType.YES)
+        response = dlg.run()
+        if response == Gtk.ResponseType.YES:
+            convert_01_to_03(path)
+            self.window.controller.load_site(path)
+        dlg.destroy()
+
 
 class SiteWindowController:
     """
     This object turns main window into a site window with loaded site contents.
     """
-    def __init__(self, main, site_path):
+    def __init__(self, main):
         self.window = main
+        self.site = None
+        self.file_browser = None
+        self.server = None
+        self.settings_dialog = None
+
+    def load_site(self, site_path):
         self.site = site.Site(site_path)
 
+        self.window.remove_start_panel()
         self._init_actions()
-        self._setup_site_header()
-
+        self.window.setup_site_header(self.site)
         self.file_browser = files_browser.FilesBrowser(self.window,
                                                        self.site)
         self.window.add(self.file_browser.widget)
@@ -178,8 +217,6 @@ class SiteWindowController:
 
         self.server = PreviewServer(self.site)
         self.server.start()
-
-        self.settings_dialog = None
 
     def _init_actions(self):
         self.window.add_simple_action("new-file", self.on_new_file)
@@ -190,48 +227,6 @@ class SiteWindowController:
         self.window.add_simple_action('generate', self.on_generate)
         self.window.add_simple_action('upload', self.on_upload)
         self.window.add_simple_action('settings', self.show_site_settings)
-
-    def _setup_site_header(self):
-        # Set window title to site name
-        self.window.header.set_title(os.path.basename(self.site.directory))
-        self.window.header.set_subtitle(os.path.dirname(self.site.directory))
-
-        # Add "gear" menu
-        menu_button = Gtk.MenuButton()
-        menu_button.set_menu_model(self._create_menu())
-        menu_button.set_image(Gtk.Image.new_from_icon_name(
-            'emblem-system-symbolic', Gtk.IconSize.BUTTON))
-        self.window.header.pack_end(menu_button)
-        menu_button.show()
-
-        preview_button = Gtk.Button(action_name='win.preview')
-        preview_button.set_image(Gtk.Image.new_from_icon_name(
-            'web-browser-symbolic', Gtk.IconSize.BUTTON))
-        self.window.header.pack_start(preview_button)
-        preview_button.show()
-
-        terminal_button = Gtk.Button(action_name='win.terminal')
-        terminal_button.set_image(Gtk.Image.new_from_icon_name(
-            'utilities-terminal-symbolic', Gtk.IconSize.BUTTON))
-        self.window.header.pack_start(terminal_button)
-        terminal_button.show()
-
-    def _create_menu(self):
-        gear_menu = Gio.Menu.new()
-        files_menu_section = Gio.Menu()
-        files_menu_section.append("New File", 'win.new-file')
-        files_menu_section.append("New Directory", 'win.new-directory')
-        files_menu_section.append("Add File", 'win.add-file')
-        gear_menu.append_section(None, files_menu_section)
-        site_menu_section = Gio.Menu()
-        site_menu_section.append("Generate", 'win.generate')
-        site_menu_section.append("Upload", 'win.upload')
-        site_menu_section.append("Site Settings...", 'win.settings')
-        gear_menu.append_section(None, site_menu_section)
-        return gear_menu
-
-    def close(self):
-        self.site.close()
 
     # Actions handlers #
 
