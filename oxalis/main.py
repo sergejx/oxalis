@@ -57,7 +57,14 @@ class MainWindow(Gtk.ApplicationWindow):
         new_file_action.connect('activate', callback)
         self.add_action(new_file_action)
 
-    def setup_site_header(self, site):
+    def load_site(self, site, file_browser):
+        self.start_panel.destroy()
+
+        self._setup_site_header(site)
+        self.add(file_browser)
+        file_browser.show_all()
+
+    def _setup_site_header(self, site):
         # Set window title to site name
         self.header.set_title(os.path.basename(site.directory))
         self.header.set_subtitle(os.path.dirname(site.directory))
@@ -95,9 +102,6 @@ class MainWindow(Gtk.ApplicationWindow):
         site_menu_section.append("Site Settings...", 'win.settings')
         gear_menu.append_section(None, site_menu_section)
         return gear_menu
-
-    def remove_start_panel(self):
-        self.start_panel.destroy()
 
     def on_quit(self, *args):
         width, height = self.get_size()
@@ -207,13 +211,10 @@ class SiteWindowController:
     def load_site(self, site_path):
         self.site = site.Site(site_path)
 
-        self.window.remove_start_panel()
         self._init_actions()
-        self.window.setup_site_header(self.site)
         self.file_browser = files_browser.FilesBrowser(self.window,
                                                        self.site)
-        self.window.add(self.file_browser.widget)
-        self.file_browser.widget.show_all()
+        self.window.load_site(self.site, self.file_browser.widget)
 
         self.server = PreviewServer(self.site)
         self.server.start()
