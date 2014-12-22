@@ -25,7 +25,7 @@ import os
 from codecs import open
 import shutil
 
-from gi.repository import Gio, Gtk
+from gi.repository import GObject, Gio, Gtk
 
 from oxalis.config import Configuration
 from oxalis import converters
@@ -125,7 +125,7 @@ def compare_files(x, y):
             return 1
 
 
-class Site(object):
+class Site:
     """Oxalis site."""
     def __init__(self, directory):
         self.directory = directory
@@ -138,6 +138,8 @@ class Site(object):
 
         self.store = SiteStore()
         self._load_files_tree()
+
+        self.errors = ErrorMessages()
 
     def get_url_path(self):
         """Return path part of site preview URL."""
@@ -308,6 +310,34 @@ class SiteStore:
         return compare_files(x, y)
 
 
+class ErrorMessages(GObject.GObject):
+    """A collection of conversion error messages."""
+    __gsignals__ = {'update': (GObject.SIGNAL_RUN_FIRST, None, ())}
+
+    def __init__(self):
+        super().__init__()
+        self._errors = {}
+
+    def set(self, file, message):
+        """
+        Set an error message for a specified file.
+        If message is None, clear the previous message.
+        """
+        if message is not None:
+            self._errors[file] = message
+        elif file in self._errors:
+            del self._errors[file]
+
+        if len(self._errors) > 0:
+            self.emit('update')
+
+    def __iter__(self):
+        return iter(self._errors)
+
+    def __str__(self):
+        return "\n".join([err.file + ": " + err.message for err in self._errors.values()])
+
+
 class File(object):
     """File inside Oxalis site."""
 
@@ -357,7 +387,8 @@ class File(object):
 
     def convert(self):
         if self.converter is not None:
-            self.converter.convert()
+            error = self.converter.convert()
+            self.site.errors.set(self, error)
 
     ## File operations ##
 
