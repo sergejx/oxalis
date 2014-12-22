@@ -332,7 +332,7 @@ class ErrorMessages(GObject.GObject):
             self.emit('update')
 
     def __iter__(self):
-        return iter(self._errors)
+        return iter(self._errors.values())
 
     def __str__(self):
         return "\n".join([err.file + ": " + err.message for err in self._errors.values()])

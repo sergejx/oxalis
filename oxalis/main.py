@@ -68,7 +68,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.box.pack_start(file_browser, True, True, 0)
         file_browser.show_all()
 
-        errors_bar = ErrorsBar(site.errors)
+        errors_bar = ErrorsBar(site)
         self.box.pack_start(errors_bar, False, False, 0)
 
     def _setup_site_header(self, site):
@@ -350,17 +350,26 @@ class SiteWindowController:
 
 class ErrorsBar(Gtk.InfoBar):
     """An info bar displaying error messages for a site."""
-    def __init__(self, site_errors):
+    def __init__(self, site):
         super().__init__(message_type=Gtk.MessageType.ERROR, show_close_button=True)
         self.label = Gtk.Label()
         self.get_content_area().add(self.label)
         self.connect('close', self.on_error_bar_closed)
         self.connect('response', self.on_error_bar_closed)
-        site_errors.connect('update', self.update_error_messages)
+        self.base_path = site.directory
+        site.errors.connect('update', self.update_error_messages)
 
     def update_error_messages(self, errors):
-        self.label.set_text(str(errors))
+        self.label.set_markup(self.format_error_messages(errors))
         self.show_all()
+
+    def format_error_messages(self, errors):
+        messages = []
+        for error in errors:
+            message = "<a href='file://{base_path}/{file}'>{file}</a>: {message}".format(
+                base_path=self.base_path, **vars(error))
+            messages.append(message)
+        return "\n".join(messages)
 
     def on_error_bar_closed(self, info_bar, response_id=Gtk.ResponseType.CLOSE):
         if response_id == Gtk.ResponseType.CLOSE:
