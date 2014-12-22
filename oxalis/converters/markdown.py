@@ -17,9 +17,9 @@
 
 import os.path
 from markdown import Markdown
-from jinja2 import Environment, FileSystemLoader
+import jinja2
 
-from oxalis.converters.base import Converter
+from oxalis.converters.base import Converter, ErrorMessage
 
 TEMPLATES_DIR = '_templates'
 
@@ -36,7 +36,7 @@ class MarkdownConverter(Converter):
         self.full_target_path = os.path.join(site_path, self.target_path)
         self._md = Markdown(extensions=['meta', 'extra'])
         templates_dir = os.path.join(site_path, TEMPLATES_DIR)
-        self._env = Environment(loader=FileSystemLoader(templates_dir))
+        self._env = jinja2.Environment(loader=jinja2.FileSystemLoader(templates_dir))
 
     @staticmethod
     def matches(path):
@@ -61,10 +61,17 @@ class MarkdownConverter(Converter):
         with open(self.full_path) as f:
             text = f.read()
         context = self._convert_markdown(text)
-
         template_name = context.get("template", "default") + ".html"
-        template = self._env.get_template(template_name)
-        full_html = template.render(context)
 
-        with open(self.full_target_path, "w") as f:
-            f.write(full_html)
+        try:
+            template = self._env.get_template(template_name)
+            full_html = template.render(context)
+
+            with open(self.full_target_path, "w") as f:
+                f.write(full_html)
+
+        except jinja2.TemplateNotFound as e:
+            return ErrorMessage(self.path, "Template '%s' was not found." % (e.name,))
+        except jinja2.TemplateSyntaxError as e:
+            return ErrorMessage(e.name, "Template syntax error: %s." % (e.message,))
+
