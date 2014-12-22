@@ -1,6 +1,7 @@
 # Oxalis -- A website building tool for Gnome
 # Copyright (C) 2014 Sergej Chodarev
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
 
 
 class Converter(metaclass=ABCMeta):
@@ -34,5 +35,11 @@ class Converter(metaclass=ABCMeta):
 
     @abstractmethod
     def convert(self):
-        """Do the conversion."""
+        """
+        Do the conversion.
+        Returns an ErrorMessage if some error occurred, or None otherwise.
+        """
         pass
+
+
+ErrorMessage = namedtuple('ErrorMessage', ['file', 'message'])
