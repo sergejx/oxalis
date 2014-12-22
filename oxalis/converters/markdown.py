@@ -73,5 +73,6 @@ class MarkdownConverter(Converter):
         except jinja2.TemplateNotFound as e:
             return ErrorMessage(self.path, "Template '%s' was not found." % (e.name,))
         except jinja2.TemplateSyntaxError as e:
-            return ErrorMessage(e.name, "Template syntax error: %s." % (e.message,))
+            return ErrorMessage(os.path.join(TEMPLATES_DIR, e.name),
+                                "Template syntax error: %s." % (e.message,))
 
