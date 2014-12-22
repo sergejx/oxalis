@@ -42,9 +42,13 @@ class MainWindow(Gtk.ApplicationWindow):
         self.header.set_title("Oxalis")
         self.set_titlebar(self.header)
 
+        # Create main box container
+        self.box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.add(self.box)
+
         self.start_panel = StartPanel()
         StartPanelController(self, self.start_panel)
-        self.add(self.start_panel)
+        self.box.pack_start(self.start_panel, True, True, 0)
         self.controller = SiteWindowController(self)
 
         # Restore window size
@@ -61,8 +65,11 @@ class MainWindow(Gtk.ApplicationWindow):
         self.start_panel.destroy()
 
         self._setup_site_header(site)
-        self.add(file_browser)
+        self.box.pack_start(file_browser, True, True, 0)
         file_browser.show_all()
+
+        errors_bar = ErrorsBar(site.errors)
+        self.box.pack_start(errors_bar, False, False, 0)
 
     def _setup_site_header(self, site):
         # Set window title to site name
@@ -339,3 +346,22 @@ class SiteWindowController:
             self.settings_dialog = SiteSettingsDialog(self.site,
                                                       self.window)
         self.settings_dialog.run()
+
+
+class ErrorsBar(Gtk.InfoBar):
+    """An info bar displaying error messages for a site."""
+    def __init__(self, site_errors):
+        super().__init__(message_type=Gtk.MessageType.ERROR, show_close_button=True)
+        self.label = Gtk.Label()
+        self.get_content_area().add(self.label)
+        self.connect('close', self.on_error_bar_closed)
+        self.connect('response', self.on_error_bar_closed)
+        site_errors.connect('update', self.update_error_messages)
+
+    def update_error_messages(self, errors):
+        self.label.set_text(str(errors))
+        self.show_all()
+
+    def on_error_bar_closed(self, info_bar, response_id=Gtk.ResponseType.CLOSE):
+        if response_id == Gtk.ResponseType.CLOSE:
+            info_bar.hide()
