@@ -327,9 +327,10 @@ class ErrorMessages(GObject.GObject):
             self._errors[file] = message
         elif file in self._errors:
             del self._errors[file]
+        self.emit('update')
 
-        if len(self._errors) > 0:
-            self.emit('update')
+    def __len__(self):
+        return len(self._errors)
 
     def __iter__(self):
         return iter(self._errors.values())
