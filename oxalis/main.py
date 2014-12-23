@@ -350,23 +350,53 @@ class SiteWindowController:
 
 class ErrorsBar(Gtk.InfoBar):
     """An info bar displaying error messages for a site."""
+    RESPONSE_EDIT = 1
+    RESPONSE_SHOW_ALL = 2
+
     def __init__(self, site):
         super().__init__(message_type=Gtk.MessageType.ERROR, show_close_button=True)
         self.label = Gtk.Label()
         self.get_content_area().add(self.label)
-        self.connect('close', self.on_error_bar_closed)
-        self.connect('response', self.on_error_bar_closed)
+        self.edit_button = self.add_button("Open in Editor", self.RESPONSE_EDIT)
+        self.show_button = self.add_button("Show Details", self.RESPONSE_SHOW_ALL)
+        self.connect('close', self._on_response)
+        self.connect('response', self._on_response)
+
         self.base_path = site.directory
-        site.errors.connect('update', self.update_error_messages)
+        self.errors = site.errors
+        self.errors.connect('update', self.update_error_messages)
 
     def update_error_messages(self, errors):
-        self.label.set_markup(self.format_error_messages(errors))
-        if len(errors) > 0:
+        if len(errors) > 1:
+            self.label.set_text("Several errors occurred during conversion.")
             self.show_all()
+            self.edit_button.hide()
+        elif len(errors) == 1:
+            self.label.set_markup(self._format_single_message(errors))
+            self.show_all()
+            self.show_button.hide()
         else:
             self.hide()
 
-    def format_error_messages(self, errors):
+    def show_all_errors(self, errors):
+        dialog = Gtk.Dialog("Conversion errors", self.get_toplevel(),
+                            Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                            ("Close", Gtk.ResponseType.CLOSE),
+                            use_header_bar=1)
+        dialog.set_default_size(500, 400)
+        scrolling = Gtk.ScrolledWindow()
+        dialog.get_content_area().add(scrolling)
+        label = Gtk.Label()
+        label.set_markup(self._format_error_messages(errors))
+        scrolling.add_with_viewport(label)
+        dialog.show_all()
+        dialog.connect('response', lambda dlg, rsp: dlg.destroy())
+
+    def _format_single_message(self, errors):
+        error_message = next(iter(errors))
+        return "{message} in <i>{file}</i>.".format(**vars(error_message))
+
+    def _format_error_messages(self, errors):
         messages = []
         for error in errors:
             message = "<a href='file://{base_path}/{file}'>{file}</a>: {message}".format(
@@ -374,6 +404,11 @@ class ErrorsBar(Gtk.InfoBar):
             messages.append(message)
         return "\n".join(messages)
 
-    def on_error_bar_closed(self, info_bar, response_id=Gtk.ResponseType.CLOSE):
+    def _on_response(self, info_bar, response_id=Gtk.ResponseType.CLOSE):
         if response_id == Gtk.ResponseType.CLOSE:
             info_bar.hide()
+        elif response_id == self.RESPONSE_EDIT:
+            error = next(iter(self.errors))
+            util.open_editor(os.path.join(self.base_path, error.file))
+        elif response_id == self.RESPONSE_SHOW_ALL:
+            self.show_all_errors(self.errors)
