@@ -361,7 +361,10 @@ class ErrorsBar(Gtk.InfoBar):
 
     def update_error_messages(self, errors):
         self.label.set_markup(self.format_error_messages(errors))
-        self.show_all()
+        if len(errors) > 0:
+            self.show_all()
+        else:
+            self.hide()
 
     def format_error_messages(self, errors):
         messages = []
